@@ -1,0 +1,41 @@
+/**
+ * icons.js — a small set of hand-picked inline SVG icons.
+ * Keeping icons as plain strings avoids pulling in an icon
+ * font or JS icon library just for a handful of glyphs.
+ */
+(function (window) {
+  "use strict";
+
+  const Icons = {
+    logo: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 13.5 5 7h14l2 6.5M3 13.5v4a1 1 0 0 0 1 1h1.2a1 1 0 0 0 1-.8l.3-1.2h10l.3 1.2a1 1 0 0 0 1 .8H19a1 1 0 0 0 1-1v-4M3 13.5h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7.5" cy="16.5" r="1.4" fill="currentColor"/><circle cx="16.5" cy="16.5" r="1.4" fill="currentColor"/></svg>',
+    sun: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+    moon: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
+    menu: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+    close: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+    search: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.8"/><path d="M20 20l-4.3-4.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+    phone: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.6 10.8c1.4 2.8 3.8 5.2 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.2.5 2.5.8 3.8.9.6 0 1 .5.9 1.1l-.4 3.2c0 .5-.5.9-1 .9C10.6 21.1 3 13.4 3 4.3c0-.5.4-1 .9-1l3.2-.4c.6-.1 1 .3 1.1.9.1 1.3.4 2.6.9 3.8.2.3.1.7-.2 1L6.6 10.8Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>',
+    chevronLeft: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    chevronRight: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    user: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="8" r="3.4" stroke="currentColor" stroke-width="1.8"/><path d="M5 20c1-3.4 4-5.2 7-5.2s6 1.8 7 5.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+    userLarge: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.6"/><path d="M4.5 20c1.2-4 4.4-6 7.5-6s6.3 2 7.5 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+    checkCircle: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M8.5 12.5l2.3 2.3 4.7-5.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    alertCircle: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 8v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="16" r="0.9" fill="currentColor"/></svg>',
+    empty: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 19h16M6 19V9l6-4 6 4v10M10 19v-5h4v5" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+    map: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 3 4 5v16l5-2 6 2 5-2V3l-5 2-6-2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 3v16M15 5v16" stroke="currentColor" stroke-width="1.6"/></svg>',
+    eye: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="12" cy="12" r="2.6" stroke="currentColor" stroke-width="1.7"/></svg>',
+    eyeOff: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 3l18 18M10.6 5.2A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a15.8 15.8 0 0 1-3 3.9M6.1 6.9C3.9 8.6 2 12 2 12s3.6 7 10 7c1.1 0 2.1-.2 3-.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.9 9.9a2.6 2.6 0 0 0 3.7 3.7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+    copy: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M5 15V6a2 2 0 0 1 2-2h9" stroke="currentColor" stroke-width="1.6"/></svg>',
+
+    // Vehicle-category icons
+    cng: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 15.5V11l1.6-4.2A2 2 0 0 1 7.5 5.5h9a2 2 0 0 1 1.9 1.3L20 11v4.5" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M4 15.5h16v2.5a1 1 0 0 1-1 1h-1.3a1 1 0 0 1-1-.8l-.2-.7H7.5l-.2.7a1 1 0 0 1-1 .8H5a1 1 0 0 1-1-1v-2.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="8" cy="19.5" r="1.3" stroke="currentColor" stroke-width="1.4"/><circle cx="16" cy="19.5" r="1.3" stroke="currentColor" stroke-width="1.4"/><path d="M8 11h8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
+    auto: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 16 6.4 9.6A2 2 0 0 1 8.4 8h5.7a2 2 0 0 1 1.9 1.4L18 16" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M3.5 16h17v2a1 1 0 0 1-1 1h-1.1a1 1 0 0 1-1-.8L17.2 17H6.8l-.2 1.2a1 1 0 0 1-1 .8H4.5a1 1 0 0 1-1-1v-2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="7.5" cy="19.2" r="1.1" stroke="currentColor" stroke-width="1.3"/><circle cx="16.5" cy="19.2" r="1.1" stroke="currentColor" stroke-width="1.3"/></svg>',
+    van: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 16V9a1 1 0 0 1 1-1h9l4.5 3.5V16" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 16h14.5v-.5A1 1 0 0 1 18.5 15h1.5a1 1 0 0 1 1 1v0" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 16v1.5a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-.3M17 17.5a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-1" stroke="currentColor" stroke-width="1.6"/><circle cx="7.2" cy="17.3" r="1.3" stroke="currentColor" stroke-width="1.3"/><circle cx="16" cy="17.3" r="1.3" stroke="currentColor" stroke-width="1.3"/></svg>',
+    other: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="17" r="2" stroke="currentColor" stroke-width="1.6"/><circle cx="17" cy="17" r="2" stroke="currentColor" stroke-width="1.6"/><path d="M7 17h6l2-8h4M13 9l2 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+  };
+
+  Icons.vehicle = function (slug) {
+    return Icons[slug] || Icons.other;
+  };
+
+  window.Icons = Icons;
+})(window);
