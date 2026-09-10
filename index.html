@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Amader Drivers — Find Local Drivers Easily</title>
+  <meta name="description" content="Find CNG, Auto, Van and other local drivers near your bazar and call them directly. No account needed to search." />
+  <meta name="theme-color" content="#1F6E4A" />
+  <meta property="og:title" content="Amader Drivers" />
+  <meta property="og:description" content="Find local drivers near your bazar and call them directly." />
+  <meta property="og:type" content="website" />
+
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="css/themes.css" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/responsive.css" />
+</head>
+<body>
+  <a class="skip-link" href="#app" data-i18n="a11y.skipToContent">Skip to content</a>
+
+  <header class="site-header">
+    <div class="container site-header__bar">
+      <a class="brand" href="#/">
+        <span class="brand__mark" aria-hidden="true"></span>
+        <span data-i18n="site.name">Amader Drivers</span>
+      </a>
+
+      <nav class="nav-primary" aria-label="Primary">
+        <a href="#/" data-nav-link="/" data-i18n="nav.home">Home</a>
+        <a href="#/markets" data-nav-link="/markets" data-i18n="nav.drivers">Drivers</a>
+        <a href="#/register" data-nav-link="/register" data-i18n="nav.register">Register</a>
+        <a href="#/login" data-nav-link="/login" data-auth-link="loggedOut" data-i18n="nav.login">Login</a>
+        <a href="#/profile" data-nav-link="/profile" data-auth-link="loggedIn" data-i18n="nav.profile">Profile</a>
+      </nav>
+
+      <div class="header-controls">
+        <div class="lang-toggle" role="group" aria-label="Language">
+          <button type="button" data-lang-toggle="en">EN</button>
+          <button type="button" data-lang-toggle="bn">বাংলা</button>
+        </div>
+        <button type="button" class="icon-btn" data-theme-toggle aria-label="Toggle dark mode" aria-pressed="false">
+          <span data-theme-icon="dark"></span>
+        </button>
+        <button type="button" class="icon-btn menu-toggle" id="menu-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav"></button>
+      </div>
+    </div>
+
+    <nav class="mobile-nav" id="mobile-nav" aria-label="Mobile">
+      <ul>
+        <li><a href="#/" data-i18n="nav.home">Home</a></li>
+        <li><a href="#/markets" data-i18n="nav.drivers">Drivers</a></li>
+        <li><a href="#/register" data-i18n="nav.register">Register</a></li>
+        <li><a href="#/login" data-auth-link="loggedOut" data-i18n="nav.login">Login</a></li>
+        <li><a href="#/profile" data-auth-link="loggedIn" data-i18n="nav.profile">Profile</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="app" tabindex="-1"></main>
+
+  <footer class="site-footer">
+    <div class="container footer-compact">
+      <div class="footer-row footer-row--top">
+        <a class="footer-brand" href="#/">
+          <span class="brand__mark brand__mark--sm" aria-hidden="true"></span>
+          <span data-i18n="site.name">Amader Drivers</span>
+        </a>
+        <nav class="footer-nav" aria-label="Footer">
+          <a href="#/markets" data-i18n="nav.drivers">Drivers</a>
+          <a href="#/register" data-i18n="nav.register">Register</a>
+          <a href="#/login" data-i18n="nav.login">Login</a>
+        </nav>
+      </div>
+      <div class="footer-row footer-row--bottom">
+        <span>© <span data-year></span> <span data-i18n="site.name">Amader Drivers</span> · <span data-i18n="footer.rights">All rights reserved.</span></span>
+        <div class="lang-toggle lang-toggle--sm" role="group" aria-label="Language">
+          <button type="button" data-lang-toggle="en">EN</button>
+          <button type="button" data-lang-toggle="bn">বাংলা</button>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <div class="toast-region" id="toast-region" aria-live="polite"></div>
+
+  <!-- Public configuration (no secrets — see config/config.example.js) -->
+  <script src="config/config.js"></script>
+
+  <!-- Core modules (order matters: later files depend on earlier ones) -->
+  <script src="js/utils.js"></script>
+  <script src="js/icons.js"></script>
+  <script src="js/language.js"></script>
+  <script src="js/theme.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/search.js"></script>
+  <script src="js/app.js"></script>
+
+  <!-- Screens (each registers its own route(s) with the router) -->
+  <script src="js/drivers.js"></script>
+  <script src="js/registration.js"></script>
+  <script src="js/profile.js"></script>
+
+  <script>
+    // Small inline glue that doesn't warrant its own file:
+    // brand/theme icon injection + footer year.
+    document.addEventListener("DOMContentLoaded", function () {
+      document.querySelectorAll(".brand__mark").forEach(function (n) { n.innerHTML = Icons.logo; });
+      var themeIcon = document.querySelector("[data-theme-icon]");
+      function paintThemeIcon() { themeIcon.innerHTML = Theme.current() === "dark" ? Icons.sun : Icons.moon; }
+      paintThemeIcon();
+      document.addEventListener("nobi:themechange", paintThemeIcon);
+      var menuIcon = document.getElementById("menu-toggle");
+      menuIcon.innerHTML = Icons.menu;
+      menuIcon.addEventListener("click", function () {
+        var open = document.getElementById("mobile-nav").classList.contains("is-open");
+        menuIcon.innerHTML = open ? Icons.menu : Icons.close;
+      });
+      var yearEl = document.querySelector("[data-year]");
+      if (yearEl) yearEl.textContent = new Date().getFullYear();
+    });
+  </script>
+</body>
+</html>
