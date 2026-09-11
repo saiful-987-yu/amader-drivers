@@ -47,6 +47,47 @@
   }
 
   // ---------------------------------------------------------
+  // DRIVER DETAILS MODAL <-> BACK BUTTON INTEGRATION
+  // ---------------------------------------------------------
+  // Only one driver-details modal exists at a time, so a couple of
+  // shared flags are enough to coordinate it with the browser's
+  // history. First Back press closes the modal only; the underlying
+  // page/route is untouched and the next Back continues normally.
+  let driverModalHistoryPushed = false;
+  let driverModalClosingFromPopstate = false;
+
+  function openDriverModalWithHistory(contentNode) {
+    function onPopState() {
+      driverModalClosingFromPopstate = true;
+      window.removeEventListener("popstate", onPopState);
+      Modal.close();
+    }
+
+    Modal.open(contentNode, {
+      onClose: () => {
+        window.removeEventListener("popstate", onPopState);
+        const wasFromPopstate = driverModalClosingFromPopstate;
+        driverModalClosingFromPopstate = false;
+        if (driverModalHistoryPushed) {
+          driverModalHistoryPushed = false;
+          if (!wasFromPopstate) {
+            // Closed via X / overlay / Escape / breadcrumb link — collapse
+            // the extra history entry so Back never hits a phantom stop.
+            history.back();
+          }
+        }
+      }
+    });
+
+    // Push a history entry (same hash — no route change) so the first
+    // Back press closes this modal instead of leaving it stranded on
+    // top of whatever the underlying page's own Back would do.
+    history.pushState({ driverModal: true }, "", window.location.hash || "#/");
+    driverModalHistoryPushed = true;
+    window.addEventListener("popstate", onPopState);
+  }
+
+  // ---------------------------------------------------------
   // DRIVER CARD + DETAIL
   // ---------------------------------------------------------
   function driverPhotoNode(driver, size) {
@@ -57,7 +98,7 @@
       // starts loading — the card/detail body never waits on the
       // photo. `loading="lazy"` defers off-screen photos so a long
       // driver grid doesn't fetch every image up front.
-      const img = Utils.el("img", { alt: driver.name, loading: "lazy", decoding: "async" });
+      const img = Utils.el("img", { alt: Utils.driverDisplayName(driver), loading: "lazy", decoding: "async" });
       img.src = url;
       img.addEventListener("error", () => {
         wrap.innerHTML = size === "large" ? Icons.userLarge : Icons.user;
@@ -119,7 +160,7 @@
     const actions = [
       Utils.el("button", {
         class: "driver-card__call-btn",
-        "aria-label": Lang.t("driver.call") + " " + driver.name,
+        "aria-label": Lang.t("driver.call") + " " + Utils.driverDisplayName(driver),
         html: Icons.phone + "<span>" + Lang.t("driver.call") + "</span>",
         disabled: driver.availability !== "active" ? "true" : null,
         onClick: (e) => driver.availability === "active" && handleCall(driver, e)
@@ -128,7 +169,7 @@
     if (whatsappNumber) {
       actions.push(Utils.el("a", {
         class: "whatsapp-btn", href: Utils.waLink(whatsappNumber), target: "_blank", rel: "noopener",
-        "aria-label": Lang.t("driver.whatsapp") + " " + driver.name, html: Icons.whatsapp,
+        "aria-label": Lang.t("driver.whatsapp") + " " + Utils.driverDisplayName(driver), html: Icons.whatsapp,
         onClick: (e) => e.stopPropagation()
       }));
     }
@@ -139,13 +180,13 @@
 
     const card = Utils.el("div", {
       class: "driver-card", tabindex: "0", role: "button",
-      "aria-label": driver.name,
+      "aria-label": Utils.driverDisplayName(driver),
       onClick: () => openDriverDetail(driver, crumbTrail),
       onKeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDriverDetail(driver, crumbTrail); } }
     }, [
       driverPhotoNode(driver, "small"),
       Utils.el("div", { class: "driver-card__body" }, [
-        Utils.el("div", { class: "driver-card__name", text: driver.name }),
+        Utils.el("div", { class: "driver-card__name", text: Utils.driverDisplayName(driver) }),
         vehicleServiceLine(driver, vehicleLabel),
         experienceRatingRow(driver),
         statusNode(driver),
@@ -178,7 +219,7 @@
     const urls = Utils.splitMulti(driver.vehicleImageUrl).map(Utils.resolveImageUrl).filter(Boolean);
     if (!urls.length) return null;
 
-    const mainImg = Utils.el("img", { alt: driver.name, loading: "lazy", decoding: "async" });
+    const mainImg = Utils.el("img", { alt: Utils.driverDisplayName(driver), loading: "lazy", decoding: "async" });
     const thumbButtons = [];
     let current = 0;
 
@@ -275,7 +316,7 @@
   function openDriverDetail(driver, crumbTrail) {
     const children = [];
     if (crumbTrail && crumbTrail.length) {
-      const crumbNode = ViewHelpers.breadcrumb(crumbTrail.concat([{ label: driver.name }]));
+      const crumbNode = ViewHelpers.breadcrumb(crumbTrail.concat([{ label: Utils.driverDisplayName(driver) }]));
       // Breadcrumb links navigate the underlying page — always close
       // this modal first so it doesn't stay stuck open on top of it.
       Utils.qsa("a", crumbNode).forEach((a) => a.addEventListener("click", () => Modal.close()));
@@ -285,7 +326,7 @@
     // Name + Close share one header row, directly under the breadcrumb.
     // The close button lives ONLY here — never beside the gallery below.
     children.push(Utils.el("div", { class: "detail-name-row" }, [
-      Utils.el("h2", { class: "detail-name", text: driver.name }),
+      Utils.el("h2", { class: "detail-name", text: Utils.driverDisplayName(driver) }),
       Utils.el("button", { class: "icon-btn", "aria-label": Lang.t("a11y.closeModal"), html: Icons.close, onClick: () => Modal.close() })
     ]));
 
@@ -321,16 +362,24 @@
     ]));
     children.push(Utils.el("div", { class: "detail-row" }, expRatingCols));
 
+    /** A clickable phone number with a small, consistent call icon in front (still plain text, not a big button). */
+    function phoneLinkNode(number) {
+      return Utils.el("a", { class: "detail-col__value detail-col__value--link detail-col__value--phone", href: "tel:" + Utils.normalizePhone(number) }, [
+        Utils.el("span", { class: "detail-col__phone-icon", "aria-hidden": "true", html: Icons.phone }),
+        document.createTextNode(number)
+      ]);
+    }
+
     const phoneCols = [
       Utils.el("div", { class: "detail-col" }, [
         Utils.el("div", { class: "detail-col__label", text: Lang.t("driver.phone") }),
-        Utils.el("a", { class: "detail-col__value detail-col__value--link", href: "tel:" + Utils.normalizePhone(driver.phone), text: driver.phone })
+        phoneLinkNode(driver.phone)
       ])
     ];
     if (driver.altPhone) {
       phoneCols.push(Utils.el("div", { class: "detail-col" }, [
         Utils.el("div", { class: "detail-col__label", text: Lang.t("driver.altPhone") }),
-        Utils.el("a", { class: "detail-col__value detail-col__value--link", href: "tel:" + Utils.normalizePhone(driver.altPhone), text: driver.altPhone })
+        phoneLinkNode(driver.altPhone)
       ]));
     }
     children.push(Utils.el("div", { class: "detail-row" }, phoneCols));
@@ -371,7 +420,7 @@
 
     children.push(buildRatingSection());
 
-    Modal.open(Utils.el("div", {}, children));
+    openDriverModalWithHistory(Utils.el("div", {}, children));
   }
 
   // ---------------------------------------------------------
@@ -385,10 +434,16 @@
         Utils.el("div", { class: "hero__eyebrow", html: Icons.map + "<span>" + Lang.t("site.tagline") + "</span>" }),
         Utils.el("h1", { text: Lang.t("hero.heading") }),
         Utils.el("p", { text: Lang.t("hero.sub") }),
-        Utils.el("button", {
-          class: "btn btn--primary", text: Lang.t("hero.cta"),
-          onClick: () => Router.navigate("/markets")
-        })
+        Utils.el("div", { class: "hero__actions" }, [
+          Utils.el("button", {
+            class: "btn btn--primary", text: Lang.t("hero.cta"),
+            onClick: () => Router.navigate("/markets")
+          }),
+          Utils.el("button", {
+            class: "btn btn--danger", html: Icons.emergency + "<span>" + Lang.t("hero.emergencyCta") + "</span>",
+            onClick: () => Router.navigate("/emergency")
+          })
+        ])
       ])
     ]);
     app.appendChild(hero);
@@ -418,14 +473,98 @@
     }
   }
 
+  /** Generic "Others" tile — reveals everything when the list was capped. */
+  function othersChip(onClick) {
+    return Utils.el("button", { class: "chip-card chip-card--others", onClick }, [
+      Utils.el("div", { class: "chip-card__icon", html: Icons.more }),
+      Utils.el("div", { class: "chip-card__name", text: Lang.t("action.others") })
+    ]);
+  }
+
+  /**
+   * 4 or fewer items -> show them all directly. More than 4 -> show only
+   * the first 3 plus an "Others" tile that expands the grid in place to
+   * reveal the rest (no navigation, no extra request).
+   */
+  function cappedChipGrid(items, buildChip) {
+    if (!items.length) return null;
+    let expanded = false;
+    const container = Utils.el("div", { class: "chip-grid" });
+    function paint() {
+      container.innerHTML = "";
+      const capped = items.length > 4 && !expanded;
+      const visible = capped ? items.slice(0, 3) : items;
+      visible.forEach((item) => container.appendChild(buildChip(item)));
+      if (capped) container.appendChild(othersChip(() => { expanded = true; paint(); }));
+    }
+    paint();
+    return container;
+  }
+
   function marketGrid(markets, onSelect) {
     if (!markets.length) return ViewHelpers.emptyBlock({ message: Lang.t("market.empty") });
-    return Utils.el("div", { class: "chip-grid" }, markets.map((m) =>
+    return cappedChipGrid(markets, (m) =>
       Utils.el("button", { class: "chip-card", onClick: () => onSelect(m) }, [
         Utils.el("div", { class: "chip-card__icon", html: Icons.map }),
         Utils.el("div", { class: "chip-card__name", text: marketName(m) })
       ])
-    ));
+    );
+  }
+
+  /** Vehicle-category chip: existing small icon + optional category image + name + dynamic online count. */
+  function vehicleChip(v, onSelect, onlineCount) {
+    const topChildren = [Utils.el("div", { class: "chip-card__icon", html: Icons.vehicle(v.slug) })];
+    const imgUrl = Utils.resolveImageUrl(v.imageUrl);
+    if (imgUrl) {
+      const img = Utils.el("img", { alt: "", loading: "lazy" });
+      img.src = imgUrl;
+      const imgWrap = Utils.el("div", { class: "chip-card__image" }, [img]);
+      // No image URL, or a broken one -> just fall back to the icon alone (never a broken-image icon).
+      img.addEventListener("error", () => imgWrap.remove());
+      topChildren.push(imgWrap);
+    }
+    const count = onlineCount || 0;
+    return Utils.el("button", { class: "chip-card chip-card--vehicle", onClick: () => onSelect(v) }, [
+      Utils.el("div", { class: "chip-card__top" }, topChildren),
+      Utils.el("div", { class: "chip-card__name", text: vehicleName(v) }),
+      Utils.el("div", { class: "chip-card__online" }, [
+        Utils.el("span", { class: "online-dot", "aria-hidden": "true" }),
+        Utils.el("span", { text: Lang.t("vehicle.onlineCount", { n: count }) })
+      ])
+    ]);
+  }
+
+  function vehicleGrid(vehicles, onSelect, onlineCounts) {
+    if (!vehicles.length) return ViewHelpers.emptyBlock({ message: Lang.t("vehicle.empty") });
+    return cappedChipGrid(vehicles, (v) => vehicleChip(v, onSelect, (onlineCounts && onlineCounts.get(v.slug)) || 0));
+  }
+
+  /** Set of vehicle-type slugs that have at least one approved driver in the given market (multi-value aware). */
+  function categoriesWithDrivers(directory, marketSlug) {
+    const set = new Set();
+    directory.forEach((d) => {
+      if (Utils.splitMulti(d.marketSlug).includes(marketSlug)) {
+        Utils.splitMulti(d.vehicleType).forEach((slug) => set.add(slug));
+      }
+    });
+    return set;
+  }
+
+  /**
+   * Map of vehicle-type slug -> count of currently AVAILABLE (not
+   * unavailable/offline) drivers in the given market, multi-value aware.
+   * Reuses the existing availability flag — no new status system.
+   */
+  function onlineCountByCategory(directory, marketSlug) {
+    const counts = new Map();
+    directory.forEach((d) => {
+      if (d.availability !== "active") return;
+      if (!Utils.splitMulti(d.marketSlug).includes(marketSlug)) return;
+      Utils.splitMulti(d.vehicleType).forEach((slug) => {
+        counts.set(slug, (counts.get(slug) || 0) + 1);
+      });
+    });
+    return counts;
   }
 
   function appendHowItWorks(app) {
@@ -491,22 +630,23 @@
 
     const cachedMarkets = Api.peekMarkets();
     const cachedVehicles = Api.peekVehicleCategories();
+    const cachedDirectory = Api.peekDriverDirectory();
 
-    function buildBody(market, vehicles) {
-      return vehicles.length
-        ? Utils.el("div", { class: "chip-grid" }, vehicles.map((v) =>
-            Utils.el("button", { class: "chip-card", onClick: () => Router.navigate(`/drivers/${market.slug}/${v.slug}`) }, [
-              Utils.el("div", { class: "chip-card__icon", html: Icons.vehicle(v.slug) }),
-              Utils.el("div", { class: "chip-card__name", text: vehicleName(v) })
-            ])
-          ))
-        : ViewHelpers.emptyBlock({ message: Lang.t("vehicle.empty") });
+    // A category only appears for THIS market if at least one approved
+    // driver there actually has that vehicle type — an active category
+    // with zero drivers in this particular market stays hidden here.
+    function buildBody(market, vehicles, directory) {
+      const availableSlugs = categoriesWithDrivers(directory, market.slug);
+      const filtered = vehicles.filter((v) => availableSlugs.has(v.slug));
+      const onlineCounts = onlineCountByCategory(directory, market.slug);
+      return vehicleGrid(filtered, (v) => Router.navigate(`/drivers/${market.slug}/${v.slug}`), onlineCounts);
     }
 
     // If we already know the market slug is invalid we still need a
     // network round trip once to find out — but if markets are cached
     // we can validate synchronously and avoid a flash of the wrong UI.
     const knownMarket = cachedMarkets && cachedMarkets.find((m) => m.slug === params.market);
+    const allCachedReady = knownMarket && cachedVehicles && cachedDirectory;
 
     const crumb = ViewHelpers.breadcrumb([
       { label: Lang.t("nav.home"), path: "/" },
@@ -519,14 +659,14 @@
         Utils.el("h2", { text: Lang.t("vehicle.chooseHeading") }),
         Utils.el("p", { "data-market-sub": "true", text: knownMarket ? Lang.t("vehicle.chooseSub", { market: marketName(knownMarket) }) : "" })
       ]),
-      (knownMarket && cachedVehicles) ? buildBody(knownMarket, cachedVehicles) : ViewHelpers.loadingBlock(Lang.t("vehicle.loading"))
+      allCachedReady ? buildBody(knownMarket, cachedVehicles, cachedDirectory) : ViewHelpers.loadingBlock(Lang.t("vehicle.loading"))
     ]);
     app.appendChild(section);
 
-    if (knownMarket && cachedVehicles) return;
+    if (allCachedReady) return;
 
     try {
-      const [markets, vehicles] = await Promise.all([Api.getMarkets(), Api.getVehicleCategories()]);
+      const [markets, vehicles, directory] = await Promise.all([Api.getMarkets(), Api.getVehicleCategories(), Api.getDriverDirectory()]);
       const market = markets.find((m) => m.slug === params.market);
       if (!market) { Router.navigate("/markets"); return; }
 
@@ -536,7 +676,7 @@
       ]);
       section.replaceChild(freshCrumb, section.firstChild);
       section.querySelector("[data-market-sub]").textContent = Lang.t("vehicle.chooseSub", { market: marketName(market) });
-      section.replaceChild(buildBody(market, vehicles), section.lastChild);
+      section.replaceChild(buildBody(market, vehicles, directory), section.lastChild);
     } catch (err) {
       section.replaceChild(ViewHelpers.errorBlock(Lang.t("error.network"), () => renderVehicles(app, params)), section.lastChild);
     }
@@ -694,9 +834,52 @@
     searchInput.focus();
   }
 
+  // ---------------------------------------------------------
+  // EMERGENCY CONTACT LIST (/emergency)
+  // ---------------------------------------------------------
+  async function renderEmergencyList(app) {
+    app.innerHTML = "";
+
+    const crumb = ViewHelpers.breadcrumb([
+      { label: Lang.t("nav.home"), path: "/" },
+      { label: Lang.t("emergency.heading") }
+    ]);
+    const resultsWrap = Utils.el("div", {});
+    const section = Utils.el("section", { class: "section container" }, [
+      crumb,
+      Utils.el("div", { class: "section-head" }, [
+        Utils.el("h2", { text: Lang.t("emergency.heading") }),
+        Utils.el("p", { text: Lang.t("emergency.sub") })
+      ]),
+      resultsWrap
+    ]);
+    app.appendChild(section);
+
+    const alreadyCached = !!Api.peekDriverDirectory();
+    if (!alreadyCached) resultsWrap.appendChild(ViewHelpers.loadingBlock(Lang.t("drivers.loading")));
+
+    try {
+      const list = await Api.getEmergencyDrivers();
+      resultsWrap.innerHTML = "";
+      if (!list.length) {
+        resultsWrap.appendChild(ViewHelpers.emptyBlock({ message: Lang.t("empty.noEmergency") }));
+        return;
+      }
+      const crumbTrail = [
+        { label: Lang.t("nav.home"), path: "/" },
+        { label: Lang.t("emergency.heading"), path: "/emergency" }
+      ];
+      resultsWrap.appendChild(Utils.el("div", { class: "driver-grid" }, list.map((d) => driverCard(d, null, crumbTrail))));
+    } catch (err) {
+      resultsWrap.innerHTML = "";
+      resultsWrap.appendChild(ViewHelpers.errorBlock(Lang.t("error.network"), () => renderEmergencyList(app)));
+    }
+  }
+
   Router.register("/", renderHome);
   Router.register("/markets", renderMarkets);
   Router.register("/vehicles/:market", renderVehicles);
   Router.register("/drivers/:market/:vehicle", renderDriverList);
   Router.register("/search", renderSearch);
+  Router.register("/emergency", renderEmergencyList);
 })(window, document, window.Utils, window.Lang, window.Icons, window.Api, window.Router, window.ViewHelpers, window.Modal, window.Toast, window.Search);

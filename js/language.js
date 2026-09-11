@@ -32,6 +32,10 @@
       "hero.heading": "Find Your Local Driver Easily",
       "hero.sub": "Browse CNG, Auto, Van and other local drivers by bazar and call them directly — no account needed.",
       "hero.cta": "Select Your Bazar",
+      "hero.emergencyCta": "Emergency Contact",
+      "emergency.heading": "Emergency Contact",
+      "emergency.sub": "Drivers marked for emergency contact, from any bazar or vehicle type.",
+      "empty.noEmergency": "No emergency contact drivers are available right now.",
 
       "market.chooseHeading": "Choose Your Bazar",
       "market.chooseSub": "Select the market area you're in or heading to.",
@@ -43,6 +47,7 @@
       "vehicle.loading": "Loading vehicle types…",
       "vehicle.empty": "No vehicle types are available for this bazar yet.",
       "vehicle.backToMarkets": "Change Bazar",
+      "vehicle.onlineCount": "{n} Online",
 
       "search.placeholder": "Search driver name or phone number…",
       "search.heading": "Quick Search",
@@ -144,6 +149,7 @@
       "action.cancel": "Cancel",
       "action.confirm": "Confirm",
       "action.close": "Close",
+      "action.others": "Others",
       "action.edit": "Edit",
 
       "register.success.title": "Application Submitted",
@@ -219,6 +225,10 @@
       "hero.heading": "সহজেই আপনার স্থানীয় ড্রাইভার খুঁজুন",
       "hero.sub": "বাজার অনুযায়ী সিএনজি, অটো, ভ্যান ও অন্যান্য স্থানীয় ড্রাইভার দেখুন এবং সরাসরি কল করুন — কোনো অ্যাকাউন্ট লাগবে না।",
       "hero.cta": "আপনার বাজার নির্বাচন করুন",
+      "hero.emergencyCta": "ইমার্জেন্সি যোগাযোগ",
+      "emergency.heading": "ইমার্জেন্সি যোগাযোগ",
+      "emergency.sub": "যেকোনো বাজার বা যানবাহনের ধরনের ইমার্জেন্সি যোগাযোগের জন্য চিহ্নিত ড্রাইভার।",
+      "empty.noEmergency": "এই মুহূর্তে কোনো ইমার্জেন্সি যোগাযোগ ড্রাইভার উপলব্ধ নেই।",
 
       "market.chooseHeading": "আপনার বাজার নির্বাচন করুন",
       "market.chooseSub": "আপনি যে বাজার এলাকায় আছেন বা যাচ্ছেন তা বেছে নিন।",
@@ -230,6 +240,7 @@
       "vehicle.loading": "যানবাহনের ধরন লোড হচ্ছে…",
       "vehicle.empty": "এই বাজারের জন্য এখনো কোনো যানবাহনের ধরন নেই।",
       "vehicle.backToMarkets": "বাজার পরিবর্তন করুন",
+      "vehicle.onlineCount": "{n} জন অনলাইন",
 
       "search.placeholder": "ড্রাইভারের নাম বা ফোন নম্বর খুঁজুন…",
       "search.heading": "দ্রুত খুঁজুন",
@@ -331,6 +342,7 @@
       "action.cancel": "বাতিল",
       "action.confirm": "নিশ্চিত করুন",
       "action.close": "বন্ধ করুন",
+      "action.others": "অন্যান্য",
       "action.edit": "সম্পাদনা",
 
       "register.success.title": "আবেদন জমা হয়েছে",

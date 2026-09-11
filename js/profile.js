@@ -112,7 +112,7 @@
     const photoWrap = Utils.el("div", { class: "profile-photo" });
     const url = Utils.resolveImageUrl(driver.imageUrl);
     if (url) {
-      const img = Utils.el("img", { alt: driver.name });
+      const img = Utils.el("img", { alt: Utils.driverDisplayName(driver) });
       img.src = url;
       img.addEventListener("error", () => { photoWrap.innerHTML = Icons.userLarge; });
       photoWrap.appendChild(img);
@@ -172,7 +172,7 @@
       Utils.el("div", { class: "profile-top" }, [
         photoWrap,
         Utils.el("div", {}, [
-          Utils.el("div", { class: "profile-name", text: driver.name }),
+          Utils.el("div", { class: "profile-name", text: Utils.driverDisplayName(driver) }),
           Utils.el("div", { class: "profile-sub", text: (driver.vehicleType || "").toUpperCase() })
         ])
       ]),

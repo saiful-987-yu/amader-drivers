@@ -33,6 +33,7 @@
   const Modal = {};
   let activeOverlay = null;
   let lastFocused = null;
+  let activeOnClose = null;
 
   Modal.open = function (contentNode, opts) {
     Modal.close();
@@ -45,6 +46,7 @@
     });
     document.body.appendChild(overlay);
     activeOverlay = overlay;
+    activeOnClose = (opts && opts.onClose) || null;
     const focusable = sheet.querySelector("button, [href], input, select, textarea, [tabindex]");
     if (focusable) focusable.focus();
     document.addEventListener("keydown", onKeydown);
@@ -61,6 +63,9 @@
       activeOverlay = null;
       document.removeEventListener("keydown", onKeydown);
       if (lastFocused && lastFocused.focus) lastFocused.focus();
+      const cb = activeOnClose;
+      activeOnClose = null;
+      if (cb) cb();
     }
   };
 

@@ -133,25 +133,36 @@
       if (!Utils.storage.get(KEYS.markets)) {
         Utils.storage.set(KEYS.markets, [
           { id: "M001", slug: "nobi-bazar", nameEn: "Nobi Bazar", nameBn: "নবী বাজার", status: "active", sortOrder: 1 },
-          { id: "M002", slug: "bangla-bazar", nameEn: "Bangla Bazar", nameBn: "বাংলা বাজার", status: "active", sortOrder: 2 }
+          { id: "M002", slug: "bangla-bazar", nameEn: "Bangla Bazar", nameBn: "বাংলা বাজার", status: "active", sortOrder: 2 },
+          { id: "M003", slug: "station-bazar", nameEn: "Station Bazar", nameBn: "স্টেশন বাজার", status: "active", sortOrder: 3 },
+          { id: "M004", slug: "new-market", nameEn: "New Market", nameBn: "নিউ মার্কেট", status: "active", sortOrder: 4 },
+          { id: "M005", slug: "central-bazar", nameEn: "Central Bazar", nameBn: "সেন্ট্রাল বাজার", status: "active", sortOrder: 5 }
         ]);
       }
       if (!Utils.storage.get(KEYS.vehicles)) {
         Utils.storage.set(KEYS.vehicles, [
-          { id: "C001", slug: "cng", nameEn: "CNG", nameBn: "সিএনজি", icon: "cng", status: "active", sortOrder: 1 },
-          { id: "C002", slug: "auto", nameEn: "Auto", nameBn: "অটো", icon: "auto", status: "active", sortOrder: 2 },
-          { id: "C003", slug: "van", nameEn: "Van", nameBn: "ভ্যান", icon: "van", status: "active", sortOrder: 3 },
-          { id: "C004", slug: "other", nameEn: "Other", nameBn: "অন্যান্য", icon: "other", status: "active", sortOrder: 4 }
+          { id: "C001", slug: "cng", nameEn: "CNG", nameBn: "সিএনজি", icon: "cng", imageUrl: "https://picsum.photos/seed/cat-cng/300/150", status: "active", sortOrder: 1 },
+          { id: "C002", slug: "auto", nameEn: "Auto", nameBn: "অটো", icon: "auto", imageUrl: "https://picsum.photos/seed/cat-auto/300/150", status: "active", sortOrder: 2 },
+          { id: "C003", slug: "motorcycle", nameEn: "Motorcycle", nameBn: "মোটরসাইকেল", icon: "motorcycle", imageUrl: "", status: "active", sortOrder: 3 },
+          { id: "C004", slug: "van", nameEn: "Van", nameBn: "ভ্যান", icon: "van", imageUrl: "https://picsum.photos/seed/cat-van/300/150", status: "active", sortOrder: 4 },
+          { id: "C005", slug: "easy-bike", nameEn: "Easy Bike", nameBn: "ইজি বাইক", icon: "easy-bike", imageUrl: "", status: "active", sortOrder: 5 },
+          { id: "C006", slug: "pickup", nameEn: "Pickup", nameBn: "পিকআপ", icon: "pickup", imageUrl: "", status: "active", sortOrder: 6 },
+          { id: "C007", slug: "truck", nameEn: "Truck", nameBn: "ট্রাক", icon: "truck", imageUrl: "", status: "active", sortOrder: 7 },
+          { id: "C008", slug: "tractor", nameEn: "Tractor", nameBn: "ট্রাক্টর", icon: "tractor", imageUrl: "", status: "active", sortOrder: 8 },
+          { id: "C009", slug: "car", nameEn: "Car", nameBn: "কার", icon: "car", imageUrl: "", status: "active", sortOrder: 9 },
+          { id: "C010", slug: "microbus", nameEn: "Microbus", nameBn: "মাইক্রোবাস", icon: "microbus", imageUrl: "", status: "active", sortOrder: 10 }
         ]);
       }
       if (!Utils.storage.get(KEYS.drivers)) {
         Utils.storage.set(KEYS.drivers, [
-          { driverId: "D001", name: "Mohammad Karim", phone: "01711000001", altPhone: "", vehicleType: "cng", vehicleNumber: "DHA-CNG-1123", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar & surrounding roads", experience: "6 years", rating: "4.2", whatsapp: "F", imageUrl: "", vehicleImageUrl: "", username: "karim.driver", status: "active", availability: "active" },
-          { driverId: "D002", name: "Abdur Rahman", phone: "01711000002", altPhone: "01911000002", vehicleType: "cng", vehicleNumber: "DHA-CNG-2245", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar to Station Road", experience: "3 years", rating: "3.99", whatsapp: "A", imageUrl: "", vehicleImageUrl: "", username: "rahman.driver", status: "active", availability: "inactive" },
-          { driverId: "D003", name: "Jamal Uddin", phone: "01711000003", altPhone: "", vehicleType: "auto", vehicleNumber: "DHA-AUTO-0091", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar Market Area", experience: "8 years", rating: "5", whatsapp: "01800111222", imageUrl: "", vehicleImageUrl: "https://picsum.photos/seed/jamal-auto/600/450", username: "jamal.driver", status: "active", availability: "active" },
-          { driverId: "D004", name: "Selina Begum", phone: "01711000004", altPhone: "", vehicleType: "van", vehicleNumber: "DHA-VAN-0456", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar & nearby villages", experience: "", rating: "", whatsapp: "N", imageUrl: "", vehicleImageUrl: "", username: "selina.driver", status: "active", availability: "active" },
-          { driverId: "D005", name: "Farid Hossain", phone: "01711000005", altPhone: "", vehicleType: "auto", vehicleNumber: "DHA-AUTO-0154", marketSlug: "bangla-bazar", serviceArea: "", experience: "5 years", rating: "2", whatsapp: "", imageUrl: "", vehicleImageUrl: "", username: "farid.driver", status: "active", availability: "active" },
-          { driverId: "D006", name: "Nurul Islam", phone: "01711000006", altPhone: "01911000006", vehicleType: "cng, auto", vehicleNumber: "DHA-MULTI-7788", marketSlug: "nobi-bazar, bangla-bazar", serviceArea: "Nobi Bazar, Bangla Bazar, Station Road", experience: "7 years", rating: "4", whatsapp: "F", imageUrl: "", vehicleImageUrl: "https://picsum.photos/seed/nurul-1/600/450, https://picsum.photos/seed/nurul-2/600/450, https://picsum.photos/seed/nurul-3/600/450", username: "nurul.driver", status: "active", availability: "active" }
+          { driverId: "D001", name: "Mohammad Karim", nameBn: "মোহাম্মদ করিম", emergencyContact: "TRUE", phone: "01711000001", altPhone: "", vehicleType: "cng", vehicleNumber: "DHA-CNG-1123", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar & surrounding roads", experience: "6 years", rating: "4.2", whatsapp: "F", imageUrl: "", vehicleImageUrl: "", username: "karim.driver", status: "active", availability: "active" },
+          { driverId: "D002", name: "Abdur Rahman", nameBn: "", emergencyContact: "FALSE", phone: "01711000002", altPhone: "01911000002", vehicleType: "cng", vehicleNumber: "DHA-CNG-2245", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar to Station Road", experience: "3 years", rating: "3.99", whatsapp: "A", imageUrl: "", vehicleImageUrl: "", username: "rahman.driver", status: "active", availability: "inactive" },
+          { driverId: "D003", name: "Jamal Uddin", nameBn: "জামাল উদ্দিন", emergencyContact: "TRUE", phone: "01711000003", altPhone: "", vehicleType: "auto", vehicleNumber: "DHA-AUTO-0091", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar Market Area", experience: "8 years", rating: "5", whatsapp: "01800111222", imageUrl: "", vehicleImageUrl: "https://picsum.photos/seed/jamal-auto/600/450", username: "jamal.driver", status: "active", availability: "active" },
+          { driverId: "D004", name: "Selina Begum", nameBn: "সেলিনা বেগম", emergencyContact: "TRUE", phone: "01711000004", altPhone: "", vehicleType: "van", vehicleNumber: "DHA-VAN-0456", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar & nearby villages", experience: "", rating: "", whatsapp: "N", imageUrl: "", vehicleImageUrl: "", username: "selina.driver", status: "active", availability: "active" },
+          { driverId: "D005", name: "Farid Hossain", nameBn: "", emergencyContact: "", phone: "01711000005", altPhone: "", vehicleType: "auto", vehicleNumber: "DHA-AUTO-0154", marketSlug: "bangla-bazar", serviceArea: "", experience: "5 years", rating: "2", whatsapp: "", imageUrl: "", vehicleImageUrl: "", username: "farid.driver", status: "active", availability: "active" },
+          { driverId: "D006", name: "Nurul Islam", nameBn: "নুরুল ইসলাম", emergencyContact: "FALSE", phone: "01711000006", altPhone: "01911000006", vehicleType: "cng, auto", vehicleNumber: "DHA-MULTI-7788", marketSlug: "nobi-bazar, bangla-bazar", serviceArea: "Nobi Bazar, Bangla Bazar, Station Road", experience: "7 years", rating: "4", whatsapp: "F", imageUrl: "", vehicleImageUrl: "https://picsum.photos/seed/nurul-1/600/450, https://picsum.photos/seed/nurul-2/600/450, https://picsum.photos/seed/nurul-3/600/450", username: "nurul.driver", status: "active", availability: "active" },
+          { driverId: "D007", name: "Kamal Hossain", nameBn: "কামাল হোসেন", emergencyContact: "TRUE", phone: "01711000007", altPhone: "", vehicleType: "motorcycle", vehicleNumber: "DHA-MOTO-2201", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar Bypass Road", experience: "4 years", rating: "4.5", whatsapp: "F", imageUrl: "", vehicleImageUrl: "", username: "kamal.driver", status: "active", availability: "active" },
+          { driverId: "D008", name: "Anwar Sheikh", nameBn: "", emergencyContact: "", phone: "01711000008", altPhone: "", vehicleType: "easy-bike", vehicleNumber: "DHA-EASY-3390", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar Local Roads", experience: "2 years", rating: "3", whatsapp: "N", imageUrl: "", vehicleImageUrl: "", username: "anwar.driver", status: "active", availability: "active" }
         ]);
       }
       if (!Utils.storage.get(KEYS.pending)) Utils.storage.set(KEYS.pending, []);
@@ -165,7 +176,9 @@
           { username: "jamal.driver", phone: "01711000003", password: "demo1234", driverId: "D003" },
           { username: "selina.driver", phone: "01711000004", password: "demo1234", driverId: "D004" },
           { username: "farid.driver", phone: "01711000005", password: "demo1234", driverId: "D005" },
-          { username: "nurul.driver", phone: "01711000006", password: "demo1234", driverId: "D006" }
+          { username: "nurul.driver", phone: "01711000006", password: "demo1234", driverId: "D006" },
+          { username: "kamal.driver", phone: "01711000007", password: "demo1234", driverId: "D007" },
+          { username: "anwar.driver", phone: "01711000008", password: "demo1234", driverId: "D008" }
         ]);
       }
     }
@@ -316,6 +329,7 @@
     return {
       driverId: d.driverId,
       name: d.name,
+      nameBn: d.nameBn || "",
       phone: d.phone,
       altPhone: d.altPhone || "",
       vehicleType: d.vehicleType,
@@ -327,7 +341,8 @@
       whatsapp: d.whatsapp || "",
       imageUrl: d.imageUrl || "",
       vehicleImageUrl: d.vehicleImageUrl || "",
-      availability: d.availability
+      availability: d.availability,
+      emergency: String(d.emergencyContact || "").trim().toUpperCase() === "TRUE"
     };
   }
 
@@ -379,6 +394,16 @@
     if (vehicleSlug) list = list.filter((d) => Utils.splitMulti(d.vehicleType).includes(vehicleSlug));
     if (query) list = list.filter((d) => matchesQuery(d, query));
     return sortDrivers(list);
+  };
+
+  /**
+   * Drivers marked Emergency Contact = TRUE, regardless of bazar or
+   * vehicle type. Reuses the same cached directory as everything else —
+   * no extra network request, and no duplicate driver records.
+   */
+  Api.getEmergencyDrivers = async () => {
+    const list = await Api.getDriverDirectory();
+    return sortDrivers(list.filter((d) => d.emergency === true));
   };
 
   // Synchronous cache peeks — used by views to skip the loading

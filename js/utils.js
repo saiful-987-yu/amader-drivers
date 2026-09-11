@@ -112,6 +112,17 @@
     }
   };
 
+  /**
+   * The driver's display name for the CURRENT language: Bengali Name
+   * when the site is in বাংলা mode and one is set, otherwise always the
+   * English Name — a driver never shows with a blank name.
+   */
+  Utils.driverDisplayName = function (driver) {
+    if (!driver) return "";
+    const isBn = window.Lang && window.Lang.current() === "bn";
+    return (isBn && driver.nameBn) ? driver.nameBn : driver.name;
+  };
+
   /** Trim + collapse internal whitespace, tolerating null/undefined. */
   Utils.clean = function (value) {
     return (value == null ? "" : String(value)).trim().replace(/\s+/g, " ");
