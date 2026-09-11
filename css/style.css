@@ -191,6 +191,10 @@ a:hover { text-decoration: underline; }
 }
 .btn:active { transform: scale(0.98); }
 .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+/* Every button icon (phone, WhatsApp, etc.) gets a consistent, clearly
+   visible size — without this, an icon with no explicit CSS size can
+   render oversized and get clipped inside a compact button. */
+.btn svg { width: 18px; height: 18px; flex-shrink: 0; }
 
 .btn--primary { background: var(--color-primary); color: var(--color-on-primary); }
 .btn--primary:hover { background: var(--color-primary-dark); }
@@ -235,6 +239,8 @@ a:hover { text-decoration: underline; }
   margin-bottom: var(--space-5);
   max-width: 46ch;
 }
+.hero__actions { display: flex; flex-direction: column; gap: var(--space-3); }
+.hero__actions .btn { width: 100%; }
 
 /* ------------------------------------------------------------
    SECTION
@@ -325,6 +331,40 @@ a:hover { text-decoration: underline; }
 .chip-card__icon svg { width: 24px; height: 24px; }
 .chip-card__name { font-weight: 600; font-size: var(--font-size-md); }
 .chip-card__sub { font-size: var(--font-size-xs); color: var(--color-ink-soft); }
+
+/* Vehicle-category card: existing small icon + new (optional) wider
+   category image sitting beside it, name stays below as before. */
+.chip-card__top { display: flex; align-items: center; gap: var(--space-2); width: 100%; }
+.chip-card__image {
+  flex: 1;
+  min-width: 0;
+  aspect-ratio: 2 / 1;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--color-primary-soft);
+}
+.chip-card__image img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* "Others" tile — same chip shape, centered and visually muted. */
+.chip-card--others { align-items: center; text-align: center; color: var(--color-ink-soft); }
+.chip-card--others .chip-card__icon { background: var(--color-line); color: var(--color-ink-soft); }
+
+/* Dynamic online-driver-count badge on each vehicle-category card. */
+.chip-card__online {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--font-size-xs);
+  color: var(--color-ink-soft);
+  margin-top: 2px;
+}
+.online-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-success);
+  flex-shrink: 0;
+}
 
 /* ------------------------------------------------------------
    SEARCH
@@ -482,7 +522,7 @@ a:hover { text-decoration: underline; }
   white-space: nowrap;
 }
 .driver-card__call-btn span { overflow: hidden; text-overflow: ellipsis; }
-.driver-card__call-btn svg { width: 16px; height: 16px; }
+.driver-card__call-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
 .driver-card__call-btn[disabled] { background: var(--color-line-strong); color: var(--color-ink-soft); cursor: not-allowed; }
 
 /* WhatsApp deep-link button — small, circular, icon-only, conditional. */
@@ -883,6 +923,9 @@ a:hover { text-decoration: underline; }
   display: inline-block;
 }
 .detail-col__value--link:hover { text-decoration: underline; }
+.detail-col__value--phone { display: inline-flex; align-items: center; gap: 6px; }
+.detail-col__phone-icon { color: var(--color-primary); flex-shrink: 0; display: inline-flex; }
+.detail-col__phone-icon svg { width: 15px; height: 15px; }
 
 /* Compact call/WhatsApp row — fixed, controlled height (matches the
    Driver Card's Call button), width divides dynamically, NEVER wraps
