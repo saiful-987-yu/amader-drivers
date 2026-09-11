@@ -146,11 +146,12 @@
       }
       if (!Utils.storage.get(KEYS.drivers)) {
         Utils.storage.set(KEYS.drivers, [
-          { driverId: "D001", name: "Mohammad Karim", phone: "01711000001", altPhone: "", vehicleType: "cng", vehicleNumber: "DHA-CNG-1123", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar & surrounding roads", experience: "6", imageUrl: "", vehicleImageUrl: "", username: "karim.driver", status: "active", availability: "active" },
-          { driverId: "D002", name: "Abdur Rahman", phone: "01711000002", altPhone: "01911000002", vehicleType: "cng", vehicleNumber: "DHA-CNG-2245", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar to Station Road", experience: "3", imageUrl: "", vehicleImageUrl: "", username: "rahman.driver", status: "active", availability: "inactive" },
-          { driverId: "D003", name: "Jamal Uddin", phone: "01711000003", altPhone: "", vehicleType: "auto", vehicleNumber: "DHA-AUTO-0091", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar Market Area", experience: "8", imageUrl: "", vehicleImageUrl: "", username: "jamal.driver", status: "active", availability: "active" },
-          { driverId: "D004", name: "Selina Begum", phone: "01711000004", altPhone: "", vehicleType: "van", vehicleNumber: "DHA-VAN-0456", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar & nearby villages", experience: "4", imageUrl: "", vehicleImageUrl: "", username: "selina.driver", status: "active", availability: "active" },
-          { driverId: "D005", name: "Farid Hossain", phone: "01711000005", altPhone: "", vehicleType: "auto", vehicleNumber: "DHA-AUTO-0154", marketSlug: "bangla-bazar", serviceArea: "Bangla Bazar Ghat Road", experience: "5", imageUrl: "", vehicleImageUrl: "", username: "farid.driver", status: "active", availability: "active" }
+          { driverId: "D001", name: "Mohammad Karim", phone: "01711000001", altPhone: "", vehicleType: "cng", vehicleNumber: "DHA-CNG-1123", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar & surrounding roads", experience: "6 years", rating: "4.2", whatsapp: "F", imageUrl: "", vehicleImageUrl: "", username: "karim.driver", status: "active", availability: "active" },
+          { driverId: "D002", name: "Abdur Rahman", phone: "01711000002", altPhone: "01911000002", vehicleType: "cng", vehicleNumber: "DHA-CNG-2245", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar to Station Road", experience: "3 years", rating: "3.99", whatsapp: "A", imageUrl: "", vehicleImageUrl: "", username: "rahman.driver", status: "active", availability: "inactive" },
+          { driverId: "D003", name: "Jamal Uddin", phone: "01711000003", altPhone: "", vehicleType: "auto", vehicleNumber: "DHA-AUTO-0091", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar Market Area", experience: "8 years", rating: "5", whatsapp: "01800111222", imageUrl: "", vehicleImageUrl: "https://picsum.photos/seed/jamal-auto/600/450", username: "jamal.driver", status: "active", availability: "active" },
+          { driverId: "D004", name: "Selina Begum", phone: "01711000004", altPhone: "", vehicleType: "van", vehicleNumber: "DHA-VAN-0456", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar & nearby villages", experience: "", rating: "", whatsapp: "N", imageUrl: "", vehicleImageUrl: "", username: "selina.driver", status: "active", availability: "active" },
+          { driverId: "D005", name: "Farid Hossain", phone: "01711000005", altPhone: "", vehicleType: "auto", vehicleNumber: "DHA-AUTO-0154", marketSlug: "bangla-bazar", serviceArea: "", experience: "5 years", rating: "2", whatsapp: "", imageUrl: "", vehicleImageUrl: "", username: "farid.driver", status: "active", availability: "active" },
+          { driverId: "D006", name: "Nurul Islam", phone: "01711000006", altPhone: "01911000006", vehicleType: "cng, auto", vehicleNumber: "DHA-MULTI-7788", marketSlug: "nobi-bazar, bangla-bazar", serviceArea: "Nobi Bazar, Bangla Bazar, Station Road", experience: "7 years", rating: "4", whatsapp: "F", imageUrl: "", vehicleImageUrl: "https://picsum.photos/seed/nurul-1/600/450, https://picsum.photos/seed/nurul-2/600/450, https://picsum.photos/seed/nurul-3/600/450", username: "nurul.driver", status: "active", availability: "active" }
         ]);
       }
       if (!Utils.storage.get(KEYS.pending)) Utils.storage.set(KEYS.pending, []);
@@ -163,7 +164,8 @@
           { username: "rahman.driver", phone: "01711000002", password: "demo1234", driverId: "D002" },
           { username: "jamal.driver", phone: "01711000003", password: "demo1234", driverId: "D003" },
           { username: "selina.driver", phone: "01711000004", password: "demo1234", driverId: "D004" },
-          { username: "farid.driver", phone: "01711000005", password: "demo1234", driverId: "D005" }
+          { username: "farid.driver", phone: "01711000005", password: "demo1234", driverId: "D005" },
+          { username: "nurul.driver", phone: "01711000006", password: "demo1234", driverId: "D006" }
         ]);
       }
     }
@@ -209,8 +211,8 @@
         // this single cached list — see Api.getDrivers below.
         const { marketSlug, vehicleSlug, query } = payload || {};
         let list = DemoStore.drivers().filter((d) => d.status === "active");
-        if (marketSlug) list = list.filter((d) => d.marketSlug === marketSlug);
-        if (vehicleSlug) list = list.filter((d) => d.vehicleType === vehicleSlug);
+        if (marketSlug) list = list.filter((d) => Utils.splitMulti(d.marketSlug).includes(marketSlug));
+        if (vehicleSlug) list = list.filter((d) => Utils.splitMulti(d.vehicleType).includes(vehicleSlug));
         if (query) list = list.filter((d) => matchesQuery(d, query));
         return list.map(publicDriverFields);
       }
@@ -321,6 +323,8 @@
       marketSlug: d.marketSlug,
       serviceArea: d.serviceArea,
       experience: d.experience,
+      rating: d.rating || "",
+      whatsapp: d.whatsapp || "",
       imageUrl: d.imageUrl || "",
       vehicleImageUrl: d.vehicleImageUrl || "",
       availability: d.availability
@@ -368,8 +372,11 @@
 
   Api.getDrivers = async (marketSlug, vehicleSlug, query) => {
     let list = await Api.getDriverDirectory();
-    if (marketSlug) list = list.filter((d) => d.marketSlug === marketSlug);
-    if (vehicleSlug) list = list.filter((d) => d.vehicleType === vehicleSlug);
+    // marketSlug/vehicleType may each hold a comma-separated list of values
+    // when a driver serves multiple bazars or drives multiple vehicle
+    // types — match if the requested slug is ANY of them.
+    if (marketSlug) list = list.filter((d) => Utils.splitMulti(d.marketSlug).includes(marketSlug));
+    if (vehicleSlug) list = list.filter((d) => Utils.splitMulti(d.vehicleType).includes(vehicleSlug));
     if (query) list = list.filter((d) => matchesQuery(d, query));
     return sortDrivers(list);
   };

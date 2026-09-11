@@ -117,5 +117,45 @@
     return (value == null ? "" : String(value)).trim().replace(/\s+/g, " ");
   };
 
+  /** Build a wa.me deep link from a raw phone number, reusing the same normalization as tel: links. */
+  Utils.waLink = function (raw) {
+    const normalized = Utils.normalizePhone(raw);
+    return "https://wa.me/" + normalized.replace(/^\+/, "");
+  };
+
+  /**
+   * Resolve which number (if any) the WhatsApp button should use, per the
+   * Sheet's "WhatsApp" column: F = main phone, A = alternative phone,
+   * N/empty = no button, anything else = used directly as the WhatsApp number.
+   * Returns null when there is no valid number to use.
+   */
+  Utils.resolveWhatsApp = function (driver) {
+    const raw = Utils.clean(driver && driver.whatsapp);
+    if (!raw) return null;
+    const upper = raw.toUpperCase();
+    if (upper === "N" || raw === "নাই" || raw === "না") return null;
+    if (upper === "F") return driver.phone ? driver.phone : null;
+    if (upper === "A") return driver.altPhone ? driver.altPhone : null;
+    return raw;
+  };
+
+  /** Round a raw star-rating value (possibly decimal, possibly empty) to a 0-5 whole-star count. */
+  Utils.starCount = function (raw) {
+    const num = parseFloat(raw);
+    if (isNaN(num)) return 0;
+    return Math.min(5, Math.max(0, Math.round(num)));
+  };
+
+  /**
+   * Split a comma-separated Sheet cell (e.g. "Nobi Bazar, Bangla Bazar" or
+   * "cng, auto") into a trimmed array of individual values. A single plain
+   * value (no comma) still works exactly as before — it just becomes a
+   * one-item array — so existing single-value data needs no migration.
+   */
+  Utils.splitMulti = function (raw) {
+    if (!raw) return [];
+    return String(raw).split(",").map((s) => s.trim()).filter(Boolean);
+  };
+
   window.Utils = Utils;
 })(window);

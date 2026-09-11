@@ -69,15 +69,74 @@
     return wrap;
   }
 
-  function statusNode(driver) {
+  function statusNode(driver, large) {
     const available = driver.availability === "active";
     return Utils.el("span", {
-      class: "status-dot " + (available ? "status-dot--available" : "status-dot--unavailable"),
+      class: "status-dot " + (available ? "status-dot--available" : "status-dot--unavailable") + (large ? " status-dot--lg" : ""),
       text: available ? Lang.t("status.available") : Lang.t("status.unavailable")
     });
   }
 
+  /** Renders a 5-star row (rounded from a raw, possibly decimal/empty value) — never the numeric value itself. */
+  function starsNode(ratingRaw) {
+    const count = Utils.starCount(ratingRaw);
+    const stars = Utils.el("span", { class: "stars", role: "img", "aria-label": Lang.t("driver.ratingAria", { n: count }) });
+    for (let i = 1; i <= 5; i++) {
+      stars.appendChild(Utils.el("span", {
+        class: "star " + (i <= count ? "star--filled" : "star--empty"),
+        "aria-hidden": "true", text: i <= count ? "★" : "☆"
+      }));
+    }
+    return stars;
+  }
+
+  /** Uppercased, comma-joined display of a possibly multi-value field (e.g. "cng, auto" -> "CNG, AUTO"). */
+  function formatMultiUpper(raw) {
+    const parts = Utils.splitMulti(raw);
+    return parts.length ? parts.map((s) => s.toUpperCase()).join(", ") : "—";
+  }
+
+  /** "VEHICLE TYPE · Service Area" — always a single line, Service Area optional. */
+  function vehicleServiceLine(driver, vehicleLabel) {
+    const label = vehicleLabel || formatMultiUpper(driver.vehicleType);
+    const text = driver.serviceArea ? label + " · " + driver.serviceArea : label;
+    return Utils.el("div", { class: "driver-card__meta", title: text, text });
+  }
+
+  /** "Experience · ★★★★☆" row — Experience hidden when empty, rating always shown (0 stars if empty). */
+  function experienceRatingRow(driver) {
+    const parts = [];
+    if (driver.experience) {
+      parts.push(Utils.el("span", { class: "driver-card__experience", text: driver.experience }));
+      parts.push(Utils.el("span", { class: "dot-sep", "aria-hidden": "true", text: "·" }));
+    }
+    parts.push(starsNode(driver.rating));
+    return Utils.el("div", { class: "driver-card__rating-row" }, parts);
+  }
+
   function driverCard(driver, vehicleLabel, crumbTrail) {
+    const whatsappNumber = Utils.resolveWhatsApp(driver);
+    const actions = [
+      Utils.el("button", {
+        class: "driver-card__call-btn",
+        "aria-label": Lang.t("driver.call") + " " + driver.name,
+        html: Icons.phone + "<span>" + Lang.t("driver.call") + "</span>",
+        disabled: driver.availability !== "active" ? "true" : null,
+        onClick: (e) => driver.availability === "active" && handleCall(driver, e)
+      })
+    ];
+    if (whatsappNumber) {
+      actions.push(Utils.el("a", {
+        class: "whatsapp-btn", href: Utils.waLink(whatsappNumber), target: "_blank", rel: "noopener",
+        "aria-label": Lang.t("driver.whatsapp") + " " + driver.name, html: Icons.whatsapp,
+        onClick: (e) => e.stopPropagation()
+      }));
+    }
+    // A fixed-width empty space always sits at the right edge of the
+    // button row, whether or not WhatsApp is shown — the Call button
+    // (and WhatsApp, when present) share the remaining width.
+    actions.push(Utils.el("div", { class: "driver-card__spacer", "aria-hidden": "true" }));
+
     const card = Utils.el("div", {
       class: "driver-card", tabindex: "0", role: "button",
       "aria-label": driver.name,
@@ -87,20 +146,130 @@
       driverPhotoNode(driver, "small"),
       Utils.el("div", { class: "driver-card__body" }, [
         Utils.el("div", { class: "driver-card__name", text: driver.name }),
-        Utils.el("div", { class: "driver-card__meta", text: (vehicleLabel ? vehicleLabel + " · " : "") + driver.serviceArea }),
+        vehicleServiceLine(driver, vehicleLabel),
+        experienceRatingRow(driver),
         statusNode(driver),
-        Utils.el("div", { class: "driver-card__actions" }, [
-          Utils.el("button", {
-            class: "driver-card__call-btn",
-            "aria-label": Lang.t("driver.call") + " " + driver.name,
-            html: Icons.phone + "<span>" + Lang.t("driver.call") + "</span>",
-            disabled: driver.availability !== "active" ? "true" : null,
-            onClick: (e) => driver.availability === "active" && handleCall(driver, e)
-          })
-        ])
+        Utils.el("div", { class: "driver-card__actions" }, actions)
       ])
     ]);
     return card;
+  }
+
+  /** Two-column "label / value" detail row (plain-text values only). */
+  function twoColRow(labelA, valueA, labelB, valueB) {
+    return Utils.el("div", { class: "detail-row" }, [
+      Utils.el("div", { class: "detail-col" }, [
+        Utils.el("div", { class: "detail-col__label", text: labelA }),
+        Utils.el("div", { class: "detail-col__value", text: valueA })
+      ]),
+      Utils.el("div", { class: "detail-col" }, [
+        Utils.el("div", { class: "detail-col__label", text: labelB }),
+        Utils.el("div", { class: "detail-col__value", text: valueB })
+      ])
+    ]);
+  }
+
+  /**
+   * Thumbnail + main-image gallery for "Vehicle Image URL" (comma-separated
+   * when a driver has more than one photo). Returns null when the driver
+   * has no vehicle images at all, so callers can skip the section entirely.
+   */
+  function buildGallery(driver) {
+    const urls = Utils.splitMulti(driver.vehicleImageUrl).map(Utils.resolveImageUrl).filter(Boolean);
+    if (!urls.length) return null;
+
+    const mainImg = Utils.el("img", { alt: driver.name, loading: "lazy", decoding: "async" });
+    const thumbButtons = [];
+    let current = 0;
+
+    function show(index) {
+      current = (index + urls.length) % urls.length;
+      mainImg.src = urls[current];
+      thumbButtons.forEach((btn, i) => btn.classList.toggle("is-active", i === current));
+    }
+
+    const mainChildren = [mainImg];
+    if (urls.length > 1) {
+      mainChildren.push(Utils.el("button", {
+        type: "button", class: "gallery__arrow gallery__arrow--prev",
+        "aria-label": Lang.t("a11y.previousImage"), html: Icons.chevronLeft,
+        onClick: () => show(current - 1)
+      }));
+      mainChildren.push(Utils.el("button", {
+        type: "button", class: "gallery__arrow gallery__arrow--next",
+        "aria-label": Lang.t("a11y.nextImage"), html: Icons.chevronRight,
+        onClick: () => show(current + 1)
+      }));
+    }
+    const mainWrap = Utils.el("div", { class: "gallery__main" }, mainChildren);
+
+    const children = [];
+    if (urls.length > 1) {
+      const thumbs = urls.map((url, i) => {
+        const thumbImg = Utils.el("img", { alt: "", loading: "lazy" });
+        thumbImg.src = url;
+        const btn = Utils.el("button", {
+          type: "button", class: "gallery__thumb", "aria-label": (i + 1) + " / " + urls.length,
+          onClick: () => show(i)
+        }, [thumbImg]);
+        thumbButtons.push(btn);
+        return btn;
+      });
+      children.push(Utils.el("div", { class: "gallery__thumbs" }, thumbs));
+    }
+    children.push(mainWrap);
+
+    show(0);
+    return Utils.el("div", { class: "gallery" }, children);
+  }
+
+  /**
+   * "Rate This Driver" — UI-only demo widget. Stars are clickable and
+   * comment is typeable, but Submit never saves anything anywhere; it
+   * just shows a friendly "not available yet" message.
+   */
+  function buildRatingSection() {
+    const starButtons = [];
+    const starsRow = Utils.el("div", { class: "rate-stars", role: "radiogroup", "aria-label": Lang.t("driver.ratingSectionTitle") });
+
+    function select(n) {
+      starButtons.forEach((btn, idx) => {
+        const filled = idx < n;
+        btn.classList.toggle("star--filled", filled);
+        btn.classList.toggle("star--empty", !filled);
+        btn.textContent = filled ? "★" : "☆";
+        btn.setAttribute("aria-checked", idx === n - 1 ? "true" : "false");
+      });
+    }
+
+    for (let i = 1; i <= 5; i++) {
+      const btn = Utils.el("button", {
+        type: "button", class: "star star--empty", role: "radio", "aria-checked": "false",
+        "aria-label": Lang.t("driver.ratingAria", { n: i }), text: "☆",
+        onClick: () => select(i)
+      });
+      starButtons.push(btn);
+      starsRow.appendChild(btn);
+    }
+
+    const commentInput = Utils.el("textarea", {
+      class: "rate-textarea", rows: "3",
+      placeholder: Lang.t("driver.ratingCommentPlaceholder"),
+      "aria-label": Lang.t("driver.ratingCommentPlaceholder")
+    });
+
+    const submitBtn = Utils.el("button", {
+      class: "btn btn--primary btn--sm mt-5",
+      text: Lang.t("driver.ratingSubmit"),
+      onClick: () => Toast.show(Lang.t("driver.ratingUnavailable"))
+    });
+
+    return Utils.el("div", { class: "rate-section" }, [
+      Utils.el("h3", { class: "detail-section-title", text: Lang.t("driver.ratingSectionTitle") }),
+      starsRow,
+      commentInput,
+      submitBtn
+    ]);
   }
 
   function openDriverDetail(driver, crumbTrail) {
@@ -112,32 +281,96 @@
       Utils.qsa("a", crumbNode).forEach((a) => a.addEventListener("click", () => Modal.close()));
       children.push(crumbNode);
     }
-    children.push(
-      Utils.el("div", { class: "modal-head" }, [
-        Utils.el("h3", { text: driver.name }),
-        Utils.el("button", { class: "icon-btn", "aria-label": Lang.t("a11y.closeModal"), html: Icons.close, onClick: () => Modal.close() })
-      ]),
-      driverPhotoNode(driver, "large"),
-      statusNode(driver),
-      Utils.el("dl", { class: "detail-list mt-5" }, [
-        Utils.el("dt", { text: Lang.t("driver.vehicleType") }),
-        Utils.el("dd", { text: driver.vehicleType.toUpperCase() }),
-        Utils.el("dt", { text: Lang.t("driver.vehicleNumber") }),
-        Utils.el("dd", { text: driver.vehicleNumber || "—" }),
-        Utils.el("dt", { text: Lang.t("driver.serviceArea") }),
-        Utils.el("dd", { text: driver.serviceArea || "—" }),
-        Utils.el("dt", { text: Lang.t("driver.experience") }),
-        Utils.el("dd", { text: driver.experience ? driver.experience + " yr" : "—" }),
-        Utils.el("dt", { text: Lang.t("driver.phone") }),
-        Utils.el("dd", { text: driver.phone })
-      ]),
+
+    // Name + Close share one header row, directly under the breadcrumb.
+    // The close button lives ONLY here — never beside the gallery below.
+    children.push(Utils.el("div", { class: "detail-name-row" }, [
+      Utils.el("h2", { class: "detail-name", text: driver.name }),
+      Utils.el("button", { class: "icon-btn", "aria-label": Lang.t("a11y.closeModal"), html: Icons.close, onClick: () => Modal.close() })
+    ]));
+
+    children.push(driverPhotoNode(driver, "large"));
+    children.push(statusNode(driver, true));
+
+    children.push(Utils.el("h3", { class: "detail-section-title", text: Lang.t("driver.information") }));
+
+    children.push(twoColRow(
+      Lang.t("driver.vehicleType"), formatMultiUpper(driver.vehicleType),
+      Lang.t("driver.vehicleNumber"), driver.vehicleNumber || "—"
+    ));
+
+    if (driver.serviceArea) {
+      children.push(Utils.el("div", { class: "detail-row" }, [
+        Utils.el("div", { class: "detail-col detail-col--full" }, [
+          Utils.el("div", { class: "detail-col__label", text: Lang.t("driver.serviceArea") }),
+          Utils.el("div", { class: "detail-col__value detail-col__value--truncate", title: driver.serviceArea, text: driver.serviceArea })
+        ])
+      ]));
+    }
+
+    const expRatingCols = [];
+    if (driver.experience) {
+      expRatingCols.push(Utils.el("div", { class: "detail-col" }, [
+        Utils.el("div", { class: "detail-col__label", text: Lang.t("driver.experience") }),
+        Utils.el("div", { class: "detail-col__value", text: driver.experience })
+      ]));
+    }
+    expRatingCols.push(Utils.el("div", { class: "detail-col" }, [
+      Utils.el("div", { class: "detail-col__label", text: Lang.t("driver.rating") }),
+      Utils.el("div", { class: "detail-col__value" }, [starsNode(driver.rating)])
+    ]));
+    children.push(Utils.el("div", { class: "detail-row" }, expRatingCols));
+
+    const phoneCols = [
+      Utils.el("div", { class: "detail-col" }, [
+        Utils.el("div", { class: "detail-col__label", text: Lang.t("driver.phone") }),
+        Utils.el("a", { class: "detail-col__value detail-col__value--link", href: "tel:" + Utils.normalizePhone(driver.phone), text: driver.phone })
+      ])
+    ];
+    if (driver.altPhone) {
+      phoneCols.push(Utils.el("div", { class: "detail-col" }, [
+        Utils.el("div", { class: "detail-col__label", text: Lang.t("driver.altPhone") }),
+        Utils.el("a", { class: "detail-col__value detail-col__value--link", href: "tel:" + Utils.normalizePhone(driver.altPhone), text: driver.altPhone })
+      ]));
+    }
+    children.push(Utils.el("div", { class: "detail-row" }, phoneCols));
+
+    // Compact, fixed-height action row (matches the Driver Card's Call
+    // button height): Call is always present; Call Alternative and
+    // WhatsApp only appear when that data actually exists.
+    const actionButtons = [
       Utils.el("button", {
-        class: "btn btn--call mt-5",
+        class: "btn btn--primary btn--sm action-row__btn",
         html: Icons.phone + "<span>" + Lang.t("driver.call") + "</span>",
         disabled: driver.availability !== "active" ? "true" : null,
-        onClick: (e) => driver.availability === "active" ? handleCall(driver, e) : null
+        onClick: () => driver.availability === "active" && handleCall(driver)
       })
-    );
+    ];
+    if (driver.altPhone) {
+      actionButtons.push(Utils.el("button", {
+        class: "btn btn--ghost btn--sm action-row__btn",
+        html: Icons.phone + "<span>" + Lang.t("driver.callAlternative") + "</span>",
+        disabled: driver.availability !== "active" ? "true" : null,
+        onClick: () => driver.availability === "active" && handleCall(Object.assign({}, driver, { phone: driver.altPhone }))
+      }));
+    }
+    const whatsappNumber = Utils.resolveWhatsApp(driver);
+    if (whatsappNumber) {
+      actionButtons.push(Utils.el("a", {
+        class: "whatsapp-btn", href: Utils.waLink(whatsappNumber), target: "_blank", rel: "noopener",
+        "aria-label": Lang.t("driver.whatsapp"), html: Icons.whatsapp
+      }));
+    }
+    children.push(Utils.el("div", { class: "action-row mt-5" }, actionButtons));
+
+    const gallery = buildGallery(driver);
+    if (gallery) {
+      children.push(Utils.el("h3", { class: "detail-section-title mt-5", text: Lang.t("driver.vehiclePhotos") }));
+      children.push(gallery);
+    }
+
+    children.push(buildRatingSection());
+
     Modal.open(Utils.el("div", {}, children));
   }
 
