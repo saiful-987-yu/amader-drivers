@@ -100,10 +100,15 @@ Create one Google Sheet with these exact tab names:
 `Market ID | Market Name English | Market Name Bengali | Location | Status | Sort Order`
 
 **Vehicle Categories**
-`Category ID | English Name | Bengali Name | Icon | Status | Sort Order`
+`Category ID | English Name | Bengali Name | Icon | Status | Sort Order | Vehicle Categories Image URL`
+
+- `Vehicle Categories Image URL` — a category artwork image shown next to the existing small icon on the vehicle-type selection screen (roughly 2:1, wider than tall). This is completely separate from a driver's own `Vehicle Image URL` in the Drivers tab — leave it empty and the category card just shows its icon as before, no broken image.
 
 **Drivers**
-`Driver ID | Name | Father/Husband Name | Phone | Alternative Phone | Village | Post Office | Union | Upazila | District | Full Address | Vehicle Type | Vehicle Number | Bazar | Service Area | Driving Experience | Star Rating | WhatsApp | Driver Image URL | Vehicle Image URL | Username | Status | Availability | Created Date | Updated Date`
+`Driver ID | Name | Bengali Name | Father/Husband Name | Phone | Alternative Phone | Village | Post Office | Union | Upazila | District | Full Address | Vehicle Type | Vehicle Number | Bazar | Service Area | Driving Experience | Star Rating | WhatsApp | Emergency Contact | Driver Image URL | Vehicle Image URL | Username | Status | Availability | Created Date | Updated Date`
+
+- `Bengali Name` — shown instead of `Name` whenever the site is in বাংলা mode. Leave it blank and the English `Name` is used as a fallback automatically — a driver never shows with a blank name.
+- `Emergency Contact` — `TRUE` (case-insensitive) adds the driver to the homepage's "Emergency Contact" list regardless of their vehicle type or bazar; `FALSE` or blank keeps them out of it. This never affects their normal listing under their own bazar/vehicle type.
 
 - `Star Rating` — a number from 0–5 (decimals like `4.2` are fine); shown to customers as rounded stars, never as the raw number. Leave empty for 0 stars.
 - `WhatsApp` — controls the WhatsApp button on the driver card/profile: `F` uses the main `Phone`, `A` uses `Alternative Phone`, a real phone number is used directly, `N` or empty hides the button.
@@ -166,9 +171,15 @@ happens inside your Apps Script project under your own Google account.
 ## 4. How to add things later
 
 - **Add a new bazar:** add a row to `Markets` with `Status = Active`. It
-  appears on the homepage automatically — no code changes.
+  appears on the homepage automatically — no code changes. If there are
+  more than 4 active bazars, the homepage shows the first 3 (by `Sort
+  Order`) plus an "Others" tile that reveals the rest in place.
 - **Add a new vehicle category:** add a row to `Vehicle Categories` the
-  same way.
+  same way. The same "first 3 + Others" rule applies, and a category only
+  shows for a given bazar if at least one approved driver in that bazar
+  actually has that vehicle type — an active-but-empty category for that
+  bazar stays hidden there (it can still show normally in a bazar that
+  does have a driver for it).
 - **Approve a driver:** move their row from `Pending Drivers` to `Drivers`
   (see §3.2), and add a matching row to `Users`.
 - **Update a driver's photo:** edit `Driver Image URL` in the `Drivers`
