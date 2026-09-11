@@ -146,6 +146,9 @@ slug: slugify(r["English Name"]),
 nameEn: clean(r["English Name"]),
 nameBn: clean(r["Bengali Name"]),
 icon: slugify(r["English Name"]),
+// Separate from a driver's own "Vehicle Image URL" — this is the
+// category artwork shown next to the existing small icon.
+imageUrl: clean(r["Vehicle Categories Image URL"]),
 status: "active",
 sortOrder: Number(r["Sort Order"] || 0)
 }));
@@ -196,6 +199,7 @@ function publicDriverFields(r) {
 return {
 driverId: clean(r["Driver ID"]),
 name: clean(r["Name"]),
+nameBn: clean(r["Bengali Name"]),
 phone: clean(r["Phone"]),
 altPhone: clean(r["Alternative Phone"]),
 vehicleType: slugifyMulti(r["Vehicle Type"]),
@@ -207,7 +211,8 @@ rating: clean(r["Star Rating"]),
 whatsapp: clean(r["WhatsApp"]),
 imageUrl: clean(r["Driver Image URL"]),
 vehicleImageUrl: clean(r["Vehicle Image URL"]),
-availability: slugOf(r["Availability"]) === "active" ? "active" : "inactive"
+availability: slugOf(r["Availability"]) === "active" ? "active" : "inactive",
+emergency: slugOf(r["Emergency Contact"]) === "true"
 };
 }
 
