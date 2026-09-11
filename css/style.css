@@ -206,15 +206,6 @@ a:hover { text-decoration: underline; }
 .btn--block { width: 100%; }
 .btn--sm { min-height: 40px; padding: var(--space-2) var(--space-4); font-size: var(--font-size-sm); }
 
-.btn--call {
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-  width: 100%;
-  min-height: 52px;
-  font-size: var(--font-size-lg);
-}
-.btn--call:hover { background: var(--color-primary-dark); }
-
 /* ------------------------------------------------------------
    HERO
    ------------------------------------------------------------ */
@@ -418,7 +409,33 @@ a:hover { text-decoration: underline; }
 
 .driver-card__body { flex: 1; min-width: 0; }
 .driver-card__name { font-weight: 700; font-size: var(--font-size-md); margin-bottom: 2px; }
-.driver-card__meta { font-size: var(--font-size-sm); color: var(--color-ink-soft); margin-bottom: var(--space-2); }
+.driver-card__meta {
+  font-size: var(--font-size-sm);
+  color: var(--color-ink-soft);
+  margin-bottom: var(--space-1);
+  /* Vehicle Type · Service Area must never wrap to a second line. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.driver-card__rating-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-xs);
+  color: var(--color-ink-soft);
+  margin-bottom: var(--space-2);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.driver-card__experience { overflow: hidden; text-overflow: ellipsis; }
+.dot-sep { color: var(--color-line-strong); flex-shrink: 0; }
+
+.stars { display: inline-flex; flex-shrink: 0; letter-spacing: 1px; }
+.star { font-size: 0.95em; line-height: 1; }
+.star--filled { color: var(--color-accent); }
+.star--empty { color: var(--color-line-strong); }
 
 .status-dot {
   display: inline-flex;
@@ -436,8 +453,15 @@ a:hover { text-decoration: underline; }
 }
 .status-dot--available { color: var(--color-success); }
 .status-dot--unavailable { color: var(--color-danger); }
+.status-dot--lg {
+  display: flex;
+  justify-content: center;
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-4);
+}
+.status-dot--lg::before { width: 10px; height: 10px; }
 
-.driver-card__actions { display: flex; gap: var(--space-2); margin-top: var(--space-2); }
+.driver-card__actions { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); flex-wrap: wrap; }
 .driver-card__call-btn {
   border: none;
   background: var(--color-primary);
@@ -445,15 +469,47 @@ a:hover { text-decoration: underline; }
   border-radius: var(--radius-sm);
   min-height: 40px;
   padding: 0 var(--space-3);
+  min-width: 96px;
   font-weight: 600;
   font-size: var(--font-size-sm);
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-1);
   cursor: pointer;
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
 }
+.driver-card__call-btn span { overflow: hidden; text-overflow: ellipsis; }
 .driver-card__call-btn svg { width: 16px; height: 16px; }
 .driver-card__call-btn[disabled] { background: var(--color-line-strong); color: var(--color-ink-soft); cursor: not-allowed; }
+
+/* WhatsApp deep-link button — small, circular, icon-only, conditional. */
+.whatsapp-btn {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #25D366;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--ease);
+}
+.whatsapp-btn:hover { transform: scale(1.05); }
+.whatsapp-btn:active { transform: scale(0.94); }
+.whatsapp-btn svg { width: 20px; height: 20px; }
+
+/* Fixed reserved space at the right edge of every Driver Card's button
+   row — present whether or not WhatsApp is shown (~1cm on typical
+   screens, scaled down a little on very narrow phones below). */
+.driver-card__spacer { flex-shrink: 0; width: 36px; }
+@media (max-width: 359px) {
+  .driver-card__spacer { width: 16px; }
+}
 
 /* ------------------------------------------------------------
    EMPTY / LOADING / ERROR STATES
@@ -760,6 +816,28 @@ a:hover { text-decoration: underline; }
 /* ------------------------------------------------------------
    DRIVER DETAILS
    ------------------------------------------------------------ */
+
+/* Name + Close button share one row, directly under the breadcrumb —
+   the X never moves down next to the gallery. */
+.detail-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0 2px;
+  margin-bottom: var(--space-4);
+}
+.detail-name {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.detail-name-row .icon-btn { flex-shrink: 0; }
+
 .detail-photo {
   width: 100%;
   aspect-ratio: 4 / 3;
@@ -775,8 +853,151 @@ a:hover { text-decoration: underline; }
 .detail-photo img { width: 100%; height: 100%; object-fit: cover; }
 .detail-photo svg { width: 64px; height: 64px; }
 
-.detail-list dt { font-size: var(--font-size-xs); color: var(--color-ink-soft); margin-top: var(--space-3); }
-.detail-list dd { font-size: var(--font-size-md); font-weight: 600; margin: 2px 0 0; }
+.detail-section-title {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--color-ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: var(--space-2);
+}
+
+.detail-row {
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-line);
+}
+.detail-col { flex: 1; min-width: 0; }
+.detail-col--full { flex: 1 1 100%; }
+.detail-col__label { font-size: var(--font-size-xs); color: var(--color-ink-soft); margin-bottom: 2px; }
+.detail-col__value { font-size: var(--font-size-md); font-weight: 600; color: var(--color-ink); }
+.detail-col__value--truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.detail-col__value--link {
+  color: var(--color-primary);
+  text-decoration: none;
+  display: inline-block;
+}
+.detail-col__value--link:hover { text-decoration: underline; }
+
+/* Compact call/WhatsApp row — fixed, controlled height (matches the
+   Driver Card's Call button), width divides dynamically, NEVER wraps
+   onto extra lines (that was what made this section look too tall). */
+.action-row {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-2);
+  flex-wrap: nowrap;
+  height: 40px;
+}
+.action-row__btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 var(--space-2);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.action-row .whatsapp-btn { flex-shrink: 0; }
+
+/* ------------------------------------------------------------
+   VEHICLE IMAGE GALLERY
+   ------------------------------------------------------------ */
+.gallery {
+  display: flex;
+  gap: var(--space-2);
+  width: 100%;
+}
+.gallery__thumbs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 64px;
+  flex-shrink: 0;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.gallery__thumb {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 2px solid transparent;
+  background: var(--color-primary-soft);
+  cursor: pointer;
+}
+.gallery__thumb.is-active { border-color: var(--color-primary); }
+.gallery__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.gallery__main {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-primary-soft);
+}
+.gallery__main img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gallery__arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(10, 20, 14, 0.5);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.gallery__arrow:hover { background: rgba(10, 20, 14, 0.7); }
+.gallery__arrow svg { width: 18px; height: 18px; }
+.gallery__arrow--prev { left: 8px; }
+.gallery__arrow--next { right: 8px; }
+
+/* ------------------------------------------------------------
+   RATE THIS DRIVER (UI-only demo widget — nothing is ever saved)
+   ------------------------------------------------------------ */
+.rate-section {
+  border-top: 1px solid var(--color-line);
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+}
+.rate-stars {
+  display: flex;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+}
+.rate-stars .star {
+  background: none;
+  border: none;
+  padding: 2px;
+  font-size: 1.7rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.rate-textarea {
+  width: 100%;
+  min-height: 72px;
+  padding: var(--space-3);
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  resize: vertical;
+}
 
 /* ------------------------------------------------------------
    PROFILE

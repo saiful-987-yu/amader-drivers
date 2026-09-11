@@ -7,6 +7,9 @@
 @media (max-width: 359px) {
   .hero h1 { font-size: var(--font-size-xl); }
   .chip-grid { grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+  .detail-row { flex-direction: column; gap: var(--space-2); }
+  .gallery__thumbs { width: 52px; }
+  .gallery__thumb { width: 52px; height: 52px; }
 }
 
 /* Tablet and up */
