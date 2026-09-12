@@ -47,11 +47,13 @@ project/
 │   ├── auth.js           # driver session/login state
 │   ├── search.js         # shared search-matching helpers
 │   ├── app.js            # router, toasts, modal, header wiring
-│   ├── drivers.js        # home, bazar/vehicle selection, driver list & detail
+│   ├── drivers.js        # home, banner, bazar/vehicle selection, driver list & detail
+│   ├── doctors.js        # doctor list & doctor-details modal ("Find a Doctor")
 │   ├── registration.js   # multi-step "Register as a Driver" form
 │   └── profile.js        # driver login + profile/availability screen
 ├── assets/
 │   ├── images/           # (empty — driver photos come from Google Sheets)
+│   ├── banner/           # homepage banner slide 2/3 images (see its own README)
 │   └── icons/
 │       └── favicon.svg
 ├── config/
@@ -166,6 +168,26 @@ in `config.js`.** The Apps Script Web App URL is the only thing that
 belongs there, and it is meant to be public — the actual spreadsheet access
 happens inside your Apps Script project under your own Google account.
 
+### 3.5 The "Doctors" sheet (optional "Find a Doctor" feature)
+
+Doctors get their own **`Doctors`** tab, built with the exact same column
+headers as `Drivers` — only the *meaning* of three columns changes for
+that tab:
+
+| Column header (unchanged) | Means, on the Doctors tab |
+|---|---|
+| `Driver ID` | Doctor ID |
+| `Vehicle Type` | Degree / Qualification (e.g. `MBBS`, `MBBS, FCPS`) |
+| `Vehicle Number` | Registration Number (e.g. `BMDC-A-45210`) |
+
+Everything else — `Name`, `Bengali Name`, `Phone`, `Alternative Phone`,
+`WhatsApp`, `Service Area`, `Driving Experience`, `Star Rating`,
+`Driver Image URL` (profile photo), `Vehicle Image URL` (sample/work
+photos, comma-separated for a gallery), `Status`, `Availability` — works
+exactly like the Drivers tab, including multi-value support and the
+Bengali Name fallback. Doctors are **not** filtered by bazar or vehicle
+type; "Find a Doctor" on the homepage always shows every active doctor.
+
 ---
 
 ## 4. How to add things later
@@ -201,6 +223,48 @@ happens inside your Apps Script project under your own Google account.
 - The one thing a driver can change is **Availability** (Active /
   Inactive). This is separate from **Account Status** (whether the account
   itself is approved) — see `Code.gs` and `js/profile.js`.
+
+---
+
+## 5.5 Homepage banner & footer social links
+
+- **Banner**: Slide 1 is generated from site text (updates live with the
+  language toggle). Slides 2 and 3 use the image files configured in
+  `BANNER_IMAGES` in `config/config.js` — drop your images into
+  `assets/banner/` using the filenames already set there (see that
+  folder's own README) and they appear automatically, no code changes.
+  Until a real image exists, a clean placeholder is shown instead of a
+  broken image. The banner auto-advances every 3 seconds and also
+  responds to touch swipe (left = next, right = previous); swiping
+  restarts the timer instead of running a second one alongside it.
+- **Footer social links**: edit `SOCIAL_LINKS` in `config/config.js`.
+  Leave any entry as `"#"` until you have a real URL — the icon still
+  shows, it just doesn't go anywhere yet.
+
+---
+
+## 5.6 Performance & offline-friendly caching
+
+Markets, Vehicle Categories, and the Driver/Doctor directories are cached
+in the browser's `localStorage` (not just in memory), so:
+
+- **Cold start / reopen / refresh**: whatever was last shown successfully
+  is displayed **instantly** — no blank/loading screen — while a fresh
+  copy is quietly fetched in the background.
+- **A failed or slow refresh never erases what's already shown.** Old
+  data is only replaced once a complete, valid new response has arrived
+  (see `cachedCall()` in `js/api.js`).
+- Driver/Doctor availability is treated as more time-sensitive than
+  static data: it refreshes on a shorter cycle (`STATUS_CACHE_TTL_MS` in
+  `config/config.js`, 60 seconds by default) than Markets/Vehicle
+  Categories (`CACHE_TTL_MS`, 5 minutes by default).
+- Images are not re-fetched for a URL the browser has already
+  downloaded — this relies on the browser's normal HTTP cache, plus
+  `loading="lazy"` so off-screen photos don't load until needed. This
+  project does not add a Service Worker / Cache Storage layer for
+  fully offline image access — that would be a reasonable future
+  enhancement, but was left out here to avoid the risk of a
+  misconfigured Service Worker breaking the site for visitors.
 
 ---
 
