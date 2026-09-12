@@ -78,9 +78,12 @@
       </div>
       <div class="footer-row footer-row--bottom">
         <span>© <span data-year></span> <span data-i18n="site.name">Amader Drivers</span> · <span data-i18n="footer.rights">All rights reserved.</span></span>
-        <div class="lang-toggle lang-toggle--sm" role="group" aria-label="Language">
-          <button type="button" data-lang-toggle="en">EN</button>
-          <button type="button" data-lang-toggle="bn">বাংলা</button>
+        <div style="display:flex; align-items:center; gap: var(--space-3); flex-wrap: wrap;">
+          <nav class="footer-social" id="footer-social" aria-label="Social media"></nav>
+          <div class="lang-toggle lang-toggle--sm" role="group" aria-label="Language">
+            <button type="button" data-lang-toggle="en">EN</button>
+            <button type="button" data-lang-toggle="bn">বাংলা</button>
+          </div>
         </div>
       </div>
     </div>
@@ -103,6 +106,7 @@
 
   <!-- Screens (each registers its own route(s) with the router) -->
   <script src="js/drivers.js"></script>
+  <script src="js/doctors.js"></script>
   <script src="js/registration.js"></script>
   <script src="js/profile.js"></script>
 
@@ -123,6 +127,28 @@
       });
       var yearEl = document.querySelector("[data-year]");
       if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+      // Footer social links — icon + URL come from config/config.js
+      // (SOCIAL_LINKS), so the owner can update just that file later.
+      var socialNav = document.getElementById("footer-social");
+      if (socialNav && window.NOBI_CONFIG && window.NOBI_CONFIG.SOCIAL_LINKS) {
+        var platforms = [
+          { key: "facebook", icon: Icons.facebook, labelKey: "footer.facebook" },
+          { key: "whatsapp", icon: Icons.whatsapp, labelKey: "footer.whatsapp" },
+          { key: "tiktok", icon: Icons.tiktok, labelKey: "footer.tiktok" },
+          { key: "linkedin", icon: Icons.linkedin, labelKey: "footer.linkedin" }
+        ];
+        platforms.forEach(function (p) {
+          var href = window.NOBI_CONFIG.SOCIAL_LINKS[p.key] || "#";
+          var a = document.createElement("a");
+          a.href = href;
+          a.target = "_blank";
+          a.rel = "noopener";
+          a.setAttribute("aria-label", Lang.t(p.labelKey));
+          a.innerHTML = p.icon;
+          socialNav.appendChild(a);
+        });
+      }
     });
   </script>
 </body>

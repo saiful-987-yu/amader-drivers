@@ -297,7 +297,7 @@ in the browser's `localStorage` (not just in memory), so:
   `google-apps-script/Code.gs` (real mode) — the `Users` sheet and the
   `Pending Drivers` sheet are never exposed to normal visitors.
 - This is a practical, appropriate level of security for a small community
-  tool — it is not a claim of bank-level security.
+  tool — it is not a claim of bank-level security..
 
 ---
 
