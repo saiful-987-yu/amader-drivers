@@ -37,9 +37,36 @@
   const IS_DEMO = !CONFIG.API_BASE_URL;
   const TIMEOUT_MS = CONFIG.REQUEST_TIMEOUT_MS || 12000;
   const CACHE_TTL = CONFIG.CACHE_TTL_MS || 5 * 60 * 1000;
+  const STATUS_CACHE_TTL = CONFIG.STATUS_CACHE_TTL_MS || 60 * 1000;
 
   // key -> { time, promise, settled, value }
   const cache = new Map();
+  const PERSIST_PREFIX = "nobi.cache.v1.";
+
+  /**
+   * Persistent (localStorage) cache — survives page reloads and browser
+   * reopens. Used so Markets/Vehicle Categories/Driver+Doctor directories
+   * can be shown INSTANTLY on a cold start from whatever was last
+   * successfully fetched, while a fresh copy loads quietly in the
+   * background (Part 11-15 of the project spec: no blank/loading screen
+   * for data we've already shown the user before, and old data is never
+   * cleared until a complete, valid replacement has arrived).
+   */
+  function persistGet(key) {
+    try {
+      const raw = window.localStorage.getItem(PERSIST_PREFIX + key);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+  function persistSet(key, value) {
+    try {
+      window.localStorage.setItem(PERSIST_PREFIX + key, JSON.stringify({ value, time: Date.now() }));
+    } catch (e) {
+      /* storage may be full/unavailable — caching is an optimization, not critical */
+    }
+  }
 
   function withTimeout(promise, ms) {
     let timer;
@@ -76,6 +103,12 @@
    * concurrent callers for the same op+payload always share one
    * network request — this is what makes Api.preload() safe to
    * fire alongside a view's own fetch without doubling requests.
+   *
+   * On a cold start (nothing in the in-memory cache yet), a persisted
+   * value from a previous visit is served immediately while a fresh
+   * request quietly updates both caches in the background — the old
+   * data is only ever replaced once a COMPLETE, valid response lands
+   * (a failed/partial refresh just keeps what was already shown).
    */
   function cachedCall(op, payload, ttl) {
     const key = cacheKey(op, payload);
@@ -84,33 +117,58 @@
     if (hit && Date.now() - hit.time < effectiveTtl) {
       return hit.promise;
     }
-    const entry = { time: Date.now(), promise: null, settled: false, value: undefined };
-    entry.promise = call(op, payload).then((value) => {
-      entry.settled = true;
-      entry.value = value;
+
+    // We may already have SOMETHING to show — either an expired-but-still
+    // valid in-memory value, or (on a cold start) a value persisted from
+    // an earlier visit. Either way, serve it instantly and refresh quietly.
+    const persistedRecord = (hit && hit.settled) ? null : persistGet(key);
+    const staleValue = (hit && hit.settled) ? hit.value : (persistedRecord ? persistedRecord.value : undefined);
+    const hasStale = staleValue !== undefined;
+
+    const freshPromise = call(op, payload).then((value) => {
+      persistSet(key, value);
+      cache.set(key, { time: Date.now(), promise: Promise.resolve(value), settled: true, value });
       return value;
     }).catch((err) => {
-      // Don't let a failed request poison the cache — allow retry.
-      cache.delete(key);
+      // A failed/timed-out refresh must never wipe out a previously
+      // working value — just report failure and keep serving the old one.
+      if (!hasStale) cache.delete(key);
       throw err;
     });
+
+    if (hasStale) {
+      const staleEntry = { time: Date.now(), promise: Promise.resolve(staleValue), settled: true, value: staleValue };
+      cache.set(key, staleEntry);
+      freshPromise.catch(() => {}); // still runs in the background; failure already handled above
+      return staleEntry.promise;
+    }
+
+    const entry = { time: Date.now(), promise: freshPromise, settled: false, value: undefined };
     cache.set(key, entry);
-    return entry.promise;
+    return freshPromise;
   }
 
-  /** Synchronous peek: returns the cached value if already settled and fresh, else undefined. */
+  /** Synchronous peek: returns a cached (even if slightly stale/persisted) value if we have one at all, else undefined. */
   function peek(op, payload, ttl) {
     const key = cacheKey(op, payload);
     const effectiveTtl = ttl != null ? ttl : CACHE_TTL;
     const hit = cache.get(key);
     if (hit && hit.settled && Date.now() - hit.time < effectiveTtl) return hit.value;
-    return undefined;
+    // Nothing fresh in memory yet (e.g. the very first synchronous peek
+    // right after a page reload) — fall back to whatever was persisted
+    // from a previous visit so the first paint is never blank.
+    const persisted = persistGet(key);
+    return persisted ? persisted.value : undefined;
   }
 
   function invalidateCache(prefix) {
     Array.from(cache.keys()).forEach((key) => {
       if (!prefix || key.startsWith(prefix)) cache.delete(key);
     });
+    // Persisted data is intentionally NOT cleared here — a driver
+    // registering or toggling availability shouldn't erase what's on
+    // disk for other tabs/sessions; the next successful fetch overwrites
+    // it atomically as usual.
   }
 
   // ---------------------------------------------------------
@@ -124,6 +182,7 @@
       markets: "nobi.demo.markets",
       vehicles: "nobi.demo.vehicles",
       drivers: "nobi.demo.drivers",
+      doctors: "nobi.demo.doctors",
       pending: "nobi.demo.pending",
       users: "nobi.demo.users",
       session: "nobi.demo.session"
@@ -166,6 +225,13 @@
         ]);
       }
       if (!Utils.storage.get(KEYS.pending)) Utils.storage.set(KEYS.pending, []);
+      if (!Utils.storage.get(KEYS.doctors)) {
+        Utils.storage.set(KEYS.doctors, [
+          { doctorId: "DOC001", name: "Dr. Rafiqul Islam", nameBn: "ডা. রফিকুল ইসলাম", degree: "MBBS, FCPS (Medicine)", regNumber: "BMDC-A-45210", phone: "01611000001", altPhone: "01911000011", whatsapp: "F", serviceArea: "Nobi Bazar Health Complex", experience: "12 years", rating: "4.8", imageUrl: "", sampleImageUrl: "https://picsum.photos/seed/doc1-1/600/450, https://picsum.photos/seed/doc1-2/600/450", status: "active", availability: "active" },
+          { doctorId: "DOC002", name: "Dr. Farzana Yasmin", nameBn: "ডা. ফারজানা ইয়াসমিন", degree: "MBBS, MD (Gynecology)", regNumber: "BMDC-A-51120", phone: "01611000002", altPhone: "", whatsapp: "N", serviceArea: "Bangla Bazar Chamber", experience: "8 years", rating: "4.5", imageUrl: "", sampleImageUrl: "", status: "active", availability: "inactive" },
+          { doctorId: "DOC003", name: "Dr. Shamsul Alam", nameBn: "", degree: "BDS", regNumber: "BDCB-11890", phone: "01611000003", altPhone: "", whatsapp: "01711999888", serviceArea: "", experience: "5 years", rating: "4", imageUrl: "", sampleImageUrl: "https://picsum.photos/seed/doc3-1/600/450", status: "active", availability: "active" }
+        ]);
+      }
       if (!Utils.storage.get(KEYS.users)) {
         // Demo passwords are stored only for the purposes of this local,
         // no-backend demo. In real mode, passwords never reach the
@@ -190,6 +256,7 @@
       markets: () => Utils.storage.get(KEYS.markets, []),
       vehicles: () => Utils.storage.get(KEYS.vehicles, []),
       drivers: () => Utils.storage.get(KEYS.drivers, []),
+      doctors: () => Utils.storage.get(KEYS.doctors, []),
       pending: () => Utils.storage.get(KEYS.pending, []),
       users: () => Utils.storage.get(KEYS.users, []),
       saveDrivers: (list) => Utils.storage.set(KEYS.drivers, list),
@@ -229,6 +296,9 @@
         if (query) list = list.filter((d) => matchesQuery(d, query));
         return list.map(publicDriverFields);
       }
+
+      case "getDoctors":
+        return sortDrivers(DemoStore.doctors().filter((d) => d.status === "active").map(publicDoctorFields));
 
       case "registerDriver": {
         const users = DemoStore.users();
@@ -346,9 +416,32 @@
     };
   }
 
+  /**
+   * Doctor fields exposed publicly — same shape/spirit as a driver
+   * record, but "Vehicle Type"/"Vehicle Number" become "Degree"/
+   * "Registration Number", and there's no bazar/vehicle filtering.
+   */
+  function publicDoctorFields(d) {
+    return {
+      doctorId: d.doctorId,
+      name: d.name,
+      nameBn: d.nameBn || "",
+      phone: d.phone,
+      altPhone: d.altPhone || "",
+      degree: d.degree,
+      regNumber: d.regNumber,
+      serviceArea: d.serviceArea,
+      experience: d.experience,
+      rating: d.rating || "",
+      whatsapp: d.whatsapp || "",
+      imageUrl: d.imageUrl || "",
+      sampleImageUrl: d.sampleImageUrl || "",
+      availability: d.availability
+    };
+  }
+
   /** Fields visible on the logged-in driver's own profile (still no password). */
-  function driverProfileFields(d) {
-    if (!d) return null;
+  function driverProfileFields(d) {    if (!d) return null;
     return Object.assign(publicDriverFields(d), {
       accountStatus: d.status,
       username: d.username
@@ -359,7 +452,7 @@
     return IS_DEMO ? demoCall(operation, payload) : realCall(operation, payload);
   }
 
-  /** Active drivers first, then a stable alphabetical order within each group. */
+  /** Active-first, then a stable alphabetical order — used for both drivers and doctors. */
   function sortDrivers(list) {
     return list.slice().sort((a, b) => {
       const aActive = a.availability === "active" ? 0 : 1;
@@ -383,7 +476,7 @@
    * driver-list view below filters this single cached list
    * client-side instead of making a new network request per click.
    */
-  Api.getDriverDirectory = () => cachedCall("getDrivers", {});
+  Api.getDriverDirectory = () => cachedCall("getDrivers", {}, STATUS_CACHE_TTL);
 
   Api.getDrivers = async (marketSlug, vehicleSlug, query) => {
     let list = await Api.getDriverDirectory();
@@ -406,11 +499,19 @@
     return sortDrivers(list.filter((d) => d.emergency === true));
   };
 
+  /**
+   * Doctors live in their own Google Sheet tab, fetched/cached exactly
+   * like the driver directory (one request, cached + persisted, reused
+   * everywhere) — see getDoctors() in Code.gs / demoCall below.
+   */
+  Api.getDoctorDirectory = () => cachedCall("getDoctors", {}, STATUS_CACHE_TTL);
+  Api.peekDoctorDirectory = () => peek("getDoctors", {}, STATUS_CACHE_TTL);
+
   // Synchronous cache peeks — used by views to skip the loading
   // skeleton entirely when data has already been preloaded.
   Api.peekMarkets = () => peek("getMarkets", {});
   Api.peekVehicleCategories = () => peek("getVehicleCategories", {});
-  Api.peekDriverDirectory = () => peek("getDrivers", {});
+  Api.peekDriverDirectory = () => peek("getDrivers", {}, STATUS_CACHE_TTL);
 
   /**
    * Kick off the initial load + background preload chain:
@@ -424,6 +525,7 @@
     return Api.getMarkets().then((markets) => {
       Api.getVehicleCategories().catch(() => {});
       Api.getDriverDirectory().catch(() => {});
+      Api.getDoctorDirectory().catch(() => {});
       return markets;
     });
   };

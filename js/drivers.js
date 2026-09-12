@@ -433,20 +433,25 @@
       Utils.el("div", { class: "container hero__inner" }, [
         Utils.el("div", { class: "hero__eyebrow", html: Icons.map + "<span>" + Lang.t("site.tagline") + "</span>" }),
         Utils.el("h1", { text: Lang.t("hero.heading") }),
-        Utils.el("p", { text: Lang.t("hero.sub") }),
-        Utils.el("div", { class: "hero__actions" }, [
-          Utils.el("button", {
-            class: "btn btn--primary", text: Lang.t("hero.cta"),
-            onClick: () => Router.navigate("/markets")
-          }),
-          Utils.el("button", {
-            class: "btn btn--danger", html: Icons.emergency + "<span>" + Lang.t("hero.emergencyCta") + "</span>",
-            onClick: () => Router.navigate("/emergency")
-          })
-        ])
+        Utils.el("p", { text: Lang.t("hero.sub") })
       ])
     ]);
     app.appendChild(hero);
+
+    app.appendChild(buildBanner());
+
+    app.appendChild(Utils.el("div", { class: "container home-actions" }, [
+      Utils.el("div", { class: "hero__actions" }, [
+        Utils.el("button", {
+          class: "btn btn--primary btn--compact", text: Lang.t("hero.cta"),
+          onClick: () => Router.navigate("/markets")
+        }),
+        Utils.el("button", {
+          class: "btn btn--danger btn--compact", html: Icons.emergency + "<span>" + Lang.t("hero.emergencyCta") + "</span>",
+          onClick: () => Router.navigate("/emergency")
+        })
+      ])
+    ]));
 
     const cachedMarkets = Api.peekMarkets();
     const marketSection = Utils.el("section", { class: "section container" }, [
@@ -462,6 +467,7 @@
 
     appendHowItWorks(app);
     appendRegisterCta(app);
+    appendDoctorSection(app);
 
     if (cachedMarkets) return;
     try {
@@ -588,6 +594,120 @@
         Utils.el("button", { class: "btn btn--accent", text: Lang.t("registerCta.button"), onClick: () => Router.navigate("/register") })
       ])
     ]));
+  }
+
+  /**
+   * Doctor CTA — visually identical to the Driver Registration band
+   * above (same .cta-band styling) per the spec. The whole banner is
+   * clickable, plus its own button, both leading to the Doctor List.
+   */
+  function appendDoctorSection(app) {
+    const openDoctors = () => Router.navigate("/doctors");
+    app.appendChild(Utils.el("section", { class: "section container" }, [
+      Utils.el("div", {
+        class: "cta-band", role: "button", tabindex: "0",
+        onClick: openDoctors,
+        onKeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDoctors(); } }
+      }, [
+        Utils.el("h2", { text: Lang.t("doctor.sectionHeading") }),
+        Utils.el("p", { text: Lang.t("doctor.sectionSub") }),
+        Utils.el("button", {
+          class: "btn btn--accent", html: Icons.doctor + "<span>" + Lang.t("doctor.sectionCta") + "</span>",
+          onClick: (e) => { e.stopPropagation(); openDoctors(); }
+        })
+      ])
+    ]));
+  }
+
+  /**
+   * Homepage banner — 3 slides, auto-advancing every 3s, swipeable.
+   * Slide 1 is generated from site text (translated live). Slides 2/3
+   * use configured image paths, falling back to a clean placeholder
+   * (never a broken-image icon) until real images are added.
+   */
+  function buildBanner() {
+    const slideDefs = [
+      { type: "text" },
+      { type: "image", src: (window.NOBI_CONFIG.BANNER_IMAGES || {}).slide2 },
+      { type: "image", src: (window.NOBI_CONFIG.BANNER_IMAGES || {}).slide3 }
+    ];
+
+    const track = Utils.el("div", { class: "banner__track" });
+    slideDefs.forEach((def) => track.appendChild(buildSlide(def)));
+
+    const dots = slideDefs.map((_, i) =>
+      Utils.el("button", { type: "button", class: "banner__dot" + (i === 0 ? " is-active" : ""), "aria-label": "Slide " + (i + 1) })
+    );
+    const dotsRow = Utils.el("div", { class: "banner__dots" }, dots);
+
+    const viewport = Utils.el("div", { class: "banner__viewport" }, [track]);
+    const root = Utils.el("div", { class: "banner" }, [Utils.el("div", { class: "container" }, [viewport, dotsRow])]);
+
+    let index = 0;
+    let intervalId = null;
+
+    function paint() {
+      track.style.transform = "translateX(-" + (index * 33.3333) + "%)";
+      dots.forEach((d, i) => d.classList.toggle("is-active", i === index));
+    }
+    function goTo(i) {
+      index = (i + slideDefs.length) % slideDefs.length;
+      paint();
+    }
+    function startTimer() {
+      if (intervalId) clearInterval(intervalId);
+      intervalId = setInterval(() => {
+        // If this banner is no longer on screen (user navigated away),
+        // stop advancing it instead of leaking an interval forever.
+        if (!document.body.contains(root)) { clearInterval(intervalId); return; }
+        goTo(index + 1);
+      }, 3000);
+    }
+
+    dots.forEach((d, i) => d.addEventListener("click", () => { goTo(i); startTimer(); }));
+
+    // Touch/swipe: left = next, right = previous, then restart the timer
+    // (never stacking a duplicate one).
+    let touchStartX = null;
+    viewport.addEventListener("touchstart", (e) => { touchStartX = e.touches[0].clientX; }, { passive: true });
+    viewport.addEventListener("touchend", (e) => {
+      if (touchStartX == null) return;
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      touchStartX = null;
+      if (Math.abs(dx) < 30) return; // ignore tiny/accidental movements
+      goTo(index + (dx < 0 ? 1 : -1));
+      startTimer();
+    }, { passive: true });
+
+    paint();
+    startTimer();
+    return root;
+  }
+
+  function buildSlide(def) {
+    if (def.type === "text") {
+      return Utils.el("div", { class: "banner__slide banner__slide--text" }, [
+        Utils.el("div", {}, [
+          Utils.el("h2", { text: Lang.t("banner.slide1Title") }),
+          Utils.el("p", { text: Lang.t("banner.slide1Sub") })
+        ])
+      ]);
+    }
+    const slide = Utils.el("div", { class: "banner__slide" });
+    const placeholder = () => {
+      slide.innerHTML = "";
+      slide.classList.add("banner__slide--placeholder");
+      slide.innerHTML = Icons.map;
+    };
+    if (def.src) {
+      const img = Utils.el("img", { alt: "", loading: "lazy" });
+      img.addEventListener("error", placeholder);
+      img.src = def.src;
+      slide.appendChild(img);
+    } else {
+      placeholder();
+    }
+    return slide;
   }
 
   // ---------------------------------------------------------
