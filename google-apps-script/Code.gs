@@ -32,6 +32,7 @@
 // CONFIG
 // ----------------------------------------------------------
 const SHEET_DRIVERS = "Drivers";
+const SHEET_DOCTORS = "Doctors";
 const SHEET_PENDING = "Pending Drivers";
 const SHEET_USERS = "Users";
 const SHEET_MARKETS = "Markets";
@@ -61,6 +62,7 @@ switch (op) {
 case "getMarkets": return respond({ ok: true, result: getMarkets() });
 case "getVehicleCategories": return respond({ ok: true, result: getVehicleCategories() });
 case "getDrivers": return respond({ ok: true, result: getDrivers(payload) });
+case "getDoctors": return respond({ ok: true, result: getDoctors() });
 case "registerDriver": return respond({ ok: true, result: registerDriver(payload) });
 case "login": return respond({ ok: true, result: login(payload) });
 case "getProfile": return respond({ ok: true, result: getProfile(payload) });
@@ -213,6 +215,45 @@ imageUrl: clean(r["Driver Image URL"]),
 vehicleImageUrl: clean(r["Vehicle Image URL"]),
 availability: slugOf(r["Availability"]) === "active" ? "active" : "inactive",
 emergency: slugOf(r["Emergency Contact"]) === "true"
+};
+}
+
+/**
+* Doctors live in their own "Doctors" sheet tab, built with the SAME
+* column headers as the Drivers tab (per the project spec) — only the
+* MEANING of three columns changes for that tab: "Driver ID" is read as
+* the Doctor ID, "Vehicle Type" as Degree/Qualification, and "Vehicle
+* Number" as the Registration Number. No bazar/vehicle filtering
+* applies to doctors, so there is no market/vehicle-type parameter here.
+*/
+function getDoctors() {
+return readRows(SHEET_DOCTORS)
+.filter((r) => slugOf(r["Status"]) === "active")
+.map(publicDoctorFields)
+.sort((a, b) => {
+const aActive = a.availability === "active" ? 0 : 1;
+const bActive = b.availability === "active" ? 0 : 1;
+if (aActive !== bActive) return aActive - bActive;
+return (a.name || "").localeCompare(b.name || "");
+});
+}
+
+function publicDoctorFields(r) {
+return {
+doctorId: clean(r["Driver ID"]),
+name: clean(r["Name"]),
+nameBn: clean(r["Bengali Name"]),
+phone: clean(r["Phone"]),
+altPhone: clean(r["Alternative Phone"]),
+degree: clean(r["Vehicle Type"]),
+regNumber: clean(r["Vehicle Number"]),
+serviceArea: clean(r["Service Area"]),
+experience: clean(r["Driving Experience"]),
+rating: clean(r["Star Rating"]),
+whatsapp: clean(r["WhatsApp"]),
+imageUrl: clean(r["Driver Image URL"]),
+sampleImageUrl: clean(r["Vehicle Image URL"]),
+availability: slugOf(r["Availability"]) === "active" ? "active" : "inactive"
 };
 }
 
