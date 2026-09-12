@@ -39,7 +39,7 @@ window.NOBI_CONFIG = {
   // Leave this as null to run the site in DEMO MODE with
   // built-in sample data (no Google Sheet required). This is
   // useful for local testing before you connect a real sheet.
-  API_BASE_URL: "https://script.google.com/macros/s/AKfycbxzpv7p_BcXNVT_FF0wvaP6VfjfBNRezop4dFc1xVzSpwatiNqUI0_kcVcg1N0ZsbZljQ/exec",
+  API_BASE_URL: "https://script.google.com/macros/s/AKfycbxp2mKqITuObRAAPXt5L8JlnRA0xQ2bAjy_Hju6EkEudvexxVsenuCmos6ygtRW9uHczw/exec",
 
   // --------------------------------------------------------
   // WEBSITE IDENTITY
@@ -65,7 +65,27 @@ window.NOBI_CONFIG = {
   // visitor's browser before quietly refreshing it again.
   CACHE_TTL_MS: 5 * 60 * 1000,
 
+  // Driver/Doctor availability changes at any time, so it refreshes
+  // more often than static data (Markets/Vehicle Categories).
+  STATUS_CACHE_TTL_MS: 60 * 1000,
+
   // How long (ms) to wait for the API before showing a
   // network-error state with a Retry button.
-  REQUEST_TIMEOUT_MS: 12000
+  REQUEST_TIMEOUT_MS: 12000,
+
+  // Homepage banner — Slide 1 is generated from site text; Slides 2/3
+  // use these image files. Drop images into /assets/banner/ with these
+  // exact filenames to replace the placeholder.
+  BANNER_IMAGES: {
+    slide2: "assets/banner/slide-2.jpg",
+    slide3: "assets/banner/slide-3.jpg"
+  },
+
+  // Footer social links — leave as "#" until a real URL is available.
+  SOCIAL_LINKS: {
+    facebook: "#",
+    whatsapp: "#",
+    tiktok: "#",
+    linkedin: "#"
+  }
 };

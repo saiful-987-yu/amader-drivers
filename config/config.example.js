@@ -65,7 +65,36 @@ window.NOBI_CONFIG = {
   // visitor's browser before quietly refreshing it again.
   CACHE_TTL_MS: 5 * 60 * 1000,
 
+  // Driver/Doctor availability can change at any time, so their
+  // directory data is refreshed more often than static data like
+  // Markets/Vehicle Categories (which barely ever change).
+  STATUS_CACHE_TTL_MS: 60 * 1000,
+
   // How long (ms) to wait for the API before showing a
   // network-error state with a Retry button.
-  REQUEST_TIMEOUT_MS: 12000
+  REQUEST_TIMEOUT_MS: 12000,
+
+  // --------------------------------------------------------
+  // HOMEPAGE BANNER — Slide 1 is generated automatically from
+  // site text; Slides 2 and 3 use these image files. Drop your
+  // own images into /assets/banner/ using these exact filenames
+  // and they'll appear automatically — no other change needed.
+  // Until then, a placeholder is shown so nothing looks broken.
+  // --------------------------------------------------------
+  BANNER_IMAGES: {
+    slide2: "assets/banner/slide-2.jpg",
+    slide3: "assets/banner/slide-3.jpg"
+  },
+
+  // --------------------------------------------------------
+  // FOOTER SOCIAL LINKS  ◄── CHANGE THESE VALUES
+  // --------------------------------------------------------
+  // Leave any entry as "#" until you have a real link — the
+  // icon still shows, it just doesn't go anywhere yet.
+  SOCIAL_LINKS: {
+    facebook: "#",
+    whatsapp: "#",
+    tiktok: "#",
+    linkedin: "#"
+  }
 };
