@@ -18,11 +18,11 @@
   .menu-toggle { display: none; }
   .mobile-nav { display: none !important; }
 
-  .hero { padding: var(--space-8) 0 var(--space-7); }
-  .hero h1 { font-size: var(--font-size-3xl); }
-  .hero p { font-size: var(--font-size-lg); }
-  .hero__actions { flex-direction: row; }
-  .hero__actions .btn { width: auto; flex: 0 1 auto; }
+  .hero { padding: var(--space-7) 0 var(--space-4); }
+  .hero h1 { font-size: var(--font-size-2xl); }
+  .hero p { font-size: var(--font-size-md); }
+  .home-actions { max-width: 480px; margin: 0 auto; }
+  .banner .container { max-width: 640px; }
 
   .chip-grid { grid-template-columns: repeat(3, 1fr); }
   .driver-grid { grid-template-columns: repeat(2, 1fr); }
