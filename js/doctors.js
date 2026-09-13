@@ -397,7 +397,7 @@
       }
       const crumbTrail = [
         { label: Lang.t("nav.home"), path: "/" },
-        { label: Lang.t("doctor.heading"), path: "/doctors" }
+        { label: Lang.t("doctor.heading"), path: "/doctor" }
       ];
       resultsWrap.appendChild(Utils.el("div", { class: "driver-grid" }, list.map((d) => doctorCard(d, crumbTrail))));
     } catch (err) {
@@ -406,5 +406,5 @@
     }
   }
 
-  Router.register("/doctors", renderDoctorList);
+  Router.register("/doctor", renderDoctorList, ["/"]);
 })(window, document, window.Utils, window.Lang, window.Icons, window.Api, window.Router, window.ViewHelpers, window.Modal, window.Toast);

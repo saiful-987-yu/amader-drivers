@@ -275,5 +275,5 @@
     ]));
   }
 
-  Router.register("/register", renderRegister);
+  Router.register("/registration", renderRegister, ["/"]);
 })(window, document, window.Utils, window.Lang, window.Icons, window.Api, window.Router, window.ViewHelpers, window.Toast);

@@ -21,6 +21,7 @@
 
       "nav.home": "Home",
       "nav.drivers": "Drivers",
+      "nav.markets": "Markets",
       "nav.register": "Register",
       "nav.profile": "Profile",
       "nav.login": "Login",
@@ -230,6 +231,7 @@
 
       "nav.home": "হোম",
       "nav.drivers": "ড্রাইভার",
+      "nav.markets": "মার্কেট",
       "nav.register": "রেজিস্ট্রেশন",
       "nav.profile": "প্রোফাইল",
       "nav.login": "লগইন",

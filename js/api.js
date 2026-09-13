@@ -184,7 +184,6 @@
       drivers: "nobi.demo.drivers",
       doctors: "nobi.demo.doctors",
       pending: "nobi.demo.pending",
-      users: "nobi.demo.users",
       session: "nobi.demo.session"
     };
 
@@ -214,14 +213,14 @@
       }
       if (!Utils.storage.get(KEYS.drivers)) {
         Utils.storage.set(KEYS.drivers, [
-          { driverId: "D001", name: "Mohammad Karim", nameBn: "মোহাম্মদ করিম", emergencyContact: "TRUE", phone: "01711000001", altPhone: "", vehicleType: "cng", vehicleNumber: "DHA-CNG-1123", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar & surrounding roads", experience: "6 years", rating: "4.2", whatsapp: "F", imageUrl: "", vehicleImageUrl: "", username: "karim.driver", status: "active", availability: "active" },
-          { driverId: "D002", name: "Abdur Rahman", nameBn: "", emergencyContact: "FALSE", phone: "01711000002", altPhone: "01911000002", vehicleType: "cng", vehicleNumber: "DHA-CNG-2245", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar to Station Road", experience: "3 years", rating: "3.99", whatsapp: "A", imageUrl: "", vehicleImageUrl: "", username: "rahman.driver", status: "active", availability: "inactive" },
-          { driverId: "D003", name: "Jamal Uddin", nameBn: "জামাল উদ্দিন", emergencyContact: "TRUE", phone: "01711000003", altPhone: "", vehicleType: "auto", vehicleNumber: "DHA-AUTO-0091", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar Market Area", experience: "8 years", rating: "5", whatsapp: "01800111222", imageUrl: "", vehicleImageUrl: "https://picsum.photos/seed/jamal-auto/600/450", username: "jamal.driver", status: "active", availability: "active" },
-          { driverId: "D004", name: "Selina Begum", nameBn: "সেলিনা বেগম", emergencyContact: "TRUE", phone: "01711000004", altPhone: "", vehicleType: "van", vehicleNumber: "DHA-VAN-0456", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar & nearby villages", experience: "", rating: "", whatsapp: "N", imageUrl: "", vehicleImageUrl: "", username: "selina.driver", status: "active", availability: "active" },
-          { driverId: "D005", name: "Farid Hossain", nameBn: "", emergencyContact: "", phone: "01711000005", altPhone: "", vehicleType: "auto", vehicleNumber: "DHA-AUTO-0154", marketSlug: "bangla-bazar", serviceArea: "", experience: "5 years", rating: "2", whatsapp: "", imageUrl: "", vehicleImageUrl: "", username: "farid.driver", status: "active", availability: "active" },
-          { driverId: "D006", name: "Nurul Islam", nameBn: "নুরুল ইসলাম", emergencyContact: "FALSE", phone: "01711000006", altPhone: "01911000006", vehicleType: "cng, auto", vehicleNumber: "DHA-MULTI-7788", marketSlug: "nobi-bazar, bangla-bazar", serviceArea: "Nobi Bazar, Bangla Bazar, Station Road", experience: "7 years", rating: "4", whatsapp: "F", imageUrl: "", vehicleImageUrl: "https://picsum.photos/seed/nurul-1/600/450, https://picsum.photos/seed/nurul-2/600/450, https://picsum.photos/seed/nurul-3/600/450", username: "nurul.driver", status: "active", availability: "active" },
-          { driverId: "D007", name: "Kamal Hossain", nameBn: "কামাল হোসেন", emergencyContact: "TRUE", phone: "01711000007", altPhone: "", vehicleType: "motorcycle", vehicleNumber: "DHA-MOTO-2201", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar Bypass Road", experience: "4 years", rating: "4.5", whatsapp: "F", imageUrl: "", vehicleImageUrl: "", username: "kamal.driver", status: "active", availability: "active" },
-          { driverId: "D008", name: "Anwar Sheikh", nameBn: "", emergencyContact: "", phone: "01711000008", altPhone: "", vehicleType: "easy-bike", vehicleNumber: "DHA-EASY-3390", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar Local Roads", experience: "2 years", rating: "3", whatsapp: "N", imageUrl: "", vehicleImageUrl: "", username: "anwar.driver", status: "active", availability: "active" }
+          { driverId: "D001", name: "Mohammad Karim", nameBn: "মোহাম্মদ করিম", emergencyContact: "TRUE", sortStatus: "2nd", phone: "01711000001", altPhone: "", vehicleType: "cng", vehicleNumber: "DHA-CNG-1123", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar & surrounding roads", experience: "6 years", rating: "4.2", whatsapp: "F", imageUrl: "", vehicleImageUrl: "", username: "karim.driver", password: "demo1234", status: "active", availability: "active" },
+          { driverId: "D002", name: "Abdur Rahman", nameBn: "", emergencyContact: "FALSE", sortStatus: "1st", phone: "01711000002", altPhone: "01911000002", vehicleType: "cng", vehicleNumber: "DHA-CNG-2245", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar to Station Road", experience: "3 years", rating: "3.99", whatsapp: "A", imageUrl: "", vehicleImageUrl: "", username: "rahman.driver", password: "demo1234", status: "active", availability: "inactive" },
+          { driverId: "D003", name: "Jamal Uddin", nameBn: "জামাল উদ্দিন", emergencyContact: "TRUE", phone: "01711000003", altPhone: "", vehicleType: "auto", vehicleNumber: "DHA-AUTO-0091", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar Market Area", experience: "8 years", rating: "5", whatsapp: "01800111222", imageUrl: "", vehicleImageUrl: "https://picsum.photos/seed/jamal-auto/600/450", username: "jamal.driver", password: "demo1234", status: "active", availability: "active" },
+          { driverId: "D004", name: "Selina Begum", nameBn: "সেলিনা বেগম", emergencyContact: "TRUE", phone: "01711000004", altPhone: "", vehicleType: "van", vehicleNumber: "DHA-VAN-0456", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar & nearby villages", experience: "", rating: "", whatsapp: "N", imageUrl: "", vehicleImageUrl: "", username: "selina.driver", password: "demo1234", status: "active", availability: "active" },
+          { driverId: "D005", name: "Farid Hossain", nameBn: "", emergencyContact: "", phone: "01711000005", altPhone: "", vehicleType: "auto", vehicleNumber: "DHA-AUTO-0154", marketSlug: "bangla-bazar", serviceArea: "", experience: "5 years", rating: "2", whatsapp: "", imageUrl: "", vehicleImageUrl: "", username: "farid.driver", password: "demo1234", status: "active", availability: "active" },
+          { driverId: "D006", name: "Nurul Islam", nameBn: "নুরুল ইসলাম", emergencyContact: "FALSE", sortStatus: "3rd", phone: "01711000006", altPhone: "01911000006", vehicleType: "cng, auto", vehicleNumber: "DHA-MULTI-7788", marketSlug: "nobi-bazar, bangla-bazar", serviceArea: "Nobi Bazar, Bangla Bazar, Station Road", experience: "7 years", rating: "4", whatsapp: "F", imageUrl: "", vehicleImageUrl: "https://picsum.photos/seed/nurul-1/600/450, https://picsum.photos/seed/nurul-2/600/450, https://picsum.photos/seed/nurul-3/600/450", username: "nurul.driver", password: "demo1234", status: "active", availability: "active" },
+          { driverId: "D007", name: "Kamal Hossain", nameBn: "কামাল হোসেন", emergencyContact: "TRUE", phone: "01711000007", altPhone: "", vehicleType: "motorcycle", vehicleNumber: "DHA-MOTO-2201", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar Bypass Road", experience: "4 years", rating: "4.5", whatsapp: "F", imageUrl: "", vehicleImageUrl: "", username: "kamal.driver", password: "demo1234", status: "active", availability: "active" },
+          { driverId: "D008", name: "Anwar Sheikh", nameBn: "", emergencyContact: "", phone: "01711000008", altPhone: "", vehicleType: "easy-bike", vehicleNumber: "DHA-EASY-3390", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar Local Roads", experience: "2 years", rating: "3", whatsapp: "N", imageUrl: "", vehicleImageUrl: "", username: "anwar.driver", password: "demo1234", status: "active", availability: "active" }
         ]);
       }
       if (!Utils.storage.get(KEYS.pending)) Utils.storage.set(KEYS.pending, []);
@@ -230,21 +229,6 @@
           { doctorId: "DOC001", name: "Dr. Rafiqul Islam", nameBn: "ডা. রফিকুল ইসলাম", degree: "MBBS, FCPS (Medicine)", regNumber: "BMDC-A-45210", phone: "01611000001", altPhone: "01911000011", whatsapp: "F", serviceArea: "Nobi Bazar Health Complex", experience: "12 years", rating: "4.8", imageUrl: "", sampleImageUrl: "https://picsum.photos/seed/doc1-1/600/450, https://picsum.photos/seed/doc1-2/600/450", status: "active", availability: "active" },
           { doctorId: "DOC002", name: "Dr. Farzana Yasmin", nameBn: "ডা. ফারজানা ইয়াসমিন", degree: "MBBS, MD (Gynecology)", regNumber: "BMDC-A-51120", phone: "01611000002", altPhone: "", whatsapp: "N", serviceArea: "Bangla Bazar Chamber", experience: "8 years", rating: "4.5", imageUrl: "", sampleImageUrl: "", status: "active", availability: "inactive" },
           { doctorId: "DOC003", name: "Dr. Shamsul Alam", nameBn: "", degree: "BDS", regNumber: "BDCB-11890", phone: "01611000003", altPhone: "", whatsapp: "01711999888", serviceArea: "", experience: "5 years", rating: "4", imageUrl: "", sampleImageUrl: "https://picsum.photos/seed/doc3-1/600/450", status: "active", availability: "active" }
-        ]);
-      }
-      if (!Utils.storage.get(KEYS.users)) {
-        // Demo passwords are stored only for the purposes of this local,
-        // no-backend demo. In real mode, passwords never reach the
-        // frontend — see Code.gs, which hashes and checks them server-side.
-        Utils.storage.set(KEYS.users, [
-          { username: "karim.driver", phone: "01711000001", password: "demo1234", driverId: "D001" },
-          { username: "rahman.driver", phone: "01711000002", password: "demo1234", driverId: "D002" },
-          { username: "jamal.driver", phone: "01711000003", password: "demo1234", driverId: "D003" },
-          { username: "selina.driver", phone: "01711000004", password: "demo1234", driverId: "D004" },
-          { username: "farid.driver", phone: "01711000005", password: "demo1234", driverId: "D005" },
-          { username: "nurul.driver", phone: "01711000006", password: "demo1234", driverId: "D006" },
-          { username: "kamal.driver", phone: "01711000007", password: "demo1234", driverId: "D007" },
-          { username: "anwar.driver", phone: "01711000008", password: "demo1234", driverId: "D008" }
         ]);
       }
     }
@@ -258,10 +242,8 @@
       drivers: () => Utils.storage.get(KEYS.drivers, []),
       doctors: () => Utils.storage.get(KEYS.doctors, []),
       pending: () => Utils.storage.get(KEYS.pending, []),
-      users: () => Utils.storage.get(KEYS.users, []),
       saveDrivers: (list) => Utils.storage.set(KEYS.drivers, list),
-      savePending: (list) => Utils.storage.set(KEYS.pending, list),
-      saveUsers: (list) => Utils.storage.set(KEYS.users, list)
+      savePending: (list) => Utils.storage.set(KEYS.pending, list)
     };
   })();
 
@@ -301,19 +283,17 @@
         return sortDrivers(DemoStore.doctors().filter((d) => d.status === "active").map(publicDoctorFields));
 
       case "registerDriver": {
-        const users = DemoStore.users();
         const drivers = DemoStore.drivers();
         const pending = DemoStore.pending();
         const phoneDigits = (payload.phone || "").replace(/\D/g, "");
-        const dup = users.some((u) => (u.phone || "").replace(/\D/g, "") === phoneDigits) ||
-          drivers.some((d) => (d.phone || "").replace(/\D/g, "") === phoneDigits) ||
+        const dup = drivers.some((d) => (d.phone || "").replace(/\D/g, "") === phoneDigits) ||
           pending.some((p) => (p.phone || "").replace(/\D/g, "") === phoneDigits);
         if (dup) {
           const err = new Error("DUPLICATE_PHONE");
           err.code = "DUPLICATE_PHONE";
           throw err;
         }
-        const usernameTaken = users.some((u) => u.username === payload.username) ||
+        const usernameTaken = drivers.some((d) => d.username === payload.username) ||
           pending.some((p) => p.username === payload.username);
         if (usernameTaken) {
           const err = new Error("DUPLICATE_USERNAME");
@@ -331,20 +311,20 @@
       }
 
       case "login": {
-        const users = DemoStore.users();
-        const pending = DemoStore.pending();
+        // The Drivers list is the ONLY source of truth for login — same
+        // as the real backend, there is no separate Users store.
         const drivers = DemoStore.drivers();
+        const pending = DemoStore.pending();
         const idInput = (payload.identifier || "").trim().toLowerCase();
         const isPending = pending.some((p) =>
           (p.username || "").toLowerCase() === idInput ||
           (p.phone || "").replace(/\D/g, "") === idInput.replace(/\D/g, ""));
-        const user = users.find((u) =>
-          (u.username || "").toLowerCase() === idInput ||
-          (u.phone || "").replace(/\D/g, "") === idInput.replace(/\D/g, ""));
-        if (user && user.password === payload.password) {
-          const driver = drivers.find((d) => d.driverId === user.driverId);
+        const driver = drivers.find((d) =>
+          (d.username || "").toLowerCase() === idInput ||
+          (d.phone || "").replace(/\D/g, "") === idInput.replace(/\D/g, ""));
+        if (driver && driver.password === payload.password) {
           const token = "demo-token-" + Utils.uid();
-          Utils.storage.set(demoSessionKey(token), { driverId: user.driverId });
+          Utils.storage.set(demoSessionKey(token), { driverId: driver.driverId });
           return { token, driver: driverProfileFields(driver) };
         }
         if (isPending) {
@@ -412,7 +392,8 @@
       imageUrl: d.imageUrl || "",
       vehicleImageUrl: d.vehicleImageUrl || "",
       availability: d.availability,
-      emergency: String(d.emergencyContact || "").trim().toUpperCase() === "TRUE"
+      emergency: String(d.emergencyContact || "").trim().toUpperCase() === "TRUE",
+      sortStatus: d.sortStatus || ""
     };
   }
 
@@ -441,7 +422,8 @@
   }
 
   /** Fields visible on the logged-in driver's own profile (still no password). */
-  function driverProfileFields(d) {    if (!d) return null;
+  function driverProfileFields(d) {
+    if (!d) return null;
     return Object.assign(publicDriverFields(d), {
       accountStatus: d.status,
       username: d.username
@@ -459,6 +441,27 @@
       const bActive = b.availability === "active" ? 0 : 1;
       if (aActive !== bActive) return aActive - bActive;
       return (a.name || "").localeCompare(b.name || "");
+    });
+  }
+
+  /**
+   * A driver's "Sort Status" (1st/2nd/3rd/blank, from the Sheet) is
+   * ALWAYS the primary ordering key for a bazar+vehicle-type driver
+   * list — 1st, then 2nd, then 3rd, then everyone else (blank), in
+   * that order. Star Rating (highest first) only decides ordering
+   * WITHIN the same Sort Status group; it never overrides Sort Status.
+   */
+  function sortBySortStatusThenRating(list) {
+    const rank = { "1st": 0, "2nd": 1, "3rd": 2 };
+    return list.slice().sort((a, b) => {
+      const ra = rank[String(a.sortStatus || "").trim().toLowerCase()];
+      const rb = rank[String(b.sortStatus || "").trim().toLowerCase()];
+      const ranka = ra != null ? ra : 3;
+      const rankb = rb != null ? rb : 3;
+      if (ranka !== rankb) return ranka - rankb;
+      const ratingA = parseFloat(a.rating) || 0;
+      const ratingB = parseFloat(b.rating) || 0;
+      return ratingB - ratingA;
     });
   }
 
@@ -486,7 +489,7 @@
     if (marketSlug) list = list.filter((d) => Utils.splitMulti(d.marketSlug).includes(marketSlug));
     if (vehicleSlug) list = list.filter((d) => Utils.splitMulti(d.vehicleType).includes(vehicleSlug));
     if (query) list = list.filter((d) => matchesQuery(d, query));
-    return sortDrivers(list);
+    return sortBySortStatusThenRating(list);
   };
 
   /**

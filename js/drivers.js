@@ -460,7 +460,7 @@
         Utils.el("p", { text: Lang.t("market.chooseSub") })
       ]),
       cachedMarkets
-        ? marketGrid(cachedMarkets, (m) => Router.navigate(`/vehicles/${m.slug}`))
+        ? marketGrid(cachedMarkets, (m) => Router.navigate(`/markets/${m.slug}`))
         : ViewHelpers.loadingBlock(Lang.t("market.loading"))
     ]);
     app.appendChild(marketSection);
@@ -472,7 +472,7 @@
     if (cachedMarkets) return;
     try {
       const markets = await Api.getMarkets();
-      const grid = marketGrid(markets, (m) => Router.navigate(`/vehicles/${m.slug}`));
+      const grid = marketGrid(markets, (m) => Router.navigate(`/markets/${m.slug}`));
       marketSection.replaceChild(grid, marketSection.lastChild);
     } catch (err) {
       marketSection.replaceChild(ViewHelpers.errorBlock(Lang.t("error.network"), () => renderHome(app)), marketSection.lastChild);
@@ -586,37 +586,39 @@
     ]));
   }
 
+  /** Sets a background photo (with a dark tint so text stays legible) on a .cta-band, with a graceful no-op if the path is missing/broken — CSS background-image never shows a broken-image icon, so the existing solid color just keeps showing through underneath. */
+  function applyCtaBandBackground(el, path) {
+    if (!path) return;
+    el.style.backgroundImage = `linear-gradient(rgba(10, 30, 20, 0.55), rgba(10, 30, 20, 0.55)), url("${path}")`;
+  }
+
   function appendRegisterCta(app) {
-    app.appendChild(Utils.el("section", { class: "section container" }, [
-      Utils.el("div", { class: "cta-band" }, [
-        Utils.el("h2", { text: Lang.t("registerCta.heading") }),
-        Utils.el("p", { text: Lang.t("registerCta.text") }),
-        Utils.el("button", { class: "btn btn--accent", text: Lang.t("registerCta.button"), onClick: () => Router.navigate("/register") })
-      ])
-    ]));
+    const band = Utils.el("div", { class: "cta-band" }, [
+      Utils.el("h2", { text: Lang.t("registerCta.heading") }),
+      Utils.el("p", { text: Lang.t("registerCta.text") }),
+      Utils.el("button", { class: "btn btn--accent", text: Lang.t("registerCta.button"), onClick: () => Router.navigate("/registration") })
+    ]);
+    applyCtaBandBackground(band, (window.NOBI_CONFIG.SECTION_BACKGROUNDS || {}).registration);
+    app.appendChild(Utils.el("section", { class: "section container" }, [band]));
   }
 
   /**
    * Doctor CTA — visually identical to the Driver Registration band
-   * above (same .cta-band styling) per the spec. The whole banner is
-   * clickable, plus its own button, both leading to the Doctor List.
+   * above (same .cta-band styling, now with its own optional background
+   * photo). Only the "Find Doctors" button itself is clickable — clicking
+   * elsewhere in the section does nothing, per the spec.
    */
   function appendDoctorSection(app) {
-    const openDoctors = () => Router.navigate("/doctors");
-    app.appendChild(Utils.el("section", { class: "section container" }, [
-      Utils.el("div", {
-        class: "cta-band", role: "button", tabindex: "0",
-        onClick: openDoctors,
-        onKeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDoctors(); } }
-      }, [
-        Utils.el("h2", { text: Lang.t("doctor.sectionHeading") }),
-        Utils.el("p", { text: Lang.t("doctor.sectionSub") }),
-        Utils.el("button", {
-          class: "btn btn--accent", html: Icons.doctor + "<span>" + Lang.t("doctor.sectionCta") + "</span>",
-          onClick: (e) => { e.stopPropagation(); openDoctors(); }
-        })
-      ])
-    ]));
+    const band = Utils.el("div", { class: "cta-band" }, [
+      Utils.el("h2", { text: Lang.t("doctor.sectionHeading") }),
+      Utils.el("p", { text: Lang.t("doctor.sectionSub") }),
+      Utils.el("button", {
+        class: "btn btn--accent", html: Icons.doctor + "<span>" + Lang.t("doctor.sectionCta") + "</span>",
+        onClick: () => Router.navigate("/doctor")
+      })
+    ]);
+    applyCtaBandBackground(band, (window.NOBI_CONFIG.SECTION_BACKGROUNDS || {}).doctor);
+    app.appendChild(Utils.el("section", { class: "section container" }, [band]));
   }
 
   /**
@@ -717,7 +719,7 @@
     app.innerHTML = "";
     const crumb = ViewHelpers.breadcrumb([
       { label: Lang.t("nav.home"), path: "/" },
-      { label: Lang.t("nav.drivers") }
+      { label: Lang.t("nav.markets") }
     ]);
 
     const cachedMarkets = Api.peekMarkets();
@@ -728,7 +730,7 @@
         Utils.el("p", { text: Lang.t("market.chooseSub") })
       ]),
       cachedMarkets
-        ? marketGrid(cachedMarkets, (m) => Router.navigate(`/vehicles/${m.slug}`))
+        ? marketGrid(cachedMarkets, (m) => Router.navigate(`/markets/${m.slug}`))
         : ViewHelpers.loadingBlock(Lang.t("market.loading"))
     ]);
     app.appendChild(section);
@@ -736,14 +738,14 @@
     if (cachedMarkets) return;
     try {
       const markets = await Api.getMarkets();
-      section.replaceChild(marketGrid(markets, (m) => Router.navigate(`/vehicles/${m.slug}`)), section.lastChild);
+      section.replaceChild(marketGrid(markets, (m) => Router.navigate(`/markets/${m.slug}`)), section.lastChild);
     } catch (err) {
       section.replaceChild(ViewHelpers.errorBlock(Lang.t("error.network"), () => renderMarkets(app)), section.lastChild);
     }
   }
 
   // ---------------------------------------------------------
-  // VEHICLE SELECTION VIEW (/vehicles/:market)
+  // VEHICLE SELECTION VIEW (/markets/:market)
   // ---------------------------------------------------------
   async function renderVehicles(app, params) {
     app.innerHTML = "";
@@ -759,7 +761,7 @@
       const availableSlugs = categoriesWithDrivers(directory, market.slug);
       const filtered = vehicles.filter((v) => availableSlugs.has(v.slug));
       const onlineCounts = onlineCountByCategory(directory, market.slug);
-      return vehicleGrid(filtered, (v) => Router.navigate(`/drivers/${market.slug}/${v.slug}`), onlineCounts);
+      return vehicleGrid(filtered, (v) => Router.navigate(`/markets/${market.slug}/${v.slug}`), onlineCounts);
     }
 
     // If we already know the market slug is invalid we still need a
@@ -770,6 +772,7 @@
 
     const crumb = ViewHelpers.breadcrumb([
       { label: Lang.t("nav.home"), path: "/" },
+      { label: Lang.t("nav.markets"), path: "/markets" },
       { label: knownMarket ? marketName(knownMarket) : "…" }
     ]);
 
@@ -792,6 +795,7 @@
 
       const freshCrumb = ViewHelpers.breadcrumb([
         { label: Lang.t("nav.home"), path: "/" },
+        { label: Lang.t("nav.markets"), path: "/markets" },
         { label: marketName(market) }
       ]);
       section.replaceChild(freshCrumb, section.firstChild);
@@ -803,7 +807,7 @@
   }
 
   // ---------------------------------------------------------
-  // DRIVER LIST VIEW (/drivers/:market/:vehicle)
+  // DRIVER LIST VIEW (/markets/:market/:vehicle)
   // ---------------------------------------------------------
   async function renderDriverList(app, params) {
     app.innerHTML = "";
@@ -818,7 +822,8 @@
       crumbHolder.innerHTML = "";
       crumbHolder.appendChild(ViewHelpers.breadcrumb([
         { label: Lang.t("nav.home"), path: "/" },
-        { label: market ? marketName(market) : "…", path: market ? `/vehicles/${market.slug}` : null },
+        { label: Lang.t("nav.markets"), path: "/markets" },
+        { label: market ? marketName(market) : "…", path: market ? `/markets/${market.slug}` : null },
         { label: vehicle ? vehicleName(vehicle) : "…" }
       ]));
     }
@@ -864,8 +869,9 @@
     paintCrumb(market, vehicle);
     const crumbTrail = [
       { label: Lang.t("nav.home"), path: "/" },
-      { label: marketName(market), path: `/vehicles/${market.slug}` },
-      { label: vehicleName(vehicle), path: `/drivers/${market.slug}/${vehicle.slug}` }
+      { label: Lang.t("nav.markets"), path: "/markets" },
+      { label: marketName(market), path: `/markets/${market.slug}` },
+      { label: vehicleName(vehicle), path: `/markets/${market.slug}/${vehicle.slug}` }
     ];
 
     section.querySelector("[data-heading]").textContent =
@@ -897,7 +903,7 @@
           message: query ? Lang.t("empty.noSearchResults") : Lang.t("empty.noDrivers"),
           sub: query ? undefined : Lang.t("empty.noDriversSub"),
           actionLabel: Lang.t("empty.backToVehicleTypes"),
-          onAction: () => Router.navigate(`/vehicles/${market.slug}`)
+          onAction: () => Router.navigate(`/markets/${market.slug}`)
         }));
         return;
       }
@@ -997,9 +1003,9 @@
   }
 
   Router.register("/", renderHome);
-  Router.register("/markets", renderMarkets);
-  Router.register("/vehicles/:market", renderVehicles);
-  Router.register("/drivers/:market/:vehicle", renderDriverList);
-  Router.register("/search", renderSearch);
-  Router.register("/emergency", renderEmergencyList);
+  Router.register("/markets", renderMarkets, ["/"]);
+  Router.register("/markets/:market", renderVehicles, ["/", "/markets"]);
+  Router.register("/markets/:market/:vehicle", renderDriverList, ["/", "/markets", "/markets/:market"]);
+  Router.register("/search", renderSearch, ["/"]);
+  Router.register("/emergency", renderEmergencyList, ["/"]);
 })(window, document, window.Utils, window.Lang, window.Icons, window.Api, window.Router, window.ViewHelpers, window.Modal, window.Toast, window.Search);

@@ -163,20 +163,50 @@
   // ROUTER
   // ---------------------------------------------------------
   const Router = { routes: [] };
+  let isFirstRouteRender = true;
 
-  /** Register a route. pattern uses ":name" segments, e.g. "/drivers/:market/:vehicle" */
-  Router.register = function (pattern, renderFn) {
+  /** Register a route. pattern uses ":name" segments, e.g. "/markets/:market/:vehicle".
+   *  `ancestors` (optional) lists this route's logical parent paths, outermost first
+   *  (e.g. ["/", "/markets", "/markets/:market"]) — same ":name" segments, filled in
+   *  from the matched params. Used only once, on a page's very first render, to
+   *  synthesize a Back-button history chain for deep links (see below). */
+  Router.register = function (pattern, renderFn, ancestors) {
     const paramNames = [];
     const regex = new RegExp("^" + pattern.replace(/:[^/]+/g, (m) => {
       paramNames.push(m.slice(1));
       return "([^/]+)";
     }) + "$");
-    Router.routes.push({ regex, paramNames, renderFn });
+    Router.routes.push({ regex, paramNames, renderFn, ancestors: ancestors || [] });
   };
 
   Router.navigate = function (path) {
     window.location.hash = "#" + path;
   };
+
+  function fillPattern(pattern, params) {
+    return pattern.replace(/:([^/]+)/g, (m, name) => encodeURIComponent(params[name] != null ? params[name] : ""));
+  }
+
+  /**
+   * A deep link (e.g. someone opens /markets/nobi-bazar/cng directly, with
+   * no prior in-app navigation) starts with NO history entries for Home,
+   * Markets, or the Market page underneath it — so the very first Back
+   * press would leave the site entirely instead of stepping up one level.
+   * We fix this once, right when such a page first loads, by rewriting
+   * the current history entry as the chain of ancestor pages leading up
+   * to this one (same final URL, so nothing visibly changes) — after
+   * that, Back naturally walks back up through Market -> Markets -> Home
+   * exactly like it would if the user had actually clicked through.
+   */
+  function synthesizeAncestorHistory(route, params, finalHash) {
+    if (!route.ancestors.length) return;
+    const chain = route.ancestors.map((p) => "#" + fillPattern(p, params));
+    history.replaceState({ synthetic: true }, "", chain[0]);
+    for (let i = 1; i < chain.length; i++) {
+      history.pushState({ synthetic: true }, "", chain[i]);
+    }
+    history.pushState({ synthetic: true }, "", finalHash);
+  }
 
   function currentPath() {
     const hash = window.location.hash || "#/";
@@ -202,6 +232,10 @@
       if (match) {
         const params = {};
         route.paramNames.forEach((name, i) => { params[name] = decodeURIComponent(match[i + 1]); });
+        if (isFirstRouteRender) {
+          synthesizeAncestorHistory(route, params, window.location.hash || "#/");
+        }
+        isFirstRouteRender = false;
         app.setAttribute("aria-busy", "true");
         try {
           await route.renderFn(app, params, query);
@@ -217,6 +251,7 @@
         return;
       }
     }
+    isFirstRouteRender = false;
     // No match — fall back to home.
     Router.navigate("/");
   }

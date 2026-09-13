@@ -43,7 +43,7 @@
       submitBtn,
       Utils.el("p", { class: "text-center mt-5 hint" }, [
         document.createTextNode(Lang.t("login.noAccount") + " "),
-        Utils.el("a", { href: "#/register", text: Lang.t("login.registerLink") })
+        Utils.el("a", { href: "#/registration", text: Lang.t("login.registerLink") })
       ])
     ]);
 
@@ -187,6 +187,6 @@
     ]));
   }
 
-  Router.register("/login", renderLogin);
-  Router.register("/profile", renderProfile);
+  Router.register("/login", renderLogin, ["/"]);
+  Router.register("/profile", renderProfile, ["/"]);
 })(window, document, window.Utils, window.Lang, window.Icons, window.Auth, window.Router, window.ViewHelpers, window.Toast, window.Modal);
