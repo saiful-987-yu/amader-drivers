@@ -53,7 +53,7 @@ project/
 │   └── profile.js        # driver login + profile/availability screen
 ├── assets/
 │   ├── images/           # (empty — driver photos come from Google Sheets)
-│   ├── banner/           # homepage banner slide 2/3 images (see its own README)
+│   ├── home-banners/     # homepage banner + section background images (see its own README)
 │   └── icons/
 │       └── favicon.svg
 ├── config/
@@ -86,13 +86,14 @@ npx serve .
 
 ### 3.1 Create the spreadsheet
 
-Create one Google Sheet with these exact tab names:
+Create one Google Sheet with these exact tab names — just **3 main tabs**
+(plus the optional `Doctors` tab from §3.5 — there is no separate `Users`
+tab; a driver's own row is the only source of truth for their login):
 
 | Tab | Purpose |
 |---|---|
-| `Drivers` | Approved, publicly visible drivers |
+| `Drivers` | Approved, publicly visible drivers — also where each driver's own Username/Password live |
 | `Pending Drivers` | New registrations awaiting manual review |
-| `Users` | Login credentials (hashed passwords), linked by Driver ID |
 | `Markets` | The list of bazars |
 | `Vehicle Categories` | CNG / Auto / Van / Other, etc. |
 
@@ -107,34 +108,30 @@ Create one Google Sheet with these exact tab names:
 - `Vehicle Categories Image URL` — a category artwork image shown next to the existing small icon on the vehicle-type selection screen (roughly 2:1, wider than tall). This is completely separate from a driver's own `Vehicle Image URL` in the Drivers tab — leave it empty and the category card just shows its icon as before, no broken image.
 
 **Drivers**
-`Driver ID | Name | Bengali Name | Father/Husband Name | Phone | Alternative Phone | Village | Post Office | Union | Upazila | District | Full Address | Vehicle Type | Vehicle Number | Bazar | Service Area | Driving Experience | Star Rating | WhatsApp | Emergency Contact | Driver Image URL | Vehicle Image URL | Username | Status | Availability | Created Date | Updated Date`
+`Driver ID | Name | Bengali Name | Father/Husband Name | Phone | Alternative Phone | Village | Post Office | Union | Upazila | District | Full Address | Vehicle Type | Vehicle Number | Bazar | Service Area | Driving Experience | Driver Image URL | Vehicle Image URL | Username | Password | Status | Availability | Created Date | Updated Date | Star Rating | WhatsApp | Emergency Contact | Sort Status`
 
+- `Username` / `Password` — **a driver logs in directly against their own row here.** There is no separate Users sheet at all. `Password` is a SHA-256 hash, never plain text — see "Pending Drivers" below for how a value gets here in the first place.
+- `Sort Status` — one of `1st`, `2nd`, `3rd`, or blank. On a bazar+vehicle-type driver list, this is **always the first sort priority**: every `1st` driver appears before every `2nd`, before every `3rd`, before everyone left blank. Drivers sharing the same Sort Status are then ordered by `Star Rating` (highest first).
 - `Bengali Name` — shown instead of `Name` whenever the site is in বাংলা mode. Leave it blank and the English `Name` is used as a fallback automatically — a driver never shows with a blank name.
 - `Emergency Contact` — `TRUE` (case-insensitive) adds the driver to the homepage's "Emergency Contact" list regardless of their vehicle type or bazar; `FALSE` or blank keeps them out of it. This never affects their normal listing under their own bazar/vehicle type.
-
 - `Star Rating` — a number from 0–5 (decimals like `4.2` are fine); shown to customers as rounded stars, never as the raw number. Leave empty for 0 stars.
 - `WhatsApp` — controls the WhatsApp button on the driver card/profile: `F` uses the main `Phone`, `A` uses `Alternative Phone`, a real phone number is used directly, `N` or empty hides the button.
 - `Bazar`, `Vehicle Type`, and `Vehicle Image URL` all support **multiple values** in one cell, separated by `, ` (comma + space) — e.g. `Nobi Bazar, Bangla Bazar` or `Motorcycle, CNG, Auto` or `image1.jpg, image2.jpg, image3.jpg`. A driver with multiple bazars/vehicle types shows up under every one of them; multiple vehicle images become a clickable thumbnail gallery on the driver detail screen. A single plain value (no comma) still works exactly as before.
-
 - `Bazar` must match a `Market Name English` value from the Markets tab (matched by a lowercased, hyphenated "slug" of the name — e.g. "Nobi Bazar" → `nobi-bazar`).
 - `Vehicle Type` must similarly match an `English Name` from Vehicle Categories.
 - `Status` = `Active` to make the driver eligible to appear publicly at all.
 - `Availability` = `Active` or `Inactive` — this is the flag the driver controls from their own profile.
 
 **Pending Drivers**
-Same idea as Drivers, plus `Application ID`, `Password` (stored hashed by
-the backend, never in plain text), `Application Status`, `Submitted Date`.
-There is **no admin panel** — you review this tab yourself and, once happy,
-manually copy the row's information into the `Drivers` tab and delete it
-from `Pending Drivers`. Give the new row a `Driver ID` and add a matching
-row to `Users`.
-
-**Users**
-`User ID | Username | Phone | Password | Driver ID | Account Status | Created Date | Last Login`
-`Password` is a SHA-256 hash — never a plain-text password. When you
-approve a pending driver, copy their `Username` and `Password` (already
-hashed) from `Pending Drivers` into `Users`, and set `Driver ID` to match
-the row you created in `Drivers`.
+Same idea as Drivers, plus `Application ID`, `Application Status`,
+`Submitted Date`. `Username`/`Password` are already collected at
+registration (password stored hashed, same as on the Drivers tab) —
+there is **no admin panel**; you review this tab yourself and, once
+happy, copy the whole row's information straight into the `Drivers`
+tab (give it a `Driver ID`) and delete it from `Pending Drivers`. Because
+`Username`/`Password` copy over as-is, the driver can log in immediately
+with the same credentials they registered with — no separate account
+sheet to keep in sync.
 
 The backend also auto-creates a `Sessions` tab the first time someone logs
 in — you don't need to create it yourself, and you never need to look at
@@ -202,8 +199,9 @@ type; "Find a Doctor" on the homepage always shows every active doctor.
   actually has that vehicle type — an active-but-empty category for that
   bazar stays hidden there (it can still show normally in a bazar that
   does have a driver for it).
-- **Approve a driver:** move their row from `Pending Drivers` to `Drivers`
-  (see §3.2), and add a matching row to `Users`.
+- **Approve a driver:** move their whole row from `Pending Drivers` to
+  `Drivers` (see §3.2) — their `Username`/`Password` come along with it,
+  so they can log in immediately with no separate account step.
 - **Update a driver's photo:** edit `Driver Image URL` in the `Drivers`
   sheet. Google Drive share links are supported — the frontend converts
   them to a direct-view URL automatically (see `Utils.resolveImageUrl` in
@@ -226,17 +224,21 @@ type; "Find a Doctor" on the homepage always shows every active doctor.
 
 ---
 
-## 5.5 Homepage banner & footer social links
+## 5.5 Homepage images & footer social links
 
 - **Banner**: Slide 1 is generated from site text (updates live with the
-  language toggle). Slides 2 and 3 use the image files configured in
-  `BANNER_IMAGES` in `config/config.js` — drop your images into
-  `assets/banner/` using the filenames already set there (see that
-  folder's own README) and they appear automatically, no code changes.
-  Until a real image exists, a clean placeholder is shown instead of a
-  broken image. The banner auto-advances every 3 seconds and also
-  responds to touch swipe (left = next, right = previous); swiping
-  restarts the timer instead of running a second one alongside it.
+  language toggle) and needs no image. Slides 2 and 3, plus the
+  Registration and Doctor section backgrounds, all come from
+  `assets/home-banners/` — drop in `home-banner-02.jpg`,
+  `home-banner-03.jpg`, `home-registration-banner.jpg`, and
+  `home-doctor-banner.jpg` (see that folder's own README) and they
+  appear automatically, no code changes. Missing files never break
+  anything: a banner slide without an image shows a clean placeholder,
+  and a section without its background image just keeps its normal
+  solid color — never a broken-image icon. The banner auto-advances
+  every 3 seconds and also responds to touch swipe (left = next, right
+  = previous); swiping restarts the timer instead of running a second
+  one alongside it.
 - **Footer social links**: edit `SOCIAL_LINKS` in `config/config.js`.
   Leave any entry as `"#"` until you have a real URL — the icon still
   shows, it just doesn't go anywhere yet.
@@ -297,7 +299,7 @@ in the browser's `localStorage` (not just in memory), so:
   `google-apps-script/Code.gs` (real mode) — the `Users` sheet and the
   `Pending Drivers` sheet are never exposed to normal visitors.
 - This is a practical, appropriate level of security for a small community
-  tool — it is not a claim of bank-level security..
+  tool — it is not a claim of bank-level security.
 
 ---
 
