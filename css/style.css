@@ -35,7 +35,9 @@ a:hover { text-decoration: underline; }
 .container {
   max-width: var(--container-max);
   margin: 0 auto;
-  padding: 0 var(--space-4);
+  /* Comfortable, responsive side padding — scales from 16px on small
+     phones up to 32px on larger screens, on every section that uses it. */
+  padding: 0 clamp(16px, 4vw, 32px);
 }
 
 .skip-link {
@@ -427,7 +429,7 @@ a:hover { text-decoration: underline; }
   gap: 5px;
   font-size: var(--font-size-xs);
   color: var(--color-ink-soft);
-  margin-top: 2px;
+  margin-top: -4px; /* slightly tighten the gap under the name, per spec */
 }
 .online-dot {
   width: 8px;
@@ -435,6 +437,11 @@ a:hover { text-decoration: underline; }
   border-radius: 50%;
   background: var(--color-success);
   flex-shrink: 0;
+  animation: online-pulse 1.8s ease-in-out infinite;
+}
+@keyframes online-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.7; }
 }
 
 /* ------------------------------------------------------------
@@ -498,6 +505,12 @@ a:hover { text-decoration: underline; }
   border: 1px solid var(--color-line);
   border-radius: var(--radius-md);
   padding: var(--space-3);
+  /* Without this, a CSS Grid item defaults to min-width:auto, which lets
+     unbreakable content (e.g. a very long Service Area line) stretch the
+     whole card — and the grid track/page — wider than the screen. */
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   cursor: pointer;
   transition: border-color var(--duration-fast) var(--ease);
 }
@@ -519,7 +532,14 @@ a:hover { text-decoration: underline; }
 .driver-card__photo svg { width: 32px; height: 32px; }
 
 .driver-card__body { flex: 1; min-width: 0; }
-.driver-card__name { font-weight: 700; font-size: var(--font-size-md); margin-bottom: 2px; }
+.driver-card__name {
+  font-weight: 700;
+  font-size: var(--font-size-md);
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .driver-card__meta {
   font-size: var(--font-size-sm);
   color: var(--color-ink-soft);
@@ -682,7 +702,9 @@ a:hover { text-decoration: underline; }
    CTA BAND
    ------------------------------------------------------------ */
 .cta-band {
-  background: var(--color-primary-dark);
+  background-color: var(--color-primary-dark);
+  background-size: cover;
+  background-position: center;
   color: #fff;
   border-radius: var(--radius-lg);
   padding: var(--space-6) var(--space-5);
