@@ -39,7 +39,7 @@ window.NOBI_CONFIG = {
   // Leave this as null to run the site in DEMO MODE with
   // built-in sample data (no Google Sheet required). This is
   // useful for local testing before you connect a real sheet.
-  API_BASE_URL: "https://script.google.com/macros/s/AKfycbxp2mKqITuObRAAPXt5L8JlnRA0xQ2bAjy_Hju6EkEudvexxVsenuCmos6ygtRW9uHczw/exec",
+  API_BASE_URL: "https://script.google.com/macros/s/AKfycbxMqG4U_jfIA_vuDF9eSyWljVx0y0EkQ1VC1yF8FCm7MkyzYUYNbEXdyc4oszig0XMSVg/exec",
 
   // --------------------------------------------------------
   // WEBSITE IDENTITY
@@ -74,11 +74,20 @@ window.NOBI_CONFIG = {
   REQUEST_TIMEOUT_MS: 12000,
 
   // Homepage banner — Slide 1 is generated from site text; Slides 2/3
-  // use these image files. Drop images into /assets/banner/ with these
-  // exact filenames to replace the placeholder.
+  // use these image files. Drop images into /assets/home-banners/ with
+  // these exact filenames to replace the placeholder (see that folder's
+  // own README).
   BANNER_IMAGES: {
-    slide2: "assets/banner/slide-2.jpg",
-    slide3: "assets/banner/slide-3.jpg"
+    slide2: "assets/home-banners/home-banner-02.jpg",
+    slide3: "assets/home-banners/home-banner-03.jpg"
+  },
+
+  // Background photo for the Registration and Doctor homepage sections.
+  // Falls back to the existing solid color automatically if the file
+  // isn't there yet — nothing to configure beyond the filenames.
+  SECTION_BACKGROUNDS: {
+    registration: "assets/home-banners/home-registration-banner.jpg",
+    doctor: "assets/home-banners/home-doctor-banner.jpg"
   },
 
   // Footer social links — leave as "#" until a real URL is available.

@@ -77,13 +77,24 @@ window.NOBI_CONFIG = {
   // --------------------------------------------------------
   // HOMEPAGE BANNER — Slide 1 is generated automatically from
   // site text; Slides 2 and 3 use these image files. Drop your
-  // own images into /assets/banner/ using these exact filenames
-  // and they'll appear automatically — no other change needed.
-  // Until then, a placeholder is shown so nothing looks broken.
+  // own images into /assets/home-banners/ using these exact
+  // filenames and they'll appear automatically — no other
+  // change needed. Until then, a placeholder is shown so
+  // nothing looks broken. See that folder's own README.
   // --------------------------------------------------------
   BANNER_IMAGES: {
-    slide2: "assets/banner/slide-2.jpg",
-    slide3: "assets/banner/slide-3.jpg"
+    slide2: "assets/home-banners/home-banner-02.jpg",
+    slide3: "assets/home-banners/home-banner-03.jpg"
+  },
+
+  // --------------------------------------------------------
+  // SECTION BACKGROUND IMAGES — Registration and Doctor
+  // homepage sections. Falls back to the existing solid color
+  // automatically if the file isn't there yet.
+  // --------------------------------------------------------
+  SECTION_BACKGROUNDS: {
+    registration: "assets/home-banners/home-registration-banner.jpg",
+    doctor: "assets/home-banners/home-doctor-banner.jpg"
   },
 
   // --------------------------------------------------------
