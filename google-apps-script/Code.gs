@@ -34,7 +34,6 @@
 const SHEET_DRIVERS = "Drivers";
 const SHEET_DOCTORS = "Doctors";
 const SHEET_PENDING = "Pending Drivers";
-const SHEET_USERS = "Users";
 const SHEET_MARKETS = "Markets";
 const SHEET_VEHICLES = "Vehicle Categories";
 const SHEET_SESSIONS = "Sessions"; // created automatically if missing
@@ -214,7 +213,8 @@ whatsapp: clean(r["WhatsApp"]),
 imageUrl: clean(r["Driver Image URL"]),
 vehicleImageUrl: clean(r["Vehicle Image URL"]),
 availability: slugOf(r["Availability"]) === "active" ? "active" : "inactive",
-emergency: slugOf(r["Emergency Contact"]) === "true"
+emergency: slugOf(r["Emergency Contact"]) === "true",
+sortStatus: clean(r["Sort Status"])
 };
 }
 
@@ -266,11 +266,10 @@ const username = clean(payload.username);
 if (!phoneDigits || !username || !payload.password) throw appError("VALIDATION_FAILED");
 
 const existingPhones = readRows(SHEET_DRIVERS).map((r) => clean(r["Phone"]).replace(/\D/g, ""))
-.concat(readRows(SHEET_PENDING).map((r) => clean(r["Phone"]).replace(/\D/g, "")))
-.concat(readRows(SHEET_USERS).map((r) => clean(r["Phone"]).replace(/\D/g, "")));
+.concat(readRows(SHEET_PENDING).map((r) => clean(r["Phone"]).replace(/\D/g, "")));
 if (existingPhones.includes(phoneDigits)) throw appError("DUPLICATE_PHONE");
 
-const existingUsernames = readRows(SHEET_USERS).map((r) => clean(r["Username"]).toLowerCase())
+const existingUsernames = readRows(SHEET_DRIVERS).map((r) => clean(r["Username"]).toLowerCase())
 .concat(readRows(SHEET_PENDING).map((r) => clean(r["Username"]).toLowerCase()));
 if (existingUsernames.includes(username.toLowerCase())) throw appError("DUPLICATE_USERNAME");
 
@@ -315,15 +314,17 @@ return digest.map((b) => (b < 0 ? b + 256 : b).toString(16).padStart(2, "0")).jo
 function login(payload) {
 const identifier = slugOf(payload.identifier).replace(/\s+/g, "");
 const identifierDigits = identifier.replace(/\D/g, "");
-const users = readRows(SHEET_USERS);
 
-const match = users.find((u) => {
-const uname = clean(u["Username"]).toLowerCase();
-const phoneDigits = clean(u["Phone"]).replace(/\D/g, "");
+// The Drivers sheet is the ONLY source of truth for driver login —
+// there is no separate Users sheet. A driver's Username/Password
+// columns live on their own row, right alongside their other data.
+const driverRow = readRows(SHEET_DRIVERS).find((r) => {
+const uname = clean(r["Username"]).toLowerCase();
+const phoneDigits = clean(r["Phone"]).replace(/\D/g, "");
 return uname === identifier || (identifierDigits && phoneDigits === identifierDigits);
 });
 
-if (!match || hashPassword(payload.password || "") !== clean(match["Password"])) {
+if (!driverRow || hashPassword(payload.password || "") !== clean(driverRow["Password"])) {
 // Distinguish "still pending" from "wrong credentials" without
 // exposing which part (username vs password) was incorrect.
 const pendingMatch = readRows(SHEET_PENDING).find((p) => {
@@ -335,18 +336,16 @@ if (pendingMatch) throw appError("PENDING_APPROVAL");
 throw appError("INVALID_CREDENTIALS");
 }
 
-const driverId = clean(match["Driver ID"]);
+const driverId = clean(driverRow["Driver ID"]);
 const token = createSession(driverId);
-const driverRow = readRows(SHEET_DRIVERS).find((r) => clean(r["Driver ID"]) === driverId);
-if (!driverRow) throw appError("INVALID_CREDENTIALS");
-
-return { token, driver: driverProfileFields(driverRow, match) };
+return { token, driver: driverProfileFields(driverRow) };
 }
 
-function driverProfileFields(row, userRow) {
+/** Adds account-status + username to the public fields — Username lives on the SAME Drivers row, no separate lookup needed. */
+function driverProfileFields(row) {
 return Object.assign(publicDriverFields(row), {
 accountStatus: slugOf(row["Status"]) || "active",
-username: userRow ? clean(userRow["Username"]) : ""
+username: clean(row["Username"])
 });
 }
 
@@ -383,8 +382,7 @@ function getProfile(payload) {
 const driverId = resolveSession(payload.token);
 const driverRow = readRows(SHEET_DRIVERS).find((r) => clean(r["Driver ID"]) === driverId);
 if (!driverRow) throw appError("SESSION_EXPIRED");
-const userRow = readRows(SHEET_USERS).find((u) => clean(u["Driver ID"]) === driverId);
-return driverProfileFields(driverRow, userRow);
+return driverProfileFields(driverRow);
 }
 
 // ----------------------------------------------------------
@@ -410,8 +408,7 @@ if (clean(values[i][idCol]) === driverId) {
 s.getRange(i + 1, availCol + 1).setValue(value);
 if (updatedCol !== -1) s.getRange(i + 1, updatedCol + 1).setValue(new Date().toISOString());
 const driverRow = readRows(SHEET_DRIVERS).find((r) => clean(r["Driver ID"]) === driverId);
-const userRow = readRows(SHEET_USERS).find((u) => clean(u["Driver ID"]) === driverId);
-return driverProfileFields(driverRow, userRow);
+return driverProfileFields(driverRow);
 }
 }
 throw appError("SESSION_EXPIRED");
