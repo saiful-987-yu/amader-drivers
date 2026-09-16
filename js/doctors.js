@@ -122,8 +122,8 @@
     const actions = [
       Utils.el("button", {
         class: "driver-card__call-btn",
-        "aria-label": Lang.t("driver.call") + " " + Utils.driverDisplayName(doctor),
-        html: Icons.phone + "<span>" + Lang.t("driver.call") + "</span>",
+        "aria-label": Lang.t("doctor.call") + " " + Utils.driverDisplayName(doctor),
+        html: Icons.phone + "<span>" + Lang.t("doctor.call") + "</span>",
         disabled: doctor.availability !== "active" ? "true" : null,
         onClick: (e) => doctor.availability === "active" && handleCall(doctor, e)
       })
@@ -304,7 +304,7 @@
     const expRatingCols = [];
     if (doctor.experience) {
       expRatingCols.push(Utils.el("div", { class: "detail-col" }, [
-        Utils.el("div", { class: "detail-col__label", text: Lang.t("driver.experience") }),
+        Utils.el("div", { class: "detail-col__label", text: Lang.t("doctor.experience") }),
         Utils.el("div", { class: "detail-col__value", text: doctor.experience })
       ]));
     }
@@ -331,7 +331,7 @@
     const actionButtons = [
       Utils.el("button", {
         class: "btn btn--primary btn--sm action-row__btn",
-        html: Icons.phone + "<span>" + Lang.t("driver.call") + "</span>",
+        html: Icons.phone + "<span>" + Lang.t("doctor.call") + "</span>",
         disabled: doctor.availability !== "active" ? "true" : null,
         onClick: () => doctor.availability === "active" && handleCall(doctor)
       })

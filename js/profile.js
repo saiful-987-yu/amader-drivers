@@ -57,7 +57,14 @@
         await Auth.login(idInput.value, pwInput.value);
         Router.navigate("/profile");
       } catch (err) {
-        const key = err.code === "PENDING_APPROVAL" ? "login.error.pending" : "login.error";
+        // Only an explicit "wrong username/password" from the backend
+        // should say so — a timeout, network hiccup, or a server-side
+        // misconfiguration (e.g. a missing/misnamed sheet) must NEVER
+        // be shown as "invalid credentials", or a driver with a
+        // perfectly correct password would wrongly think it's wrong.
+        let key = "login.error.generic";
+        if (err.code === "PENDING_APPROVAL") key = "login.error.pending";
+        else if (err.code === "INVALID_CREDENTIALS") key = "login.error";
         errorMsg.textContent = Lang.t(key);
         errorMsg.style.display = "block";
       } finally {

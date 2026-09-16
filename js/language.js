@@ -17,7 +17,6 @@
   const TRANSLATIONS = {
     en: {
       "site.name": "Amader Drivers",
-      "site.tagline": "Find a local driver in seconds",
 
       "nav.home": "Home",
       "nav.drivers": "Drivers",
@@ -31,11 +30,9 @@
       "theme.dark": "Dark",
 
       "hero.heading": "Find Your Local Driver Easily",
-      "hero.sub": "Browse CNG, Auto, Van and other local drivers by bazar and call them directly — no account needed.",
+      "hero.tagline": "Easily get numbers for CNG, auto, bike and local drivers. For emergencies, ambulance, fire service and doctors are also available.",
       "hero.cta": "Select Your Bazar",
             "hero.emergencyCta": "Emergency Contact",
-      "banner.slide1Title": "Local Drivers, One Tap Away",
-      "banner.slide1Sub": "Find CNG, Auto, Van and other local drivers near your bazar instantly.",
       "doctor.sectionHeading": "Find a Doctor",
       "doctor.sectionSub": "Contact doctors in your area directly — no appointment app needed.",
       "doctor.sectionCta": "Find Doctors",
@@ -45,6 +42,8 @@
       "doctor.degree": "Degree / Qualification",
       "doctor.regNumber": "Registration Number",
       "doctor.samplePhotos": "Doctor Sample Photos",
+      "doctor.call": "Call Doctor",
+      "doctor.experience": "Doctor Experience",
       "empty.noDoctors": "No doctors are available right now.",
       "footer.facebook": "Facebook",
       "footer.whatsapp": "WhatsApp",
@@ -137,10 +136,16 @@
       "register.step4.title": "Account Information",
       "register.step5.title": "Review & Submit",
 
-      "field.fullName": "Full Name",
+      "field.fullName": "Full Name (English)",
       "field.guardianName": "Father's / Husband's Name",
       "field.mobile": "Mobile Number",
-      "field.altMobile": "Alternative Mobile Number (optional)",
+            "field.altMobile": "Alternative Mobile Number (optional)",
+      "field.fullNameBn": "Full Name (Bangla)",
+      "field.whatsapp": "WhatsApp Number (optional)",
+      "field.experienceYears": "Years",
+      "field.experienceMonths": "Months",
+      "field.usernameTaken": "This username is already taken.",
+      "field.usernameChecking": "Checking availability…",
       "field.village": "Village",
       "field.postOffice": "Post Office",
       "field.union": "Union",
@@ -178,6 +183,7 @@
 
       "validation.required": "This field is required.",
       "validation.phoneInvalid": "Enter a valid Bangladesh mobile number.",
+      "field.phoneTaken": "This number is already taken.",
       "validation.passwordMismatch": "Passwords do not match.",
       "validation.passwordShort": "Password must be at least 6 characters.",
       "validation.selectOption": "Please make a selection.",
@@ -192,6 +198,7 @@
       "login.noAccount": "Don't have an account?",
       "login.registerLink": "Register as Driver",
       "login.error": "Invalid username or password.",
+      "login.error.generic": "Something went wrong. Please try again.",
       "login.error.pending": "Your application is still under review. Please check back once it has been approved.",
 
       "profile.heading": "My Profile",
@@ -227,7 +234,6 @@
 
     bn: {
       "site.name": "আমাদের ড্রাইভার",
-      "site.tagline": "কয়েক সেকেন্ডে স্থানীয় ড্রাইভার খুঁজুন",
 
       "nav.home": "হোম",
       "nav.drivers": "ড্রাইভার",
@@ -241,11 +247,9 @@
       "theme.dark": "ডার্ক",
 
       "hero.heading": "সহজেই আপনার স্থানীয় ড্রাইভার খুঁজুন",
-      "hero.sub": "বাজার অনুযায়ী সিএনজি, অটো, ভ্যান ও অন্যান্য স্থানীয় ড্রাইভার দেখুন এবং সরাসরি কল করুন — কোনো অ্যাকাউন্ট লাগবে না।",
+      "hero.tagline": "সহজেই সিএনজি, অটো, বাইক ও স্থানীয় চালকদের নম্বর পান। জরুরি প্রয়োজনে অ্যাম্বুলেন্স, ফায়ার সার্ভিস ও ডাক্তার রয়েছে।",
       "hero.cta": "আপনার বাজার নির্বাচন করুন",
             "hero.emergencyCta": "ইমার্জেন্সি যোগাযোগ",
-      "banner.slide1Title": "স্থানীয় ড্রাইভার, এক ট্যাপেই",
-      "banner.slide1Sub": "আপনার বাজারের কাছে সিএনজি, অটো, ভ্যান ও অন্যান্য স্থানীয় ড্রাইভার তাৎক্ষণিক খুঁজুন।",
       "doctor.sectionHeading": "ডাক্তার খুঁজুন",
       "doctor.sectionSub": "আপনার এলাকার ডাক্তারদের সাথে সরাসরি যোগাযোগ করুন — কোনো অ্যাপয়েন্টমেন্ট অ্যাপ লাগবে না।",
       "doctor.sectionCta": "ডাক্তার খুঁজুন",
@@ -253,6 +257,8 @@
       "doctor.information": "ডাক্তারের তথ্য",
       "doctor.rateSectionTitle": "এই ডাক্তারকে রেট করুন",
       "doctor.degree": "ডিগ্রি / যোগ্যতা",
+      "doctor.call": "ডাক্তারকে কল করুন",
+      "doctor.experience": "ডাক্তারের অভিজ্ঞতা",
       "doctor.regNumber": "রেজিস্ট্রেশন নম্বর",
       "doctor.samplePhotos": "ডাক্তারের নমুনা ছবি",
       "empty.noDoctors": "এই মুহূর্তে কোনো ডাক্তার উপলব্ধ নেই।",
@@ -347,10 +353,16 @@
       "register.step4.title": "অ্যাকাউন্ট তথ্য",
       "register.step5.title": "পর্যালোচনা ও জমা দিন",
 
-      "field.fullName": "পূর্ণ নাম",
+      "field.fullName": "পূর্ণ নাম (ইংরেজি)",
       "field.guardianName": "পিতা/স্বামীর নাম",
       "field.mobile": "মোবাইল নম্বর",
-      "field.altMobile": "বিকল্প মোবাইল নম্বর (ঐচ্ছিক)",
+            "field.altMobile": "বিকল্প মোবাইল নম্বর (ঐচ্ছিক)",
+      "field.fullNameBn": "পূর্ণ নাম (বাংলা)",
+      "field.whatsapp": "হোয়াটসঅ্যাপ নম্বর (ঐচ্ছিক)",
+      "field.experienceYears": "বছর",
+      "field.experienceMonths": "মাস",
+      "field.usernameTaken": "এই ইউজারনেমটি ইতিমধ্যে ব্যবহৃত হয়েছে।",
+      "field.usernameChecking": "উপলব্ধতা যাচাই করা হচ্ছে…",
       "field.village": "গ্রাম",
       "field.postOffice": "ডাকঘর",
       "field.union": "ইউনিয়ন",
@@ -388,6 +400,7 @@
 
       "validation.required": "এই ঘরটি পূরণ করা আবশ্যক।",
       "validation.phoneInvalid": "সঠিক বাংলাদেশি মোবাইল নম্বর দিন।",
+      "field.phoneTaken": "এই নম্বরটি ইতিমধ্যে ব্যবহৃত হয়েছে।",
       "validation.passwordMismatch": "পাসওয়ার্ড মিলছে না।",
       "validation.passwordShort": "পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।",
       "validation.selectOption": "অনুগ্রহ করে একটি অপশন নির্বাচন করুন।",
@@ -402,6 +415,7 @@
       "login.noAccount": "অ্যাকাউন্ট নেই?",
       "login.registerLink": "ড্রাইভার হিসেবে রেজিস্ট্রেশন করুন",
       "login.error": "ভুল ইউজারনেম বা পাসওয়ার্ড।",
+      "login.error.generic": "কিছু একটা সমস্যা হয়েছে। আবার চেষ্টা করুন।",
       "login.error.pending": "আপনার আবেদনটি এখনও পর্যালোচনাধীন। অনুমোদনের পর আবার চেষ্টা করুন।",
 
       "profile.heading": "আমার প্রোফাইল",

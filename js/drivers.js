@@ -429,11 +429,10 @@
   async function renderHome(app) {
     app.innerHTML = "";
 
-    const hero = Utils.el("section", { class: "hero" }, [
+    const hero = Utils.el("section", { class: "hero hero--compact" }, [
       Utils.el("div", { class: "container hero__inner" }, [
-        Utils.el("div", { class: "hero__eyebrow", html: Icons.map + "<span>" + Lang.t("site.tagline") + "</span>" }),
-        Utils.el("h1", { text: Lang.t("hero.heading") }),
-        Utils.el("p", { text: Lang.t("hero.sub") })
+        Utils.el("h2", { class: "hero__heading", text: Lang.t("hero.heading") }),
+        Utils.el("p", { class: "hero__tagline", text: Lang.t("hero.tagline") })
       ])
     ]);
     app.appendChild(hero);
@@ -447,14 +446,17 @@
           onClick: () => Router.navigate("/markets")
         }),
         Utils.el("button", {
-          class: "btn btn--danger btn--compact", html: Icons.emergency + "<span>" + Lang.t("hero.emergencyCta") + "</span>",
+          class: "btn btn--danger btn--compact btn--emergency",
           onClick: () => Router.navigate("/emergency")
-        })
+        }, [
+          Utils.el("span", { class: "emergency-icon", "aria-hidden": "true", text: "🚑" }),
+          Utils.el("span", { text: Lang.t("hero.emergencyCta") })
+        ])
       ])
     ]));
 
     const cachedMarkets = Api.peekMarkets();
-    const marketSection = Utils.el("section", { class: "section container" }, [
+    const marketSection = Utils.el("section", { class: "section section--flush-top container" }, [
       Utils.el("div", { class: "section-head" }, [
         Utils.el("h2", { text: Lang.t("market.chooseHeading") }),
         Utils.el("p", { text: Lang.t("market.chooseSub") })
@@ -507,14 +509,44 @@
     return container;
   }
 
+  /**
+   * Sets a large card-background photo (with a dark overlay so the
+   * card's text stays readable) once the image has actually finished
+   * loading — probed off-DOM first, so a missing/broken "Markets BG
+   * Image URL" silently leaves the card's existing plain background
+   * (white in Light Mode, dark in Dark Mode) in place. Never a broken
+   * image, never touches the small market image/icon in the card.
+   */
+  function applyMarketCardBackground(card, url) {
+    if (!url) return;
+    const probe = new Image();
+    probe.onload = () => {
+      card.style.backgroundImage = `linear-gradient(rgba(10, 30, 20, 0.45), rgba(10, 30, 20, 0.45)), url("${url}")`;
+      card.classList.add("chip-card--market-has-bg");
+    };
+    probe.src = url;
+  }
+
   function marketGrid(markets, onSelect) {
     if (!markets.length) return ViewHelpers.emptyBlock({ message: Lang.t("market.empty") });
-    return cappedChipGrid(markets, (m) =>
-      Utils.el("button", { class: "chip-card", onClick: () => onSelect(m) }, [
-        Utils.el("div", { class: "chip-card__icon", html: Icons.map }),
+    return cappedChipGrid(markets, (m) => {
+      const topChildren = [Utils.el("div", { class: "chip-card__icon", html: Icons.map })];
+      const imgUrl = Utils.resolveImageUrl(m.imageUrl);
+      if (imgUrl) {
+        const img = Utils.el("img", { alt: "", loading: "lazy" });
+        img.src = imgUrl;
+        const imgWrap = Utils.el("div", { class: "chip-card__image" }, [img]);
+        // No image URL, or a broken one -> just fall back to the icon alone.
+        img.addEventListener("error", () => imgWrap.remove());
+        topChildren.push(imgWrap);
+      }
+      const card = Utils.el("button", { class: "chip-card chip-card--vehicle chip-card--market", onClick: () => onSelect(m) }, [
+        Utils.el("div", { class: "chip-card__top" }, topChildren),
         Utils.el("div", { class: "chip-card__name", text: marketName(m) })
-      ])
-    );
+      ]);
+      applyMarketCardBackground(card, Utils.resolveImageUrl(m.bgImageUrl));
+      return card;
+    });
   }
 
   /** Vehicle-category chip: existing small icon + optional category image + name + dynamic online count. */
@@ -622,16 +654,22 @@
   }
 
   /**
-   * Homepage banner — 3 slides, auto-advancing every 3s, swipeable.
-   * Slide 1 is generated from site text (translated live). Slides 2/3
-   * use configured image paths, falling back to a clean placeholder
-   * (never a broken-image icon) until real images are added.
+   * Homepage banner — 3 slides (home-banner-01/02/03), auto-advancing
+   * every 3s, swipeable. Slide 1 is dynamic: it always shows the
+   * automatic site headline/text (translated live) on a solid
+   * background — the SAME default background as the Doctor/
+   * Registration sections — and only swaps that solid background for
+   * home-banner-01.jpg when that file is actually present and loads.
+   * Slides 2/3 use their own configured image paths, falling back to a
+   * clean placeholder (never a broken-image icon) until a real image
+   * is added.
    */
   function buildBanner() {
+    const bannerImages = window.NOBI_CONFIG.BANNER_IMAGES || {};
     const slideDefs = [
-      { type: "text" },
-      { type: "image", src: (window.NOBI_CONFIG.BANNER_IMAGES || {}).slide2 },
-      { type: "image", src: (window.NOBI_CONFIG.BANNER_IMAGES || {}).slide3 }
+      { type: "dynamic", src: bannerImages.slide1 },
+      { src: bannerImages.slide2 },
+      { src: bannerImages.slide3 }
     ];
 
     const track = Utils.el("div", { class: "banner__track" });
@@ -687,13 +725,30 @@
   }
 
   function buildSlide(def) {
-    if (def.type === "text") {
-      return Utils.el("div", { class: "banner__slide banner__slide--text" }, [
-        Utils.el("div", {}, [
-          Utils.el("h2", { text: Lang.t("banner.slide1Title") }),
-          Utils.el("p", { text: Lang.t("banner.slide1Sub") })
+    // Slide 1: always the automatic headline/text, translated live, on
+    // the same solid background used by the Doctor/Registration
+    // sections by default. If home-banner-01.jpg is present and loads,
+    // it replaces that solid background — the text/layout stay the
+    // same either way.
+    if (def.type === "dynamic") {
+      const slide = Utils.el("div", { class: "banner__slide banner__slide--text" }, [
+        Utils.el("div", { class: "banner__slide-text" }, [
+          Utils.el("h2", { text: Lang.t("hero.heading") }),
+          Utils.el("p", { class: "banner__slide-sub", text: Lang.t("hero.tagline") })
         ])
       ]);
+      if (def.src) {
+        // Probe-load off-DOM first — if it 404s/errors we simply never
+        // touch the background, so the solid colour background just
+        // keeps showing through (no broken-image icon possible here
+        // since this is a CSS background-image, not an <img>).
+        const probe = new Image();
+        probe.onload = () => {
+          slide.style.backgroundImage = `linear-gradient(rgba(10, 30, 20, 0.45), rgba(10, 30, 20, 0.45)), url("${def.src}")`;
+        };
+        probe.src = def.src;
+      }
+      return slide;
     }
     const slide = Utils.el("div", { class: "banner__slide" });
     const placeholder = () => {

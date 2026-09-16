@@ -190,11 +190,11 @@
     function seedIfEmpty() {
       if (!Utils.storage.get(KEYS.markets)) {
         Utils.storage.set(KEYS.markets, [
-          { id: "M001", slug: "nobi-bazar", nameEn: "Nobi Bazar", nameBn: "নবী বাজার", status: "active", sortOrder: 1 },
-          { id: "M002", slug: "bangla-bazar", nameEn: "Bangla Bazar", nameBn: "বাংলা বাজার", status: "active", sortOrder: 2 },
-          { id: "M003", slug: "station-bazar", nameEn: "Station Bazar", nameBn: "স্টেশন বাজার", status: "active", sortOrder: 3 },
-          { id: "M004", slug: "new-market", nameEn: "New Market", nameBn: "নিউ মার্কেট", status: "active", sortOrder: 4 },
-          { id: "M005", slug: "central-bazar", nameEn: "Central Bazar", nameBn: "সেন্ট্রাল বাজার", status: "active", sortOrder: 5 }
+          { id: "M001", slug: "nobi-bazar", nameEn: "Nobi Bazar", nameBn: "নবী বাজার", imageUrl: "https://picsum.photos/seed/market-nobi/300/150", bgImageUrl: "https://picsum.photos/seed/market-nobi-bg/600/400", status: "active", sortOrder: 1 },
+          { id: "M002", slug: "bangla-bazar", nameEn: "Bangla Bazar", nameBn: "বাংলা বাজার", imageUrl: "https://picsum.photos/seed/market-bangla/300/150", bgImageUrl: "", status: "active", sortOrder: 2 },
+          { id: "M003", slug: "station-bazar", nameEn: "Station Bazar", nameBn: "স্টেশন বাজার", imageUrl: "", status: "active", sortOrder: 3 },
+          { id: "M004", slug: "new-market", nameEn: "New Market", nameBn: "নিউ মার্কেট", imageUrl: "", status: "active", sortOrder: 4 },
+          { id: "M005", slug: "central-bazar", nameEn: "Central Bazar", nameBn: "সেন্ট্রাল বাজার", imageUrl: "", status: "active", sortOrder: 5 }
         ]);
       }
       if (!Utils.storage.get(KEYS.vehicles)) {
@@ -281,6 +281,22 @@
 
       case "getDoctors":
         return sortDrivers(DemoStore.doctors().filter((d) => d.status === "active").map(publicDoctorFields));
+
+      case "checkUsername": {
+        const username = String(payload.username || "").trim().toLowerCase();
+        if (!username) return { available: false };
+        const taken = DemoStore.drivers().some((d) => (d.username || "").toLowerCase() === username) ||
+          DemoStore.pending().some((p) => (p.username || "").toLowerCase() === username);
+        return { available: !taken };
+      }
+
+      case "checkPhone": {
+        const phoneDigits = String(payload.phone || "").replace(/\D/g, "");
+        if (!phoneDigits) return { available: false };
+        const taken = DemoStore.drivers().some((d) => (d.phone || "").replace(/\D/g, "") === phoneDigits) ||
+          DemoStore.pending().some((p) => (p.phone || "").replace(/\D/g, "") === phoneDigits);
+        return { available: !taken };
+      }
 
       case "registerDriver": {
         const drivers = DemoStore.drivers();
@@ -538,6 +554,12 @@
       invalidateCache("getDrivers");
       return res;
     });
+
+  /** Lightweight live check for the registration form — never exposes the list of existing usernames or any password data to the browser. */
+  Api.checkUsername = (username) => call("checkUsername", { username });
+
+  /** Same idea as Api.checkUsername, for the Step 1 mobile number field. */
+  Api.checkPhone = (phone) => call("checkPhone", { phone });
 
   Api.login = (identifier, password) => call("login", { identifier, password });
   Api.getProfile = (token) => call("getProfile", { token });
