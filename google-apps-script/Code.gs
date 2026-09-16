@@ -63,6 +63,8 @@ case "getVehicleCategories": return respond({ ok: true, result: getVehicleCatego
 case "getDrivers": return respond({ ok: true, result: getDrivers(payload) });
 case "getDoctors": return respond({ ok: true, result: getDoctors() });
 case "registerDriver": return respond({ ok: true, result: registerDriver(payload) });
+case "checkUsername": return respond({ ok: true, result: checkUsernameAvailable(payload) });
+case "checkPhone": return respond({ ok: true, result: checkPhoneAvailable(payload) });
 case "login": return respond({ ok: true, result: login(payload) });
 case "getProfile": return respond({ ok: true, result: getProfile(payload) });
 case "updateAvailability": return respond({ ok: true, result: updateAvailability(payload) });
@@ -132,6 +134,8 @@ id: clean(r["Market ID"]),
 slug: slugify(r["Market Name English"]),
 nameEn: clean(r["Market Name English"]),
 nameBn: clean(r["Market Name Bengali"]),
+imageUrl: clean(r["Markets Image URL"]),
+bgImageUrl: clean(r["Markets BG Image URL"]),
 status: "active",
 sortOrder: Number(r["Sort Order"] || 0)
 }));
@@ -260,6 +264,32 @@ availability: slugOf(r["Availability"]) === "active" ? "active" : "inactive"
 // ----------------------------------------------------------
 // REGISTRATION -> PENDING DRIVERS (never published automatically)
 // ----------------------------------------------------------
+
+/**
+* A lightweight, dedicated check used by the registration form's live
+* "is this username available?" indicator. Returns ONLY a boolean —
+* never the list of existing usernames, and never any password data —
+* so the browser never receives anything about other drivers' accounts.
+*/
+function checkUsernameAvailable(payload) {
+const username = clean(payload.username).toLowerCase();
+if (!username) return { available: false };
+const taken = readRows(SHEET_DRIVERS).some((r) => clean(r["Username"]).toLowerCase() === username) ||
+readRows(SHEET_PENDING).some((r) => clean(r["Username"]).toLowerCase() === username);
+return { available: !taken };
+}
+
+/** Same shape/spirit as checkUsernameAvailable — used by the registration
+* form's Step 1 mobile number field, so a duplicate number is caught
+* before the user fills in the rest of the form. */
+function checkPhoneAvailable(payload) {
+const phoneDigits = clean(payload.phone).replace(/\D/g, "");
+if (!phoneDigits) return { available: false };
+const taken = readRows(SHEET_DRIVERS).some((r) => clean(r["Phone"]).replace(/\D/g, "") === phoneDigits) ||
+readRows(SHEET_PENDING).some((r) => clean(r["Phone"]).replace(/\D/g, "") === phoneDigits);
+return { available: !taken };
+}
+
 function registerDriver(payload) {
 const phoneDigits = clean(payload.phone).replace(/\D/g, "");
 const username = clean(payload.username);
@@ -278,9 +308,11 @@ const applicationId = "APP-" + Date.now().toString(36).toUpperCase();
 appendRow(SHEET_PENDING, {
 "Application ID": applicationId,
 "Name": clean(payload.fullName),
+"Bengali Name": clean(payload.fullNameBn),
 "Father/Husband Name": clean(payload.guardianName),
 "Phone": clean(payload.phone),
 "Alternative Phone": clean(payload.altPhone),
+"WhatsApp": clean(payload.whatsapp),
 "Village": clean(payload.village),
 "Post Office": clean(payload.postOffice),
 "Union": clean(payload.union),
@@ -324,7 +356,7 @@ const phoneDigits = clean(r["Phone"]).replace(/\D/g, "");
 return uname === identifier || (identifierDigits && phoneDigits === identifierDigits);
 });
 
-if (!driverRow || hashPassword(payload.password || "") !== clean(driverRow["Password"])) {
+if (!driverRow || hashPassword(payload.password || "").toLowerCase() !== clean(driverRow["Password"]).toLowerCase()) {
 // Distinguish "still pending" from "wrong credentials" without
 // exposing which part (username vs password) was incorrect.
 const pendingMatch = readRows(SHEET_PENDING).find((p) => {
