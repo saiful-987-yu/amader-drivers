@@ -213,39 +213,39 @@ a:hover { text-decoration: underline; }
 .btn--sm { min-height: 40px; padding: var(--space-2) var(--space-4); font-size: var(--font-size-sm); }
 
 /* ------------------------------------------------------------
-   HERO
+   HERO / TEXT SECTION — sits between the Main Header and the Main
+   Banner, and only ever holds this automatic text (never the banner).
    ------------------------------------------------------------ */
-.hero {
-  padding: var(--space-6) 0 var(--space-3);
+.hero--compact {
+  min-height: calc(var(--header-height) * 1.5);
+  padding: var(--space-3) 0;
   background: linear-gradient(180deg, var(--color-primary-soft), var(--color-bg) 85%);
   text-align: center;
-}
-.hero__inner { max-width: 640px; margin: 0 auto; }
-.hero__eyebrow {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
+}
+.hero__inner { max-width: 640px; margin: 0 auto; }
+.hero__heading {
+  color: var(--color-primary-dark);
+  font-weight: 700;
+  font-size: var(--font-size-lg);
+  margin: 0 0 4px;
+}
+.hero__tagline {
   color: var(--color-primary-dark);
   font-weight: 600;
-  font-size: var(--font-size-sm);
-  margin-bottom: var(--space-2);
-}
-.hero__eyebrow svg { width: 18px; height: 18px; }
-.hero h1 {
-  font-size: var(--font-size-xl);
-  margin-bottom: var(--space-2);
-  color: var(--color-ink);
-}
-.hero p {
-  color: var(--color-ink-soft);
-  font-size: var(--font-size-sm);
-  margin: 0 auto;
-  max-width: 46ch;
+  font-size: var(--font-size-md);
+  margin: 0;
+  /* Max 2 lines even on very small screens — never pushes the banner down. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* ------------------------------------------------------------
-   HOMEPAGE BANNER — 3 slides, ~2:1, auto-advance + swipe
+   HOMEPAGE BANNER — 3 slides, 2:1, auto-advance + swipe
    ------------------------------------------------------------ */
 .banner { padding: var(--space-4) 0; }
 .banner__viewport {
@@ -273,14 +273,22 @@ a:hover { text-decoration: underline; }
   justify-content: center;
   overflow: hidden;
 }
-.banner__slide--text {
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
-  text-align: center;
-  padding: var(--space-5);
-}
-.banner__slide--text h2 { color: #fff; font-size: var(--font-size-lg); margin-bottom: var(--space-2); }
-.banner__slide--text p { color: rgba(255,255,255,0.9); font-size: var(--font-size-sm); max-width: 34ch; margin: 0 auto; }
 .banner__slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* Slide 1's dynamic text — same solid background as the Doctor/
+   Registration sections' .cta-band by default; a loaded
+   home-banner-01.jpg is layered on top of it inline (see buildSlide()
+   in drivers.js), never replacing the background-color outright, so a
+   missing/broken image just leaves this solid colour showing. */
+.banner__slide--text {
+  background-color: var(--color-primary-dark);
+  background-size: cover;
+  background-position: center;
+  text-align: center;
+  padding: var(--space-3) var(--space-5);
+}
+.banner__slide-text { display: flex; flex-direction: column; gap: var(--space-2); }
+.banner__slide--text h2 { color: #fff; font-size: var(--font-size-lg); font-weight: 700; margin: 0; }
+.banner__slide-sub { color: rgba(255,255,255,0.9); font-size: var(--font-size-sm); font-weight: 400; max-width: 34ch; margin: 0 auto; }
 .banner__slide--placeholder {
   flex-direction: column;
   gap: var(--space-2);
@@ -303,9 +311,11 @@ a:hover { text-decoration: underline; }
 /* ------------------------------------------------------------
    HOMEPAGE ACTIONS — compact, side-by-side even on small phones
    ------------------------------------------------------------ */
-.home-actions { padding: var(--space-2) 0 var(--space-5); }
-.hero__actions { display: flex; flex-direction: row; flex-wrap: nowrap; gap: var(--space-2); }
-.hero__actions .btn { flex: 1; min-width: 0; }
+.home-actions { padding: var(--space-2) 0 var(--space-2); }
+/* Grid (not flex) so the 60/40 ratio holds exactly even with a gap —
+   flex-basis percentages plus a gap would add up to slightly over 100%. */
+.hero__actions { display: grid; grid-template-columns: 3fr 2fr; gap: var(--space-2); }
+.hero__actions .btn { width: 100%; min-width: 0; }
 .btn--compact {
   padding: var(--space-2);
   font-size: var(--font-size-sm);
@@ -315,10 +325,30 @@ a:hover { text-decoration: underline; }
 }
 .btn--compact svg { width: 16px; height: 16px; }
 
+.btn--emergency { gap: 6px; }
+.emergency-icon {
+  font-size: 1.15em;
+  line-height: 1;
+  /* Stays visually distinct from the red button background and draws
+     a little attention without being distracting or shaking the page. */
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.25));
+  animation: emergency-pulse 1.6s ease-in-out infinite;
+  display: inline-block;
+}
+@keyframes emergency-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.18); }
+}
+
 /* ------------------------------------------------------------
    SECTION
    ------------------------------------------------------------ */
 .section { padding: var(--space-6) 0; }
+/* Used only by the Home page's market section, immediately below the
+   Select Your Bazar / Emergency Contact buttons — trims just that one
+   top gap without touching `.section`'s shared top/bottom padding used
+   everywhere else (Markets page, How It Works, Register CTA, etc). */
+.section--flush-top { padding-top: var(--space-3); }
 .section-head { margin-bottom: var(--space-4); }
 .section-head h2 { font-size: var(--font-size-xl); margin-bottom: var(--space-1); }
 .section-head p { color: var(--color-ink-soft); font-size: var(--font-size-sm); }
@@ -417,6 +447,13 @@ a:hover { text-decoration: underline; }
   background: var(--color-primary-soft);
 }
 .chip-card__image img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* Market card with a "Markets BG Image URL" background photo — text/
+   icon are lifted to white so they stay readable over the photo (the
+   dark overlay gradient itself is applied inline, see drivers.js). */
+.chip-card--market-has-bg { background-color: transparent; background-size: cover; background-position: center; border-color: transparent; }
+.chip-card--market-has-bg .chip-card__name { color: #fff; }
+.chip-card--market-has-bg .chip-card__icon { background: rgba(255, 255, 255, 0.2); color: #fff; }
 
 /* "Others" tile — same chip shape, centered and visually muted. */
 .chip-card--others { align-items: center; text-align: center; color: var(--color-ink-soft); }
@@ -709,6 +746,17 @@ a:hover { text-decoration: underline; }
   border-radius: var(--radius-lg);
   padding: var(--space-6) var(--space-5);
   text-align: center;
+  /* A soft ~2:1 (width:height) target so the section scales
+     proportionally with width instead of sitting at a fixed height —
+     but this is a preference, not a hard clip: min-height keeps it
+     from ever getting too short, and the box still grows if the text
+     genuinely needs more room. */
+  aspect-ratio: 2 / 1;
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 .cta-band h2 { color: #fff; margin-bottom: var(--space-2); font-size: var(--font-size-xl); }
 .cta-band p { color: rgba(255,255,255,0.85); margin-bottom: var(--space-4); }
@@ -849,6 +897,88 @@ a:hover { text-decoration: underline; }
   align-items: center;
   justify-content: center;
 }
+
+/* Multi-select vehicle type / preferred bazar — pill-style checkboxes,
+   easy to tap on mobile. Kept to a single compact horizontally-
+   scrolling row instead of wrapping into several rows, so a long list
+   of options never eats up extra vertical space on the form. */
+.checkbox-group {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding-bottom: var(--space-1);
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.checkbox-option {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  background: var(--color-surface);
+}
+.checkbox-option:has(input:checked) {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+  font-weight: 600;
+}
+.checkbox-option input { width: 16px; height: 16px; accent-color: var(--color-primary); }
+
+/* Driving Experience — number + Years/Months side by side, wraps to a
+   safe stacked layout only at extremely narrow widths. */
+.experience-row { display: flex; gap: var(--space-2); }
+.experience-row input { flex: 1 1 0; min-width: 0; }
+.experience-row select { flex: 1 1 0; min-width: 0; }
+
+/* Username availability indicator. */
+.username-field { position: relative; }
+.username-field input { padding-right: 40px; }
+.username-field__status {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  width: 20px;
+  height: 20px;
+  color: var(--color-ink-soft);
+}
+.username-field__status svg { width: 20px; height: 20px; }
+.username-field__status.is-checking { color: var(--color-ink-soft); animation: username-checking 1s linear infinite; }
+.username-field__status.is-available { color: var(--color-focus-ring); }
+@keyframes username-checking {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+/* Mobile Number availability indicator — same look/behavior as the
+   Username field above, just its own class so neither is affected by
+   changes to the other. */
+.phone-field { position: relative; }
+.phone-field input { padding-right: 40px; }
+.phone-field__status {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  width: 20px;
+  height: 20px;
+  color: var(--color-ink-soft);
+}
+.phone-field__status svg { width: 20px; height: 20px; }
+.phone-field__status.is-checking { color: var(--color-ink-soft); animation: username-checking 1s linear infinite; }
+.phone-field__status.is-available { color: var(--color-focus-ring); }
 
 .step-indicator {
   display: flex;

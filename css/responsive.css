@@ -5,7 +5,6 @@
 
 /* Small phones: tighten spacing a touch */
 @media (max-width: 359px) {
-  .hero h1 { font-size: var(--font-size-xl); }
   .chip-grid { grid-template-columns: 1fr 1fr; gap: var(--space-2); }
   .detail-row { flex-direction: column; gap: var(--space-2); }
   .gallery__thumbs { width: 52px; }
@@ -18,11 +17,11 @@
   .menu-toggle { display: none; }
   .mobile-nav { display: none !important; }
 
-  .hero { padding: var(--space-7) 0 var(--space-4); }
-  .hero h1 { font-size: var(--font-size-2xl); }
-  .hero p { font-size: var(--font-size-md); }
+  .hero--compact { padding: var(--space-4) 0; }
+  .hero__tagline { font-size: var(--font-size-lg); }
   .home-actions { max-width: 480px; margin: 0 auto; }
   .banner .container { max-width: 640px; }
+  .cta-band { max-width: 480px; margin: 0 auto; }
 
   .chip-grid { grid-template-columns: repeat(3, 1fr); }
   .driver-grid { grid-template-columns: repeat(2, 1fr); }
