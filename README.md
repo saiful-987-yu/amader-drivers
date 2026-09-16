@@ -100,7 +100,10 @@ tab; a driver's own row is the only source of truth for their login):
 ### 3.2 Column headers
 
 **Markets**
-`Market ID | Market Name English | Market Name Bengali | Location | Status | Sort Order`
+`Market ID | Market Name English | Market Name Bengali | Location | Status | Sort Order | Markets Image URL | Markets BG Image URL`
+
+- `Markets Image URL` — an optional photo shown next to the bazar's icon on the homepage's market cards (same idea as the Vehicle Categories image below). Leave it empty and the card just shows its icon as before, no broken image.
+- `Markets BG Image URL` — an optional large background photo for the whole market card (separate from the small icon/image above, which stays visible either way). Leave it empty and the card keeps its existing plain background (white in Light Mode, dark in Dark Mode); if the URL doesn't load, the same plain background is used — never a broken image.
 
 **Vehicle Categories**
 `Category ID | English Name | Bengali Name | Icon | Status | Sort Order | Vehicle Categories Image URL`
@@ -132,6 +135,23 @@ tab (give it a `Driver ID`) and delete it from `Pending Drivers`. Because
 `Username`/`Password` copy over as-is, the driver can log in immediately
 with the same credentials they registered with — no separate account
 sheet to keep in sync.
+
+The registration form itself collects: Full Name (English, required),
+Full Name (Bangla, required — falls back to the English name anywhere
+it's displayed if left blank later), Mobile (required), Alternative
+Mobile and WhatsApp Number (both optional), a multi-select for Vehicle
+Type and for Preferred Bazar (each saved as one comma-separated cell,
+same as elsewhere in this project), and Driving Experience as a number
+plus a Years/Months choice (combined into one free-text value like
+"2 Years" when saved). A live check while typing a Username or the
+Mobile number shows a small blue check mark once it's confirmed
+available, or a red "already taken" message otherwise (see
+`checkUsernameAvailable()` / `checkPhoneAvailable()` in `Code.gs` —
+each only ever returns true/false, never the list of existing
+usernames/numbers or any password data). The result for whichever
+value was last checked is remembered, so pressing Next doesn't
+re-check/re-load the same, unchanged value a second time — only
+editing the field invalidates that remembered result.
 
 The backend also auto-creates a `Sessions` tab the first time someone logs
 in — you don't need to create it yourself, and you never need to look at
