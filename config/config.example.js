@@ -75,14 +75,18 @@ window.NOBI_CONFIG = {
   REQUEST_TIMEOUT_MS: 12000,
 
   // --------------------------------------------------------
-  // HOMEPAGE BANNER — Slide 1 is generated automatically from
-  // site text; Slides 2 and 3 use these image files. Drop your
+  // HOMEPAGE BANNER — Slide 1 always shows the automatic site
+  // headline/text (translated live) on the same solid background
+  // as the Doctor/Registration sections; drop in
+  // home-banner-01.jpg and it's used as that slide's background
+  // image instead. Slides 2 and 3 are plain images — drop your
   // own images into /assets/home-banners/ using these exact
   // filenames and they'll appear automatically — no other
   // change needed. Until then, a placeholder is shown so
   // nothing looks broken. See that folder's own README.
   // --------------------------------------------------------
   BANNER_IMAGES: {
+    slide1: "assets/home-banners/home-banner-01.jpg",
     slide2: "assets/home-banners/home-banner-02.jpg",
     slide3: "assets/home-banners/home-banner-03.jpg"
   },

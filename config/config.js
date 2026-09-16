@@ -39,7 +39,7 @@ window.NOBI_CONFIG = {
   // Leave this as null to run the site in DEMO MODE with
   // built-in sample data (no Google Sheet required). This is
   // useful for local testing before you connect a real sheet.
-  API_BASE_URL: "https://script.google.com/macros/s/AKfycbxMqG4U_jfIA_vuDF9eSyWljVx0y0EkQ1VC1yF8FCm7MkyzYUYNbEXdyc4oszig0XMSVg/exec",
+  API_BASE_URL: "https://script.google.com/macros/s/AKfycbwB85M5J3CyGJyyZeZUyYwrTR2kJdisZIRcnLoF5iJF8xy5rjacH7nNjQhRj06XQGovZA/exec",
 
   // --------------------------------------------------------
   // WEBSITE IDENTITY
@@ -73,11 +73,16 @@ window.NOBI_CONFIG = {
   // network-error state with a Retry button.
   REQUEST_TIMEOUT_MS: 12000,
 
-  // Homepage banner — Slide 1 is generated from site text; Slides 2/3
-  // use these image files. Drop images into /assets/home-banners/ with
-  // these exact filenames to replace the placeholder (see that folder's
-  // own README).
+  // Homepage banner — Slide 1 always shows the automatic site
+  // headline/text (translated live) on the same solid background as
+  // the Doctor/Registration sections; if home-banner-01.jpg is present
+  // it's used as that slide's background image instead. Slides 2/3 are
+  // plain images, falling back to a clean placeholder if their file is
+  // missing — never a broken image. Drop images into
+  // /assets/home-banners/ with these exact filenames (see that
+  // folder's own README).
   BANNER_IMAGES: {
+    slide1: "assets/home-banners/home-banner-01.jpg",
     slide2: "assets/home-banners/home-banner-02.jpg",
     slide3: "assets/home-banners/home-banner-03.jpg"
   },
