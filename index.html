@@ -164,6 +164,10 @@
         ];
         platforms.forEach(function (p) {
           var href = window.NOBI_CONFIG.SOCIAL_LINKS[p.key] || "#";
+          // WhatsApp is configured as a plain phone number, not a URL —
+          // reuse the same wa.me link builder as everywhere else on the
+          // site (Utils.waLink) instead of a one-off implementation here.
+          if (p.key === "whatsapp" && href !== "#") href = Utils.waLink(href);
           var a = document.createElement("a");
           a.href = href;
           a.target = "_blank";

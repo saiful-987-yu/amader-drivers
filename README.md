@@ -125,6 +125,21 @@ tab; a driver's own row is the only source of truth for their login):
 - `Status` = `Active` to make the driver eligible to appear publicly at all.
 - `Availability` = `Active` or `Inactive` — this is the flag the driver controls from their own profile.
 
+**My Profile (driver-side)**
+A logged-in driver's own "My Profile" page (Change Password + a
+"Edit Profile" action) writes back to their SAME row on `Drivers` —
+still no separate Users sheet. Only a small, fixed set of columns are
+ever editable this way: `Bengali Name`, `Father/Husband Name`,
+`Alternative Phone`, `WhatsApp`, `Service Area`, `Vehicle Number`, and
+`Password` (via Change Password, after the current password is
+verified). Everything else shown on the profile — `Name`, `Phone`,
+`Username`, `Vehicle Type`, `Bazar`, `Driving Experience`, both photo
+URLs, `Status`, and `Availability` (which has its own dedicated
+toggle) — stays read-only there by design; see `updateProfile()` /
+`changePassword()` in `Code.gs`. As with Availability, the row to
+change is always located by the Driver ID tied to the caller's own
+session token, never a value the client sends directly.
+
 **Pending Drivers**
 Same idea as Drivers, plus `Application ID`, `Application Status`,
 `Submitted Date`. `Username`/`Password` are already collected at
