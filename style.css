@@ -1,0 +1,1604 @@
+/* ============================================================
+   style.css — base, layout and components (mobile-first).
+   Breakpoint overrides live in responsive.css.
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body { margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-family);
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-normal);
+  -webkit-font-smoothing: antialiased;
+  transition: background var(--duration-base) var(--ease), color var(--duration-base) var(--ease);
+}
+
+h1, h2, h3, h4 { line-height: var(--line-height-tight); margin: 0; font-weight: 600; }
+p { margin: 0; }
+ul { margin: 0; padding: 0; list-style: none; }
+img { max-width: 100%; display: block; }
+button { font-family: inherit; }
+
+a { color: var(--color-primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.container {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  /* Comfortable, responsive side padding — scales from 16px on small
+     phones up to 32px on larger screens, on every section that uses it. */
+  padding: 0 clamp(16px, 4vw, 32px);
+}
+
+.skip-link {
+  position: absolute;
+  left: -999px;
+  top: auto;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
+  z-index: 200;
+}
+.skip-link:focus {
+  left: var(--space-3);
+  top: var(--space-3);
+}
+
+/* ------------------------------------------------------------
+   HEADER
+   ------------------------------------------------------------ */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-line);
+}
+
+.site-header__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: var(--header-height);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 700;
+  font-size: var(--font-size-lg);
+  color: var(--color-ink);
+  margin-right: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.brand:hover { text-decoration: none; }
+
+.brand__mark {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.brand__mark svg { width: 20px; height: 20px; }
+
+.nav-primary {
+  display: none;
+  align-items: center;
+  gap: var(--space-5);
+}
+.nav-primary a {
+  color: var(--color-ink-soft);
+  font-weight: 500;
+  font-size: var(--font-size-sm);
+}
+.nav-primary a.is-current { color: var(--color-primary); }
+.nav-primary a:hover { text-decoration: none; color: var(--color-primary); }
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.icon-btn {
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--ease), background var(--duration-fast) var(--ease);
+}
+.icon-btn:hover { background: var(--color-primary-soft); }
+.icon-btn:active { transform: scale(0.94); }
+.icon-btn svg { width: 20px; height: 20px; }
+
+.lang-toggle {
+  display: flex;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+.lang-toggle button {
+  border: none;
+  background: transparent;
+  color: var(--color-ink-soft);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+}
+.lang-toggle button.is-active {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.menu-toggle { display: inline-flex; }
+
+.mobile-nav {
+  display: none;
+  border-top: 1px solid var(--color-line);
+  background: var(--color-surface);
+}
+.mobile-nav.is-open { display: block; }
+.mobile-nav ul { display: flex; flex-direction: column; padding: var(--space-2) var(--space-4) var(--space-4); gap: var(--space-1); }
+.mobile-nav a {
+  display: block;
+  padding: var(--space-3) var(--space-2);
+  color: var(--color-ink);
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+}
+.mobile-nav a:hover { background: var(--color-primary-soft); text-decoration: none; }
+
+/* ------------------------------------------------------------
+   BUTTONS
+   ------------------------------------------------------------ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-5);
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 48px;
+  transition: transform var(--duration-fast) var(--ease), background var(--duration-fast) var(--ease), box-shadow var(--duration-fast) var(--ease);
+}
+.btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+/* Every button icon (phone, WhatsApp, etc.) gets a consistent, clearly
+   visible size — without this, an icon with no explicit CSS size can
+   render oversized and get clipped inside a compact button. */
+.btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+.btn--primary { background: var(--color-primary); color: var(--color-on-primary); }
+.btn--primary:hover { background: var(--color-primary-dark); }
+
+.btn--accent { background: var(--color-accent); color: var(--color-on-accent); }
+.btn--accent:hover { background: var(--color-accent-dark); }
+
+.btn--ghost { background: transparent; color: var(--color-primary); border: 1px solid var(--color-line-strong); }
+.btn--ghost:hover { background: var(--color-primary-soft); }
+
+.btn--danger { background: var(--color-danger); color: #fff; }
+
+.btn--block { width: 100%; }
+.btn--sm { min-height: 40px; padding: var(--space-2) var(--space-4); font-size: var(--font-size-sm); }
+
+/* ------------------------------------------------------------
+   HERO / TEXT SECTION — sits between the Main Header and the Main
+   Banner, and only ever holds this automatic text (never the banner).
+   ------------------------------------------------------------ */
+.hero--compact {
+  min-height: calc(var(--header-height) * 1.5);
+  padding: var(--space-3) 0;
+  background: linear-gradient(180deg, var(--color-primary-soft), var(--color-bg) 85%);
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hero__inner { max-width: 640px; margin: 0 auto; }
+.hero__heading {
+  color: var(--color-primary-dark);
+  font-weight: 700;
+  font-size: var(--font-size-lg);
+  margin: 0 0 4px;
+}
+.hero__tagline {
+  color: var(--color-primary-dark);
+  font-weight: 600;
+  font-size: var(--font-size-md);
+  margin: 0;
+  /* Max 2 lines even on very small screens — never pushes the banner down. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ------------------------------------------------------------
+   HOMEPAGE BANNER — 3 slides, 2:1, auto-advance + swipe
+   ------------------------------------------------------------ */
+.banner { padding: var(--space-4) 0; }
+.banner__viewport {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-primary-soft);
+  touch-action: pan-y;
+}
+.banner__track {
+  display: flex;
+  width: 300%;
+  height: 100%;
+  transition: transform 380ms cubic-bezier(0.2, 0.6, 0.2, 1);
+}
+.banner__slide {
+  width: 33.3333%;
+  height: 100%;
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.banner__slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* Slide 1's dynamic text — same solid background as the Doctor/
+   Registration sections' .cta-band by default; a loaded
+   home-banner-01.jpg is layered on top of it inline (see buildSlide()
+   in drivers.js), never replacing the background-color outright, so a
+   missing/broken image just leaves this solid colour showing. */
+.banner__slide--text {
+  background-color: var(--color-primary-dark);
+  background-size: cover;
+  background-position: center;
+  text-align: center;
+  padding: var(--space-3) var(--space-5);
+}
+.banner__slide-text { display: flex; flex-direction: column; gap: var(--space-2); }
+.banner__slide--text h2 { color: #fff; font-size: var(--font-size-lg); font-weight: 700; margin: 0; }
+.banner__slide-sub { color: rgba(255,255,255,0.9); font-size: var(--font-size-sm); font-weight: 400; max-width: 34ch; margin: 0 auto; }
+.banner__slide--placeholder {
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--color-primary-dark);
+}
+.banner__slide--placeholder svg { width: 40px; height: 40px; }
+.banner__dots { display: flex; justify-content: center; gap: var(--space-2); margin-top: var(--space-3); }
+.banner__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-line-strong);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: width var(--duration-base) var(--ease), background var(--duration-base) var(--ease);
+}
+.banner__dot.is-active { background: var(--color-primary); width: 20px; }
+
+/* ------------------------------------------------------------
+   HOMEPAGE ACTIONS — compact, side-by-side even on small phones
+   ------------------------------------------------------------ */
+.home-actions { padding: var(--space-2) 0 var(--space-2); }
+/* Grid (not flex) so the 60/40 ratio holds exactly even with a gap —
+   flex-basis percentages plus a gap would add up to slightly over 100%. */
+.hero__actions { display: grid; grid-template-columns: 3fr 2fr; gap: var(--space-2); }
+.hero__actions .btn { width: 100%; min-width: 0; }
+.btn--compact {
+  padding: var(--space-2);
+  font-size: var(--font-size-sm);
+  min-height: 44px;
+  white-space: normal;
+  line-height: 1.2;
+}
+.btn--compact svg { width: 16px; height: 16px; }
+
+.btn--emergency { gap: 6px; }
+.emergency-icon {
+  font-size: 1.15em;
+  line-height: 1;
+  /* Stays visually distinct from the red button background and draws
+     a little attention without being distracting or shaking the page. */
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.25));
+  animation: emergency-pulse 1.6s ease-in-out infinite;
+  display: inline-block;
+}
+@keyframes emergency-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.18); }
+}
+
+/* ------------------------------------------------------------
+   SECTION
+   ------------------------------------------------------------ */
+.section { padding: var(--space-6) 0; }
+/* Used only by the Home page's market section, immediately below the
+   Select Your Bazar / Emergency Contact buttons — trims just that one
+   top gap without touching `.section`'s shared top/bottom padding used
+   everywhere else (Markets page, How It Works, Register CTA, etc). */
+.section--flush-top { padding-top: var(--space-3); }
+.section-head { margin-bottom: var(--space-4); }
+.section-head h2 { font-size: var(--font-size-xl); margin-bottom: var(--space-1); }
+.section-head p { color: var(--color-ink-soft); font-size: var(--font-size-sm); }
+
+/* ------------------------------------------------------------
+   BREADCRUMB
+   ------------------------------------------------------------ */
+.breadcrumb {
+  margin-bottom: var(--space-4);
+  /* Allow horizontal scroll of the crumb trail itself on very
+     narrow screens, never the page. */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.breadcrumb::-webkit-scrollbar { display: none; }
+
+.breadcrumb__list {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  white-space: nowrap;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+.breadcrumb__item {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.breadcrumb__link {
+  color: var(--color-ink-soft);
+  text-decoration: none;
+  padding: var(--space-1) 2px;
+}
+.breadcrumb__link:hover { color: var(--color-primary); text-decoration: underline; }
+.breadcrumb__sep { color: var(--color-line-strong); padding: 0 2px; }
+.breadcrumb__current {
+  color: var(--color-ink);
+  max-width: 40vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  vertical-align: bottom;
+}
+.modal-sheet .breadcrumb { margin-bottom: var(--space-3); }
+
+/* ------------------------------------------------------------
+   CHIP GRID (bazars, vehicle types)
+   ------------------------------------------------------------ */
+.chip-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+}
+.chip-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: left;
+  color: var(--color-ink);
+  min-height: 108px;
+  transition: border-color var(--duration-fast) var(--ease), transform var(--duration-fast) var(--ease);
+}
+.chip-card:hover { border-color: var(--color-primary); }
+.chip-card:active { transform: scale(0.98); }
+.chip-card__icon {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.chip-card__icon svg { width: 24px; height: 24px; }
+.chip-card__name { font-weight: 600; font-size: var(--font-size-md); }
+.chip-card__sub { font-size: var(--font-size-xs); color: var(--color-ink-soft); }
+
+/* Vehicle-category card: existing small icon + new (optional) wider
+   category image sitting beside it, name stays below as before. */
+.chip-card__top { display: flex; align-items: center; gap: var(--space-2); width: 100%; }
+.chip-card__image {
+  flex: 1;
+  min-width: 0;
+  aspect-ratio: 2 / 1;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--color-primary-soft);
+}
+.chip-card__image img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* Market card with a "Markets BG Image URL" background photo — text/
+   icon are lifted to white so they stay readable over the photo (the
+   dark overlay gradient itself is applied inline, see drivers.js). */
+.chip-card--market-has-bg { background-color: transparent; background-size: cover; background-position: center; border-color: transparent; }
+.chip-card--market-has-bg .chip-card__name { color: #fff; }
+.chip-card--market-has-bg .chip-card__icon { background: rgba(255, 255, 255, 0.2); color: #fff; }
+
+/* "Others" tile — same chip shape, centered and visually muted. */
+.chip-card--others { align-items: center; text-align: center; color: var(--color-ink-soft); }
+.chip-card--others .chip-card__icon { background: var(--color-line); color: var(--color-ink-soft); }
+
+/* Dynamic online-driver-count badge on each vehicle-category card. */
+.chip-card__online {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--font-size-xs);
+  color: var(--color-ink-soft);
+  margin-top: -4px; /* slightly tighten the gap under the name, per spec */
+}
+.online-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-success);
+  flex-shrink: 0;
+  animation: online-pulse 1.8s ease-in-out infinite;
+}
+@keyframes online-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.7; }
+}
+
+/* ------------------------------------------------------------
+   SEARCH
+   ------------------------------------------------------------ */
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-pill);
+  padding: var(--space-2) var(--space-4);
+}
+.search-bar svg { width: 20px; height: 20px; color: var(--color-ink-soft); flex-shrink: 0; }
+.search-bar input {
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--color-ink);
+  font-size: var(--font-size-md);
+  width: 100%;
+  min-height: 40px;
+  font-family: inherit;
+}
+.search-bar input::placeholder { color: var(--color-ink-soft); }
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+  flex-wrap: wrap;
+}
+.result-count { font-size: var(--font-size-sm); color: var(--color-ink-soft); }
+.toggle-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-ink);
+  cursor: pointer;
+  user-select: none;
+}
+.toggle-pill input { width: 18px; height: 18px; accent-color: var(--color-primary); }
+
+/* ------------------------------------------------------------
+   DRIVER GRID + CARD
+   ------------------------------------------------------------ */
+.driver-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+
+.driver-card {
+  display: flex;
+  gap: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  /* Without this, a CSS Grid item defaults to min-width:auto, which lets
+     unbreakable content (e.g. a very long Service Area line) stretch the
+     whole card — and the grid track/page — wider than the screen. */
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease);
+}
+.driver-card:hover { border-color: var(--color-primary); }
+
+.driver-card__photo {
+  width: 76px;
+  height: 76px;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+  flex-shrink: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.driver-card__photo img { width: 100%; height: 100%; object-fit: cover; }
+.driver-card__photo svg { width: 32px; height: 32px; }
+
+.driver-card__body { flex: 1; min-width: 0; }
+.driver-card__name {
+  font-weight: 700;
+  font-size: var(--font-size-md);
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.driver-card__meta {
+  font-size: var(--font-size-sm);
+  color: var(--color-ink-soft);
+  margin-bottom: var(--space-1);
+  /* Vehicle Type · Service Area must never wrap to a second line. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.driver-card__rating-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-xs);
+  color: var(--color-ink-soft);
+  margin-bottom: var(--space-2);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.driver-card__experience { overflow: hidden; text-overflow: ellipsis; }
+.dot-sep { color: var(--color-line-strong); flex-shrink: 0; }
+
+.stars { display: inline-flex; flex-shrink: 0; letter-spacing: 1px; }
+.star { font-size: 0.95em; line-height: 1; }
+.star--filled { color: var(--color-accent); }
+.star--empty { color: var(--color-line-strong); }
+
+.status-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+.status-dot::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.status-dot--available { color: var(--color-success); }
+.status-dot--unavailable { color: var(--color-danger); }
+.status-dot--lg {
+  display: flex;
+  justify-content: center;
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-4);
+}
+.status-dot--lg::before { width: 10px; height: 10px; }
+
+.driver-card__actions { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); flex-wrap: wrap; }
+.driver-card__call-btn {
+  border: none;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border-radius: var(--radius-sm);
+  min-height: 40px;
+  padding: 0 var(--space-3);
+  min-width: 96px;
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  cursor: pointer;
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.driver-card__call-btn span { overflow: hidden; text-overflow: ellipsis; }
+.driver-card__call-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+.driver-card__call-btn[disabled] { background: var(--color-line-strong); color: var(--color-ink-soft); cursor: not-allowed; }
+
+/* WhatsApp deep-link button — small, circular, icon-only, conditional. */
+.whatsapp-btn {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #25D366;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--ease);
+}
+.whatsapp-btn:hover { transform: scale(1.05); }
+.whatsapp-btn:active { transform: scale(0.94); }
+.whatsapp-btn svg { width: 20px; height: 20px; }
+
+/* Fixed reserved space at the right edge of every Driver Card's button
+   row — present whether or not WhatsApp is shown (~1cm on typical
+   screens, scaled down a little on very narrow phones below). */
+.driver-card__spacer { flex-shrink: 0; width: 36px; }
+@media (max-width: 359px) {
+  .driver-card__spacer { width: 16px; }
+}
+
+/* ------------------------------------------------------------
+   EMPTY / LOADING / ERROR STATES
+   ------------------------------------------------------------ */
+.state-block {
+  text-align: center;
+  padding: var(--space-7) var(--space-4);
+  color: var(--color-ink-soft);
+}
+.state-block__icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto var(--space-3);
+  color: var(--color-line-strong);
+}
+.state-block h3 { color: var(--color-ink); margin-bottom: var(--space-2); font-size: var(--font-size-lg); }
+.state-block .btn { margin-top: var(--space-4); }
+
+.skeleton-grid { display: grid; grid-template-columns: 1fr; gap: var(--space-4); }
+.skeleton-card {
+  height: 100px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(100deg, var(--color-surface) 30%, var(--color-primary-soft) 50%, var(--color-surface) 70%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border: 1px solid var(--color-line);
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ------------------------------------------------------------
+   HOW IT WORKS
+   ------------------------------------------------------------ */
+.steps { display: grid; grid-template-columns: 1fr; gap: var(--space-4); }
+.step-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+.step-card__num {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  margin-bottom: var(--space-3);
+}
+.step-card h3 { font-size: var(--font-size-md); margin-bottom: var(--space-1); }
+.step-card p { font-size: var(--font-size-sm); color: var(--color-ink-soft); }
+
+/* ------------------------------------------------------------
+   CTA BAND
+   ------------------------------------------------------------ */
+.cta-band {
+  background-color: var(--color-primary-dark);
+  background-size: cover;
+  background-position: center;
+  color: #fff;
+  border-radius: var(--radius-lg);
+  padding: var(--space-6) var(--space-5);
+  text-align: center;
+  /* A soft ~2:1 (width:height) target so the section scales
+     proportionally with width instead of sitting at a fixed height —
+     but this is a preference, not a hard clip: min-height keeps it
+     from ever getting too short, and the box still grows if the text
+     genuinely needs more room. */
+  aspect-ratio: 2 / 1;
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.cta-band h2 { color: #fff; margin-bottom: var(--space-2); font-size: var(--font-size-xl); }
+.cta-band p { color: rgba(255,255,255,0.85); margin-bottom: var(--space-4); }
+
+/* ------------------------------------------------------------
+   FOOTER — kept intentionally compact: one brand+links row, one
+   thin copyright/language row, minimal padding either side.
+   ------------------------------------------------------------ */
+.site-footer {
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-line);
+  padding: var(--space-3) 0;
+  margin-top: var(--space-5);
+}
+.footer-compact { display: flex; flex-direction: column; gap: var(--space-2); }
+
+.footer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.footer-row--top { padding-bottom: var(--space-2); }
+.footer-row--bottom {
+  border-top: 1px solid var(--color-line);
+  padding-top: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--color-ink-soft);
+}
+
+.footer-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+  color: var(--color-ink);
+}
+.footer-brand:hover { text-decoration: none; color: var(--color-primary); }
+.brand__mark--sm { width: 24px; height: 24px; }
+.brand__mark--sm svg { width: 15px; height: 15px; }
+
+.footer-nav { display: flex; gap: var(--space-4); flex-wrap: wrap; }
+.footer-nav a { color: var(--color-ink-soft); font-size: var(--font-size-sm); font-weight: 500; }
+.footer-nav a:hover { color: var(--color-primary); text-decoration: none; }
+
+.lang-toggle--sm button { padding: 4px var(--space-2); font-size: 0.7rem; }
+
+/* Footer social links — compact icon row beside the language toggle. */
+.footer-social { display: flex; align-items: center; gap: var(--space-2); }
+.footer-social a {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background var(--duration-fast) var(--ease), transform var(--duration-fast) var(--ease);
+}
+.footer-social a:hover { background: var(--color-primary); color: var(--color-on-primary); text-decoration: none; }
+.footer-social a:active { transform: scale(0.94); }
+.footer-social svg { width: 15px; height: 15px; }
+
+@media (max-width: 480px) {
+  .footer-row--bottom { flex-direction: column-reverse; align-items: flex-start; gap: var(--space-2); }
+}
+
+/* ------------------------------------------------------------
+   FORMS
+   ------------------------------------------------------------ */
+.form-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  max-width: 560px;
+  margin: 0 auto;
+}
+.field { margin-bottom: var(--space-4); }
+.field label {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+  color: var(--color-ink);
+}
+.field .hint { font-size: var(--font-size-xs); color: var(--color-ink-soft); margin-top: var(--space-1); }
+.field .error-msg {
+  font-size: var(--font-size-xs);
+  color: var(--color-danger);
+  margin-top: var(--space-1);
+  display: none;
+}
+.field.has-error .error-msg { display: block; }
+.field.has-error input,
+.field.has-error select,
+.field.has-error textarea { border-color: var(--color-danger); }
+
+.field input[type="text"],
+.field input[type="tel"],
+.field input[type="password"],
+.field input[type="number"],
+.field input[type="url"],
+.field select,
+.field textarea {
+  width: 100%;
+  min-height: 48px;
+  padding: var(--space-3);
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: var(--font-size-md);
+  font-family: inherit;
+}
+.field textarea { min-height: 88px; resize: vertical; }
+.field input:focus, .field select:focus, .field textarea:focus {
+  border-color: var(--color-primary);
+}
+
+.password-field { position: relative; }
+.password-field input { padding-right: 44px; }
+.password-field button {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  bottom: 6px;
+  width: 36px;
+  border: none;
+  background: transparent;
+  color: var(--color-ink-soft);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Multi-select vehicle type / preferred bazar — pill-style checkboxes,
+   easy to tap on mobile. Kept to a single compact horizontally-
+   scrolling row instead of wrapping into several rows, so a long list
+   of options never eats up extra vertical space on the form. */
+.checkbox-group {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding-bottom: var(--space-1);
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.checkbox-option {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  background: var(--color-surface);
+}
+.checkbox-option:has(input:checked) {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+  font-weight: 600;
+}
+.checkbox-option input { width: 16px; height: 16px; accent-color: var(--color-primary); }
+
+/* Driving Experience — number + Years/Months side by side, wraps to a
+   safe stacked layout only at extremely narrow widths. */
+.experience-row { display: flex; gap: var(--space-2); }
+.experience-row input { flex: 1 1 0; min-width: 0; }
+.experience-row select { flex: 1 1 0; min-width: 0; }
+
+/* Username availability indicator. */
+.username-field { position: relative; }
+.username-field input { padding-right: 40px; }
+.username-field__status {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  width: 20px;
+  height: 20px;
+  color: var(--color-ink-soft);
+}
+.username-field__status svg { width: 20px; height: 20px; }
+.username-field__status.is-checking { color: var(--color-ink-soft); animation: username-checking 1s linear infinite; }
+.username-field__status.is-available { color: var(--color-focus-ring); }
+@keyframes username-checking {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+/* Mobile Number availability indicator — same look/behavior as the
+   Username field above, just its own class so neither is affected by
+   changes to the other. */
+.phone-field { position: relative; }
+.phone-field input { padding-right: 40px; }
+.phone-field__status {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  width: 20px;
+  height: 20px;
+  color: var(--color-ink-soft);
+}
+.phone-field__status svg { width: 20px; height: 20px; }
+.phone-field__status.is-checking { color: var(--color-ink-soft); animation: username-checking 1s linear infinite; }
+.phone-field__status.is-available { color: var(--color-focus-ring); }
+
+.step-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-5);
+  font-size: var(--font-size-xs);
+  color: var(--color-ink-soft);
+  font-weight: 600;
+}
+.step-indicator__track {
+  flex: 1;
+  height: 6px;
+  background: var(--color-line);
+  border-radius: var(--radius-pill);
+  margin: 0 var(--space-3);
+  overflow: hidden;
+}
+.step-indicator__fill {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: var(--radius-pill);
+  transition: width var(--duration-base) var(--ease);
+}
+
+.form-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+.form-actions .btn { flex: 1; }
+
+.review-list { border-top: 1px solid var(--color-line); margin-top: var(--space-2); }
+.review-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-line);
+  font-size: var(--font-size-sm);
+}
+.review-row dt { color: var(--color-ink-soft); }
+.review-row dd { margin: 0; font-weight: 600; text-align: right; }
+
+/* ------------------------------------------------------------
+   TOAST
+   ------------------------------------------------------------ */
+.toast-region {
+  position: fixed;
+  left: var(--space-4);
+  right: var(--space-4);
+  bottom: var(--space-4);
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  pointer-events: none;
+}
+.toast {
+  background: var(--color-ink);
+  color: var(--color-bg);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  box-shadow: var(--shadow-float);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  animation: toast-in var(--duration-base) var(--ease);
+  pointer-events: auto;
+}
+.toast--success { background: var(--color-primary-dark); color: #fff; }
+.toast--error { background: var(--color-danger); color: #fff; }
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ------------------------------------------------------------
+   MODAL
+   ------------------------------------------------------------ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--color-overlay);
+  z-index: 250;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.modal-sheet {
+  background: var(--color-surface);
+  width: 100%;
+  max-width: 520px;
+  max-height: 92vh;
+  overflow-y: auto;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding: var(--space-5);
+  animation: sheet-up var(--duration-base) var(--ease);
+}
+@keyframes sheet-up {
+  from { transform: translateY(24px); opacity: 0.4; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+.modal-head h3 { font-size: var(--font-size-lg); }
+
+.confirm-actions { display: flex; gap: var(--space-3); margin-top: var(--space-5); }
+.confirm-actions .btn { flex: 1; }
+
+/* ------------------------------------------------------------
+   DRIVER DETAILS
+   ------------------------------------------------------------ */
+
+/* Name + Close button share one row, directly under the breadcrumb —
+   the X never moves down next to the gallery. */
+.detail-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0 2px;
+  margin-bottom: var(--space-4);
+}
+.detail-name {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.detail-name-row .icon-btn { flex-shrink: 0; }
+
+.detail-photo {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--space-4);
+}
+.detail-photo img { width: 100%; height: 100%; object-fit: cover; }
+.detail-photo svg { width: 64px; height: 64px; }
+
+.detail-section-title {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--color-ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: var(--space-2);
+}
+
+.detail-row {
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-line);
+}
+.detail-col { flex: 1; min-width: 0; }
+.detail-col--full { flex: 1 1 100%; }
+.detail-col__label { font-size: var(--font-size-xs); color: var(--color-ink-soft); margin-bottom: 2px; }
+.detail-col__value { font-size: var(--font-size-md); font-weight: 600; color: var(--color-ink); }
+.detail-col__value--truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.detail-col__value--link {
+  color: var(--color-primary);
+  text-decoration: none;
+  display: inline-block;
+}
+.detail-col__value--link:hover { text-decoration: underline; }
+.detail-col__value--phone { display: inline-flex; align-items: center; gap: 6px; }
+.detail-col__phone-icon { color: var(--color-primary); flex-shrink: 0; display: inline-flex; }
+.detail-col__phone-icon svg { width: 15px; height: 15px; }
+
+/* Compact call/WhatsApp row — fixed, controlled height (matches the
+   Driver Card's Call button), width divides dynamically, NEVER wraps
+   onto extra lines (that was what made this section look too tall). */
+.action-row {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-2);
+  flex-wrap: nowrap;
+  height: 40px;
+}
+.action-row__btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 var(--space-2);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.action-row .whatsapp-btn { flex-shrink: 0; }
+
+/* ------------------------------------------------------------
+   VEHICLE IMAGE GALLERY
+   ------------------------------------------------------------ */
+.gallery {
+  display: flex;
+  gap: var(--space-2);
+  width: 100%;
+}
+.gallery__thumbs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 64px;
+  flex-shrink: 0;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.gallery__thumb {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 2px solid transparent;
+  background: var(--color-primary-soft);
+  cursor: pointer;
+}
+.gallery__thumb.is-active { border-color: var(--color-primary); }
+.gallery__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.gallery__main {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-primary-soft);
+}
+.gallery__main img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gallery__arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(10, 20, 14, 0.5);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.gallery__arrow:hover { background: rgba(10, 20, 14, 0.7); }
+.gallery__arrow svg { width: 18px; height: 18px; }
+.gallery__arrow--prev { left: 8px; }
+.gallery__arrow--next { right: 8px; }
+
+/* ------------------------------------------------------------
+   RATE THIS DRIVER (UI-only demo widget — nothing is ever saved)
+   ------------------------------------------------------------ */
+.rate-section {
+  border-top: 1px solid var(--color-line);
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+}
+.rate-stars {
+  display: flex;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+}
+.rate-stars .star {
+  background: none;
+  border: none;
+  padding: 2px;
+  font-size: 1.7rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.rate-textarea {
+  width: 100%;
+  min-height: 72px;
+  padding: var(--space-3);
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  resize: vertical;
+}
+
+/* ------------------------------------------------------------
+   PROFILE
+   ------------------------------------------------------------ */
+.profile-page { max-width: 640px; margin: 0 auto; }
+
+/* -- Header hero: photo, name, vehicle type, rating, experience,
+      with a vehicle-type-driven background + decorative icon -- */
+.profile-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  background: linear-gradient(135deg, var(--color-primary-soft), var(--color-bg) 85%);
+}
+.profile-hero__decor {
+  position: absolute;
+  right: -14px;
+  bottom: -14px;
+  width: 128px;
+  height: 128px;
+  color: var(--color-primary-dark);
+  opacity: 0.16;
+  pointer-events: none;
+}
+.profile-hero__decor svg { width: 100%; height: 100%; }
+.profile-hero--auto { background: linear-gradient(135deg, transparent 40%, var(--color-accent)), var(--color-bg); }
+.profile-hero--auto .profile-hero__decor { color: var(--color-accent-dark); }
+.profile-hero--van { background: linear-gradient(135deg, transparent 40%, var(--color-focus-ring)), var(--color-bg); }
+.profile-hero--van .profile-hero__decor { color: var(--color-focus-ring); }
+.profile-hero--motorcycle { background: linear-gradient(135deg, transparent 40%, var(--color-accent-dark)), var(--color-primary-soft); }
+.profile-hero--easy-bike { background: linear-gradient(135deg, transparent 40%, var(--color-focus-ring)), var(--color-primary-soft); }
+.profile-hero__top { position: relative; display: flex; gap: var(--space-4); align-items: flex-start; }
+
+.profile-photo {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 3px solid var(--color-bg);
+}
+.profile-photo svg { width: 42px; height: 42px; }
+.profile-photo img { width: 100%; height: 100%; object-fit: cover; }
+
+.profile-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.profile-badge svg { width: 13px; height: 13px; }
+.profile-badge--active { background: var(--color-primary-soft); color: var(--color-primary-dark); }
+.profile-badge--pending { background: var(--color-accent); color: var(--color-on-accent); }
+.profile-badge--suspended { background: var(--color-danger-soft); color: var(--color-danger); }
+
+.profile-name { font-size: var(--font-size-xl); font-weight: 700; margin: 0 0 2px; }
+.profile-vehicle-type {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--color-ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-bottom: 6px;
+}
+.profile-meta-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: var(--font-size-sm); color: var(--color-ink-soft); }
+.profile-meta-row svg { width: 15px; height: 15px; vertical-align: -3px; color: var(--color-accent-dark); }
+.profile-meta-row .icon-shield { color: var(--color-primary-dark); }
+.profile-meta-row .dot-sep { color: var(--color-line-strong); }
+
+/* -- Section cards (Account Overview / Service Areas / Vehicle
+      Information / Profile Fields) -- */
+.profile-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+.profile-card__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-3); }
+.profile-card__head h2 { display: flex; align-items: center; gap: 8px; font-size: var(--font-size-md); font-weight: 700; margin: 0; }
+.profile-card__head h2 svg { width: 18px; height: 18px; color: var(--color-primary); flex-shrink: 0; }
+
+.pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-line-strong);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.pill-btn svg { width: 12px; height: 12px; }
+
+/* -- Account Overview grid -- */
+.overview-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-3); }
+.overview-grid--top { grid-template-columns: repeat(3, 1fr); margin-bottom: var(--space-3); }
+.overview-grid--bottom { grid-template-columns: repeat(3, 1fr); }
+.overview-grid--top, .overview-grid--bottom { column-gap: 6px; }
+/* Account Overview only (scoped via .overview-grid) — smaller, single-line
+   text so 3-per-row headers/values never wrap, even for "Primary Phone"
+   and its number on narrow phones. Vehicle Information / Profile Fields
+   reuse .overview-item elsewhere but are NOT inside .overview-grid, so
+   they keep their own existing sizing untouched. */
+.overview-grid .overview-item { gap: 6px; }
+.overview-grid .overview-icon { width: 24px; height: 24px; }
+.overview-grid .overview-icon svg { width: 12px; height: 12px; }
+.overview-grid .overview-label,
+.overview-grid .overview-value {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.overview-grid .overview-label { font-size: clamp(9px, 2.6vw, 11px); }
+.overview-grid .overview-value { font-size: clamp(10px, 3vw, 12.5px); }
+.overview-grid .status-pill { font-size: clamp(9px, 2.6vw, 11px); padding: 1px 6px; }
+.overview-item { display: flex; gap: 8px; align-items: flex-start; min-width: 0; }
+.overview-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.overview-icon svg { width: 15px; height: 15px; }
+.overview-label { font-size: var(--font-size-xs); color: var(--color-ink-soft); margin-bottom: 2px; }
+.overview-value { font-size: var(--font-size-sm); font-weight: 700; overflow-wrap: anywhere; }
+
+.status-pill { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: var(--radius-pill); font-size: var(--font-size-xs); font-weight: 700; }
+.status-pill--success { background: var(--color-primary-soft); color: var(--color-primary-dark); }
+.status-pill--warning { background: var(--color-accent); color: var(--color-on-accent); }
+.status-pill--danger { background: var(--color-danger-soft); color: var(--color-danger); }
+.status-pill--neutral { background: var(--color-line); color: var(--color-ink-soft); }
+
+/* -- Small colour chips (Service Areas / Preferred Bazar) -- */
+.info-chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: var(--space-3); }
+.info-chip {
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.service-area-row { display: flex; gap: 10px; align-items: flex-start; }
+.service-area-row svg { width: 18px; height: 18px; color: var(--color-primary-dark); flex-shrink: 0; margin-top: 2px; }
+.service-area-row__label { font-size: var(--font-size-sm); font-weight: 700; margin-bottom: 2px; }
+.service-area-row__text { font-size: var(--font-size-sm); color: var(--color-ink-soft); line-height: 1.5; }
+
+/* -- Vehicle Information layout -- */
+.vehicle-info-grid { display: grid; grid-template-columns: 190px 1fr; column-gap: var(--space-4); row-gap: var(--space-3); align-items: start; }
+.vehicle-thumb {
+  position: relative;
+  width: 128px;
+  height: 96px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  flex-shrink: 0;
+  cursor: pointer;
+  background: var(--color-primary-soft);
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary-dark);
+}
+.vehicle-thumb svg { width: 34px; height: 34px; }
+.vehicle-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.vehicle-thumb__badge {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  background: rgba(10, 20, 15, 0.6);
+  color: #fff;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+}
+.vehicle-info-cols { display: flex; gap: var(--space-4); flex-wrap: wrap; flex: 1; min-width: 160px; }
+.vehicle-info-col { min-width: 128px; }
+.vehicle-info-col .overview-item + .overview-item { margin-top: var(--space-3); }
+
+/* Compact photo gallery (big photo + up to 3 small stacked photos,
+   matching the big photo's height) + the two info items beside it,
+   with the remaining two info items on their own full-width row below. */
+.vehicle-gallery-compact { display: flex; gap: 6px; flex-shrink: 0; }
+.vehicle-gallery-compact__side { display: flex; flex-direction: column; gap: 6px; }
+.vehicle-side-thumb {
+  position: relative;
+  width: 56px;
+  height: 28px;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--color-primary-soft);
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary-dark);
+}
+.vehicle-side-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.vehicle-side-thumb__badge {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 20, 15, 0.55);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.vehicle-info-top { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+
+/* -- Profile Fields grid -- */
+.profile-fields-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-3); }
+
+/* -- Link rows (Change Password / Vehicle Photos) -- */
+.profile-link-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-3);
+  cursor: pointer;
+  text-align: left;
+  color: var(--color-ink);
+  font-family: inherit;
+}
+.profile-link-row__icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.profile-link-row__icon svg { width: 18px; height: 18px; }
+.profile-link-row__body { flex: 1; min-width: 0; }
+.profile-link-row__title { font-weight: 700; font-size: var(--font-size-sm); }
+.profile-link-row__sub { font-size: var(--font-size-xs); color: var(--color-ink-soft); }
+.profile-link-row__chevron { color: var(--color-ink-soft); flex-shrink: 0; }
+.profile-link-row__chevron svg { width: 16px; height: 16px; }
+
+/* -- Big, clear Availability toggle -- */
+.availability-toggle { display: flex; gap: var(--space-3); margin-bottom: var(--space-4); }
+.availability-toggle__option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  border: 2px solid var(--color-line-strong);
+  background: var(--color-surface);
+  cursor: pointer;
+  text-align: left;
+  color: var(--color-ink-soft);
+  font-family: inherit;
+}
+.availability-toggle__option svg { width: 22px; height: 22px; flex-shrink: 0; }
+.availability-toggle__title { font-weight: 700; font-size: var(--font-size-sm); display: block; }
+.availability-toggle__sub { font-size: var(--font-size-xs); }
+.availability-toggle__option.is-selected--active { border-color: var(--color-primary); background: var(--color-primary-soft); color: var(--color-primary-dark); }
+.availability-toggle__option.is-selected--inactive { border-color: var(--color-danger); background: var(--color-danger-soft); color: var(--color-danger); }
+
+.btn--outline-danger { background: transparent; color: var(--color-danger); border: 1px solid var(--color-danger); }
+.btn--outline-danger:hover { background: var(--color-danger-soft); }
+
+/* -- Edit Profile / Change Password modal forms -- */
+.profile-form-grid { display: grid; grid-template-columns: 1fr; gap: 0; }
+@media (min-width: 480px) {
+  .profile-form-grid--2col { grid-template-columns: 1fr 1fr; column-gap: var(--space-4); }
+}
+
+/* -- Vehicle Photos modal -- */
+.vehicle-gallery-empty { text-align: center; padding: var(--space-6) var(--space-3); color: var(--color-ink-soft); }
+.vehicle-gallery-empty svg { width: 40px; height: 40px; margin-bottom: var(--space-2); }
+
+/* utility */
+.mt-5 { margin-top: var(--space-5); }
+.text-center { text-align: center; }
+.visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
