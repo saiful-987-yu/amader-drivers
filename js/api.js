@@ -372,6 +372,41 @@
         return driverProfileFields(drivers[idx]);
       }
 
+      case "updateProfile": {
+        const session = getDemoSession(payload.token);
+        if (!session) throw sessionError();
+        const drivers = DemoStore.drivers();
+        const idx = drivers.findIndex((d) => d.driverId === session.driverId);
+        if (idx === -1) throw sessionError();
+        // Same fixed, driver-editable field list as updateProfile() in Code.gs.
+        const d = drivers[idx];
+        const fieldMap = { nameBn: "nameBn", guardianName: "guardianName", altPhone: "altPhone", whatsapp: "whatsapp", serviceArea: "serviceArea", vehicleNumber: "vehicleNumber" };
+        let changed = false;
+        Object.keys(fieldMap).forEach((key) => {
+          if (payload[key] !== undefined) { d[fieldMap[key]] = String(payload[key] || "").trim(); changed = true; }
+        });
+        if (!changed) { const err = new Error("VALIDATION_FAILED"); err.code = "VALIDATION_FAILED"; throw err; }
+        DemoStore.saveDrivers(drivers);
+        return driverProfileFields(d);
+      }
+
+      case "changePassword": {
+        const session = getDemoSession(payload.token);
+        if (!session) throw sessionError();
+        const drivers = DemoStore.drivers();
+        const idx = drivers.findIndex((d) => d.driverId === session.driverId);
+        if (idx === -1) throw sessionError();
+        if (String(drivers[idx].password || "") !== String(payload.oldPassword || "")) {
+          const err = new Error("INVALID_CREDENTIALS"); err.code = "INVALID_CREDENTIALS"; throw err;
+        }
+        if (!payload.newPassword || String(payload.newPassword).length < 6) {
+          const err = new Error("VALIDATION_FAILED"); err.code = "VALIDATION_FAILED"; throw err;
+        }
+        drivers[idx].password = payload.newPassword;
+        DemoStore.saveDrivers(drivers);
+        return { ok: true };
+      }
+
       default:
         throw new Error("UNKNOWN_OPERATION");
     }
@@ -437,12 +472,13 @@
     };
   }
 
-  /** Fields visible on the logged-in driver's own profile (still no password). */
+  /** Fields visible on the logged-in driver's own profile (still no password). Father/Husband Name is only ever returned here — never in publicDriverFields (the public directory) above. */
   function driverProfileFields(d) {
     if (!d) return null;
     return Object.assign(publicDriverFields(d), {
       accountStatus: d.status,
-      username: d.username
+      username: d.username,
+      guardianName: d.guardianName || ""
     });
   }
 
@@ -511,11 +547,14 @@
   /**
    * Drivers marked Emergency Contact = TRUE, regardless of bazar or
    * vehicle type. Reuses the same cached directory as everything else —
-   * no extra network request, and no duplicate driver records.
+   * no extra network request, and no duplicate driver records. Ordered
+   * by the SAME Sort Status → Rating rule as a bazar+vehicle-type
+   * driver list (sortBySortStatusThenRating above) — not a separate
+   * emergency-only ordering rule.
    */
   Api.getEmergencyDrivers = async () => {
     const list = await Api.getDriverDirectory();
-    return sortDrivers(list.filter((d) => d.emergency === true));
+    return sortBySortStatusThenRating(list.filter((d) => d.emergency === true));
   };
 
   /**
@@ -568,6 +607,16 @@
       invalidateCache("getDrivers");
       return res;
     });
+
+  /** `fields` is a plain {key: value} object — only the driver-editable keys the Profile section actually sends (see updateProfile() in Code.gs for the fixed list); anything else is ignored server-side. */
+  Api.updateProfile = (token, fields) =>
+    call("updateProfile", Object.assign({ token }, fields)).then((res) => {
+      invalidateCache("getDrivers"); // altPhone/WhatsApp/Service Area/Vehicle Number can all show up in the public directory
+      return res;
+    });
+
+  Api.changePassword = (token, oldPassword, newPassword) =>
+    call("changePassword", { token, oldPassword, newPassword });
 
   window.Api = Api;
 })(window, window.Utils);

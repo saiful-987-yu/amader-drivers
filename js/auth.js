@@ -44,5 +44,18 @@
     return Api.updateAvailability(token, availability);
   };
 
+  /** `fields` is a plain {key: value} object of only the driver-editable Profile fields being changed (see updateProfile() in Code.gs for the fixed list). */
+  Auth.updateProfile = async function (fields) {
+    const token = Auth.getToken();
+    if (!token) throw new Error("SESSION_EXPIRED");
+    return Api.updateProfile(token, fields);
+  };
+
+  Auth.changePassword = async function (oldPassword, newPassword) {
+    const token = Auth.getToken();
+    if (!token) throw new Error("SESSION_EXPIRED");
+    return Api.changePassword(token, oldPassword, newPassword);
+  };
+
   window.Auth = Auth;
 })(window, window.Utils, window.Api);
