@@ -39,7 +39,7 @@ window.NOBI_CONFIG = {
   // Leave this as null to run the site in DEMO MODE with
   // built-in sample data (no Google Sheet required). This is
   // useful for local testing before you connect a real sheet.
-  API_BASE_URL: "https://script.google.com/macros/s/AKfycbwB85M5J3CyGJyyZeZUyYwrTR2kJdisZIRcnLoF5iJF8xy5rjacH7nNjQhRj06XQGovZA/exec",
+  API_BASE_URL: "https://script.google.com/macros/s/AKfycbyL0MS6Z7p7b_cJ9xZp_prok9IAoUKWp0ynZ_DjTwB9FG2GOdOndKTkONNefozf9kt5IQ/exec",
 
   // --------------------------------------------------------
   // WEBSITE IDENTITY
@@ -96,10 +96,12 @@ window.NOBI_CONFIG = {
   },
 
   // Footer social links — leave as "#" until a real URL is available.
+  // whatsapp is the only exception: give it a plain phone number (any
+  // format), not a URL — the footer builds the wa.me link from it.
   SOCIAL_LINKS: {
-    facebook: "#",
-    whatsapp: "#",
-    tiktok: "#",
+    facebook: "https://fb.com/Saiful.Islam.Personal",
+    whatsapp: "01610-253221",
+    tiktok: "https://tiktok.com/@saiful.islam.personal",
     linkedin: "#"
   }
 };

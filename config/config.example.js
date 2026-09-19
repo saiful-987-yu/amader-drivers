@@ -106,6 +106,8 @@ window.NOBI_CONFIG = {
   // --------------------------------------------------------
   // Leave any entry as "#" until you have a real link — the
   // icon still shows, it just doesn't go anywhere yet.
+  // whatsapp is the exception: put a plain phone number here (any
+  // format), not a URL — the footer builds the wa.me link from it.
   SOCIAL_LINKS: {
     facebook: "#",
     whatsapp: "#",
