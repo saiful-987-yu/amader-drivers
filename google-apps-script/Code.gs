@@ -68,6 +68,8 @@ case "checkPhone": return respond({ ok: true, result: checkPhoneAvailable(payloa
 case "login": return respond({ ok: true, result: login(payload) });
 case "getProfile": return respond({ ok: true, result: getProfile(payload) });
 case "updateAvailability": return respond({ ok: true, result: updateAvailability(payload) });
+case "updateProfile": return respond({ ok: true, result: updateProfile(payload) });
+case "changePassword": return respond({ ok: true, result: changePassword(payload) });
 default: return respond({ ok: false, errorCode: "UNKNOWN_OPERATION" });
 }
 } catch (err) {
@@ -373,11 +375,12 @@ const token = createSession(driverId);
 return { token, driver: driverProfileFields(driverRow) };
 }
 
-/** Adds account-status + username to the public fields — Username lives on the SAME Drivers row, no separate lookup needed. */
+/** Adds account-status + username + guardian name to the public fields — Username lives on the SAME Drivers row, no separate lookup needed. Father/Husband Name is only ever returned here, on the driver's OWN profile — never in the public directory (publicDriverFields above). */
 function driverProfileFields(row) {
 return Object.assign(publicDriverFields(row), {
 accountStatus: slugOf(row["Status"]) || "active",
-username: clean(row["Username"])
+username: clean(row["Username"]),
+guardianName: clean(row["Father/Husband Name"])
 });
 }
 
@@ -420,28 +423,84 @@ return driverProfileFields(driverRow);
 // ----------------------------------------------------------
 // AVAILABILITY UPDATE (the only field a driver can change themself)
 // ----------------------------------------------------------
-function updateAvailability(payload) {
-const driverId = resolveSession(payload.token);
-const value = payload.availability === "active" ? "Active" : "Inactive";
-
+/**
+* Locates the calling driver's OWN row (by Driver ID, never a value the
+* client sends directly) and writes `updates` — a plain {ColumnName:
+* value} map — onto it, touching only the columns given. Shared by
+* updateAvailability/updateProfile/changePassword below so the same
+* row-locating logic (and "Updated Date" stamping) isn't repeated three
+* times.
+*/
+function writeDriverRow(driverId, updates) {
 const s = sheet(SHEET_DRIVERS);
 const values = s.getDataRange().getValues();
 const headers = values[0].map((h) => String(h).trim());
 const idCol = headers.indexOf("Driver ID");
-const availCol = headers.indexOf("Availability");
-const updatedCol = headers.indexOf("Updated Date");
-if (idCol === -1 || availCol === -1) throw appError("SHEET_MISCONFIGURED");
+if (idCol === -1) throw appError("SHEET_MISCONFIGURED");
 
 for (let i = 1; i < values.length; i++) {
 if (clean(values[i][idCol]) === driverId) {
-// A driver may only ever update their OWN row — the row to
-// change is located by the Driver ID tied to their session
-// token, never by a value the client sends directly.
-s.getRange(i + 1, availCol + 1).setValue(value);
+Object.keys(updates).forEach((colName) => {
+const col = headers.indexOf(colName);
+if (col !== -1) s.getRange(i + 1, col + 1).setValue(updates[colName]);
+});
+const updatedCol = headers.indexOf("Updated Date");
 if (updatedCol !== -1) s.getRange(i + 1, updatedCol + 1).setValue(new Date().toISOString());
-const driverRow = readRows(SHEET_DRIVERS).find((r) => clean(r["Driver ID"]) === driverId);
-return driverProfileFields(driverRow);
+return readRows(SHEET_DRIVERS).find((r) => clean(r["Driver ID"]) === driverId);
 }
 }
 throw appError("SESSION_EXPIRED");
+}
+
+function updateAvailability(payload) {
+const driverId = resolveSession(payload.token);
+const value = payload.availability === "active" ? "Active" : "Inactive";
+const driverRow = writeDriverRow(driverId, { "Availability": value });
+return driverProfileFields(driverRow);
+}
+
+// ----------------------------------------------------------
+// PROFILE SECTION — self-service edits (Change Password + a small,
+// clearly-scoped set of driver-editable fields; everything else on
+// the profile — identity, Vehicle Type, Bazar, Driving Experience,
+// photos, Username, Account Status — stays admin/registration-only).
+// ----------------------------------------------------------
+
+/**
+* Only these EXISTING Sheet columns are driver-editable from their own
+* profile. Anything not listed here (Name, Vehicle Type, Bazar,
+* Driving Experience, photos, Username, Status, Phone) is intentionally
+* left out — either security-sensitive (Phone/Username double as the
+* login identifier) or admin/registration-controlled by design.
+*/
+function updateProfile(payload) {
+const driverId = resolveSession(payload.token);
+const fieldMap = {
+nameBn: "Bengali Name",
+guardianName: "Father/Husband Name",
+altPhone: "Alternative Phone",
+whatsapp: "WhatsApp",
+serviceArea: "Service Area",
+vehicleNumber: "Vehicle Number"
+};
+const updates = {};
+Object.keys(fieldMap).forEach((key) => {
+if (payload[key] !== undefined) updates[fieldMap[key]] = clean(payload[key]);
+});
+if (!Object.keys(updates).length) throw appError("VALIDATION_FAILED");
+const driverRow = writeDriverRow(driverId, updates);
+return driverProfileFields(driverRow);
+}
+
+function changePassword(payload) {
+const driverId = resolveSession(payload.token);
+const driverRow = readRows(SHEET_DRIVERS).find((r) => clean(r["Driver ID"]) === driverId);
+if (!driverRow) throw appError("SESSION_EXPIRED");
+if (hashPassword(payload.oldPassword || "").toLowerCase() !== clean(driverRow["Password"]).toLowerCase()) {
+throw appError("INVALID_CREDENTIALS");
+}
+// Same minimum-length rule as registration (Step 4) — not a new rule.
+if (!payload.newPassword || String(payload.newPassword).length < 6) throw appError("VALIDATION_FAILED");
+writeDriverRow(driverId, { "Password": hashPassword(payload.newPassword) });
+return { ok: true };
 }
