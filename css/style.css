@@ -1286,18 +1286,40 @@ a:hover { text-decoration: underline; }
 /* ------------------------------------------------------------
    PROFILE
    ------------------------------------------------------------ */
-.profile-card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
+.profile-page { max-width: 640px; margin: 0 auto; }
+
+/* -- Header hero: photo, name, vehicle type, rating, experience,
+      with a vehicle-type-driven background + decorative icon -- */
+.profile-hero {
+  position: relative;
+  overflow: hidden;
   border-radius: var(--radius-lg);
-  padding: var(--space-5);
-  max-width: 520px;
-  margin: 0 auto;
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  background: linear-gradient(135deg, var(--color-primary-soft), var(--color-bg) 85%);
 }
-.profile-top { display: flex; align-items: center; gap: var(--space-4); margin-bottom: var(--space-5); }
+.profile-hero__decor {
+  position: absolute;
+  right: -14px;
+  bottom: -14px;
+  width: 128px;
+  height: 128px;
+  color: var(--color-primary-dark);
+  opacity: 0.16;
+  pointer-events: none;
+}
+.profile-hero__decor svg { width: 100%; height: 100%; }
+.profile-hero--auto { background: linear-gradient(135deg, transparent 40%, var(--color-accent)), var(--color-bg); }
+.profile-hero--auto .profile-hero__decor { color: var(--color-accent-dark); }
+.profile-hero--van { background: linear-gradient(135deg, transparent 40%, var(--color-focus-ring)), var(--color-bg); }
+.profile-hero--van .profile-hero__decor { color: var(--color-focus-ring); }
+.profile-hero--motorcycle { background: linear-gradient(135deg, transparent 40%, var(--color-accent-dark)), var(--color-primary-soft); }
+.profile-hero--easy-bike { background: linear-gradient(135deg, transparent 40%, var(--color-focus-ring)), var(--color-primary-soft); }
+.profile-hero__top { position: relative; display: flex; gap: var(--space-4); align-items: flex-start; }
+
 .profile-photo {
-  width: 72px;
-  height: 72px;
+  width: 84px;
+  height: 84px;
   border-radius: 50%;
   background: var(--color-primary-soft);
   color: var(--color-primary-dark);
@@ -1306,44 +1328,269 @@ a:hover { text-decoration: underline; }
   justify-content: center;
   overflow: hidden;
   flex-shrink: 0;
+  border: 3px solid var(--color-bg);
 }
+.profile-photo svg { width: 42px; height: 42px; }
 .profile-photo img { width: 100%; height: 100%; object-fit: cover; }
-.profile-name { font-size: var(--font-size-lg); font-weight: 700; }
-.profile-sub { color: var(--color-ink-soft); font-size: var(--font-size-sm); }
 
-.availability-control {
-  display: flex;
-  border: 1px solid var(--color-line-strong);
+.profile-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px 2px 8px;
   border-radius: var(--radius-pill);
-  overflow: hidden;
-  margin-top: var(--space-2);
-}
-.availability-control button {
-  flex: 1;
-  border: none;
-  background: transparent;
-  padding: var(--space-3);
+  font-size: var(--font-size-xs);
   font-weight: 700;
+  margin-bottom: 6px;
+}
+.profile-badge svg { width: 13px; height: 13px; }
+.profile-badge--active { background: var(--color-primary-soft); color: var(--color-primary-dark); }
+.profile-badge--pending { background: var(--color-accent); color: var(--color-on-accent); }
+.profile-badge--suspended { background: var(--color-danger-soft); color: var(--color-danger); }
+
+.profile-name { font-size: var(--font-size-xl); font-weight: 700; margin: 0 0 2px; }
+.profile-vehicle-type {
   font-size: var(--font-size-sm);
-  cursor: pointer;
+  font-weight: 700;
   color: var(--color-ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-bottom: 6px;
+}
+.profile-meta-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: var(--font-size-sm); color: var(--color-ink-soft); }
+.profile-meta-row svg { width: 15px; height: 15px; vertical-align: -3px; color: var(--color-accent-dark); }
+.profile-meta-row .icon-shield { color: var(--color-primary-dark); }
+.profile-meta-row .dot-sep { color: var(--color-line-strong); }
+
+/* -- Section cards (Account Overview / Service Areas / Vehicle
+      Information / Profile Fields) -- */
+.profile-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+.profile-card__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-3); }
+.profile-card__head h2 { display: flex; align-items: center; gap: 8px; font-size: var(--font-size-md); font-weight: 700; margin: 0; }
+.profile-card__head h2 svg { width: 18px; height: 18px; color: var(--color-primary); flex-shrink: 0; }
+
+.pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-line-strong);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.pill-btn svg { width: 12px; height: 12px; }
+
+/* -- Account Overview grid -- */
+.overview-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-3); }
+.overview-grid--top { grid-template-columns: repeat(3, 1fr); margin-bottom: var(--space-3); }
+.overview-grid--bottom { grid-template-columns: repeat(3, 1fr); }
+.overview-grid--top, .overview-grid--bottom { column-gap: 6px; }
+/* Account Overview only (scoped via .overview-grid) — smaller, single-line
+   text so 3-per-row headers/values never wrap, even for "Primary Phone"
+   and its number on narrow phones. Vehicle Information / Profile Fields
+   reuse .overview-item elsewhere but are NOT inside .overview-grid, so
+   they keep their own existing sizing untouched. */
+.overview-grid .overview-item { gap: 6px; }
+.overview-grid .overview-icon { width: 24px; height: 24px; }
+.overview-grid .overview-icon svg { width: 12px; height: 12px; }
+.overview-grid .overview-label,
+.overview-grid .overview-value {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.overview-grid .overview-label { font-size: clamp(9px, 2.6vw, 11px); }
+.overview-grid .overview-value { font-size: clamp(10px, 3vw, 12.5px); }
+.overview-grid .status-pill { font-size: clamp(9px, 2.6vw, 11px); padding: 1px 6px; }
+.overview-item { display: flex; gap: 8px; align-items: flex-start; min-width: 0; }
+.overview-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
+  flex-shrink: 0;
 }
-.availability-control button.is-active-state { background: var(--color-primary); color: var(--color-on-primary); }
-.availability-control button.is-inactive-state { background: var(--color-danger); color: #fff; }
+.overview-icon svg { width: 15px; height: 15px; }
+.overview-label { font-size: var(--font-size-xs); color: var(--color-ink-soft); margin-bottom: 2px; }
+.overview-value { font-size: var(--font-size-sm); font-weight: 700; overflow-wrap: anywhere; }
 
-.kv-row {
-  display: flex;
-  justify-content: space-between;
-  padding: var(--space-3) 0;
-  border-bottom: 1px solid var(--color-line);
+.status-pill { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: var(--radius-pill); font-size: var(--font-size-xs); font-weight: 700; }
+.status-pill--success { background: var(--color-primary-soft); color: var(--color-primary-dark); }
+.status-pill--warning { background: var(--color-accent); color: var(--color-on-accent); }
+.status-pill--danger { background: var(--color-danger-soft); color: var(--color-danger); }
+.status-pill--neutral { background: var(--color-line); color: var(--color-ink-soft); }
+
+/* -- Small colour chips (Service Areas / Preferred Bazar) -- */
+.info-chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: var(--space-3); }
+.info-chip {
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
   font-size: var(--font-size-sm);
+  font-weight: 600;
 }
-.kv-row dt { color: var(--color-ink-soft); }
-.kv-row dd { margin: 0; font-weight: 600; }
+
+.service-area-row { display: flex; gap: 10px; align-items: flex-start; }
+.service-area-row svg { width: 18px; height: 18px; color: var(--color-primary-dark); flex-shrink: 0; margin-top: 2px; }
+.service-area-row__label { font-size: var(--font-size-sm); font-weight: 700; margin-bottom: 2px; }
+.service-area-row__text { font-size: var(--font-size-sm); color: var(--color-ink-soft); line-height: 1.5; }
+
+/* -- Vehicle Information layout -- */
+.vehicle-info-grid { display: grid; grid-template-columns: 190px 1fr; column-gap: var(--space-4); row-gap: var(--space-3); align-items: start; }
+.vehicle-thumb {
+  position: relative;
+  width: 128px;
+  height: 96px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  flex-shrink: 0;
+  cursor: pointer;
+  background: var(--color-primary-soft);
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary-dark);
+}
+.vehicle-thumb svg { width: 34px; height: 34px; }
+.vehicle-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.vehicle-thumb__badge {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  background: rgba(10, 20, 15, 0.6);
+  color: #fff;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+}
+.vehicle-info-cols { display: flex; gap: var(--space-4); flex-wrap: wrap; flex: 1; min-width: 160px; }
+.vehicle-info-col { min-width: 128px; }
+.vehicle-info-col .overview-item + .overview-item { margin-top: var(--space-3); }
+
+/* Compact photo gallery (big photo + up to 3 small stacked photos,
+   matching the big photo's height) + the two info items beside it,
+   with the remaining two info items on their own full-width row below. */
+.vehicle-gallery-compact { display: flex; gap: 6px; flex-shrink: 0; }
+.vehicle-gallery-compact__side { display: flex; flex-direction: column; gap: 6px; }
+.vehicle-side-thumb {
+  position: relative;
+  width: 56px;
+  height: 28px;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--color-primary-soft);
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary-dark);
+}
+.vehicle-side-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.vehicle-side-thumb__badge {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 20, 15, 0.55);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.vehicle-info-top { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+
+/* -- Profile Fields grid -- */
+.profile-fields-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-3); }
+
+/* -- Link rows (Change Password / Vehicle Photos) -- */
+.profile-link-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-3);
+  cursor: pointer;
+  text-align: left;
+  color: var(--color-ink);
+  font-family: inherit;
+}
+.profile-link-row__icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.profile-link-row__icon svg { width: 18px; height: 18px; }
+.profile-link-row__body { flex: 1; min-width: 0; }
+.profile-link-row__title { font-weight: 700; font-size: var(--font-size-sm); }
+.profile-link-row__sub { font-size: var(--font-size-xs); color: var(--color-ink-soft); }
+.profile-link-row__chevron { color: var(--color-ink-soft); flex-shrink: 0; }
+.profile-link-row__chevron svg { width: 16px; height: 16px; }
+
+/* -- Big, clear Availability toggle -- */
+.availability-toggle { display: flex; gap: var(--space-3); margin-bottom: var(--space-4); }
+.availability-toggle__option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  border: 2px solid var(--color-line-strong);
+  background: var(--color-surface);
+  cursor: pointer;
+  text-align: left;
+  color: var(--color-ink-soft);
+  font-family: inherit;
+}
+.availability-toggle__option svg { width: 22px; height: 22px; flex-shrink: 0; }
+.availability-toggle__title { font-weight: 700; font-size: var(--font-size-sm); display: block; }
+.availability-toggle__sub { font-size: var(--font-size-xs); }
+.availability-toggle__option.is-selected--active { border-color: var(--color-primary); background: var(--color-primary-soft); color: var(--color-primary-dark); }
+.availability-toggle__option.is-selected--inactive { border-color: var(--color-danger); background: var(--color-danger-soft); color: var(--color-danger); }
+
+.btn--outline-danger { background: transparent; color: var(--color-danger); border: 1px solid var(--color-danger); }
+.btn--outline-danger:hover { background: var(--color-danger-soft); }
+
+/* -- Edit Profile / Change Password modal forms -- */
+.profile-form-grid { display: grid; grid-template-columns: 1fr; gap: 0; }
+@media (min-width: 480px) {
+  .profile-form-grid--2col { grid-template-columns: 1fr 1fr; column-gap: var(--space-4); }
+}
+
+/* -- Vehicle Photos modal -- */
+.vehicle-gallery-empty { text-align: center; padding: var(--space-6) var(--space-3); color: var(--color-ink-soft); }
+.vehicle-gallery-empty svg { width: 40px; height: 40px; margin-bottom: var(--space-2); }
 
 /* utility */
 .mt-5 { margin-top: var(--space-5); }
