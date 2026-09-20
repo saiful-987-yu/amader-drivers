@@ -5,6 +5,7 @@ website picks them up automatically, no code changes needed:
 
 | Filename | Used for |
 |---|---|
+| `home-banner-01.jpg` | Homepage banner, slide 1 — used as the BACKGROUND behind the automatic headline/text (not a replacement for it) |
 | `home-banner-02.jpg` | Homepage banner, slide 2 |
 | `home-banner-03.jpg` | Homepage banner, slide 3 |
 | `home-registration-banner.jpg` | Background image of the "Register as a Driver" section |
@@ -12,10 +13,15 @@ website picks them up automatically, no code changes needed:
 
 Notes:
 
-- The homepage banner's **Slide 1** is generated automatically from site
-  text — it doesn't use an image file and needs no image from you.
-- If any of these files is missing, nothing breaks: the banner slide
-  shows a clean placeholder instead, and the Registration/Doctor
+- Slide 1's headline/text is always automatic and always follows the
+  selected language (English/বাংলা), on the same solid background used
+  by the Doctor/Registration sections by default — `home-banner-01.jpg`
+  only ever supplies the background photo behind that text.
+- If `home-banner-01.jpg` is missing (or fails to load), slide 1 simply
+  keeps that solid background with the same automatic text — you don't
+  need to provide it to get started.
+- If any of these other files is missing, nothing breaks: slides 2/3
+  show a clean placeholder instead, and the Registration/Doctor
   sections just keep their existing solid background color. There is
   never a broken-image icon.
 - To use different filenames or a different folder, edit `BANNER_IMAGES`
