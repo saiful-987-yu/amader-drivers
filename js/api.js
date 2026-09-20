@@ -184,7 +184,8 @@
       drivers: "nobi.demo.drivers",
       doctors: "nobi.demo.doctors",
       pending: "nobi.demo.pending",
-      session: "nobi.demo.session"
+      session: "nobi.demo.session",
+      ratings: "nobi.demo.ratings"
     };
 
     function seedIfEmpty() {
@@ -213,7 +214,7 @@
       }
       if (!Utils.storage.get(KEYS.drivers)) {
         Utils.storage.set(KEYS.drivers, [
-          { driverId: "D001", name: "Mohammad Karim", nameBn: "মোহাম্মদ করিম", emergencyContact: "TRUE", sortStatus: "2nd", phone: "01711000001", altPhone: "", vehicleType: "cng", vehicleNumber: "DHA-CNG-1123", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar & surrounding roads", experience: "6 years", rating: "4.2", whatsapp: "F", imageUrl: "", vehicleImageUrl: "", username: "karim.driver", password: "demo1234", status: "active", availability: "active" },
+          { driverId: "D001", name: "Mohammad Karim", nameBn: "মোহাম্মদ করিম", emergencyContact: "TRUE", sortStatus: "2nd", phone: "01711000001", altPhone: "", vehicleType: "cng", vehicleNumber: "DHA-CNG-1123", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar & surrounding roads", experience: "6 years", rating: "4.2", whatsapp: "F", imageUrl: "", vehicleImageUrl: "", username: "karim.driver", password: "demo1234", status: "active", availability: "active", personalDetails: "<h3>About Karim</h3><p>Friendly and always on time. Speaks basic English.</p><ul><li>Non-smoker</li><li>Owns his own CNG</li></ul>", videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", manualRating: 2 },
           { driverId: "D002", name: "Abdur Rahman", nameBn: "", emergencyContact: "FALSE", sortStatus: "1st", phone: "01711000002", altPhone: "01911000002", vehicleType: "cng", vehicleNumber: "DHA-CNG-2245", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar to Station Road", experience: "3 years", rating: "3.99", whatsapp: "A", imageUrl: "", vehicleImageUrl: "", username: "rahman.driver", password: "demo1234", status: "active", availability: "inactive" },
           { driverId: "D003", name: "Jamal Uddin", nameBn: "জামাল উদ্দিন", emergencyContact: "TRUE", phone: "01711000003", altPhone: "", vehicleType: "auto", vehicleNumber: "DHA-AUTO-0091", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar Market Area", experience: "8 years", rating: "5", whatsapp: "01800111222", imageUrl: "", vehicleImageUrl: "https://picsum.photos/seed/jamal-auto/600/450", username: "jamal.driver", password: "demo1234", status: "active", availability: "active" },
           { driverId: "D004", name: "Selina Begum", nameBn: "সেলিনা বেগম", emergencyContact: "TRUE", phone: "01711000004", altPhone: "", vehicleType: "van", vehicleNumber: "DHA-VAN-0456", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar & nearby villages", experience: "", rating: "", whatsapp: "N", imageUrl: "", vehicleImageUrl: "", username: "selina.driver", password: "demo1234", status: "active", availability: "active" },
@@ -226,9 +227,20 @@
       if (!Utils.storage.get(KEYS.pending)) Utils.storage.set(KEYS.pending, []);
       if (!Utils.storage.get(KEYS.doctors)) {
         Utils.storage.set(KEYS.doctors, [
-          { doctorId: "DOC001", name: "Dr. Rafiqul Islam", nameBn: "ডা. রফিকুল ইসলাম", degree: "MBBS, FCPS (Medicine)", regNumber: "BMDC-A-45210", phone: "01611000001", altPhone: "01911000011", whatsapp: "F", serviceArea: "Nobi Bazar Health Complex", experience: "12 years", rating: "4.8", imageUrl: "", sampleImageUrl: "https://picsum.photos/seed/doc1-1/600/450, https://picsum.photos/seed/doc1-2/600/450", status: "active", availability: "active" },
+          { doctorId: "DOC001", name: "Dr. Rafiqul Islam", nameBn: "ডা. রফিকুল ইসলাম", degree: "MBBS, FCPS (Medicine)", regNumber: "BMDC-A-45210", phone: "01611000001", altPhone: "01911000011", whatsapp: "F", serviceArea: "Nobi Bazar Health Complex", experience: "12 years", rating: "4.8", imageUrl: "", sampleImageUrl: "https://picsum.photos/seed/doc1-1/600/450, https://picsum.photos/seed/doc1-2/600/450", status: "active", availability: "active", personalDetails: "<h3>Chamber Hours</h3><p>Saturday–Thursday, 6 PM – 9 PM.</p><p><strong>Specializes in:</strong> general medicine, diabetes management.</p>", videoUrl: "", manualRating: 3 },
           { doctorId: "DOC002", name: "Dr. Farzana Yasmin", nameBn: "ডা. ফারজানা ইয়াসমিন", degree: "MBBS, MD (Gynecology)", regNumber: "BMDC-A-51120", phone: "01611000002", altPhone: "", whatsapp: "N", serviceArea: "Bangla Bazar Chamber", experience: "8 years", rating: "4.5", imageUrl: "", sampleImageUrl: "", status: "active", availability: "inactive" },
           { doctorId: "DOC003", name: "Dr. Shamsul Alam", nameBn: "", degree: "BDS", regNumber: "BDCB-11890", phone: "01611000003", altPhone: "", whatsapp: "01711999888", serviceArea: "", experience: "5 years", rating: "4", imageUrl: "", sampleImageUrl: "https://picsum.photos/seed/doc3-1/600/450", status: "active", availability: "active" }
+        ]);
+      }
+      if (!Utils.storage.get(KEYS.ratings)) {
+        // A mix of verified/unverified reviews, purely to demonstrate the
+        // review system in demo mode — a real deployment starts with an
+        // empty "Public Ratings" tab and fills up from real submissions.
+        Utils.storage.set(KEYS.ratings, [
+          { id: "R001", targetType: "driver", targetId: "D001", stars: 5, comment: "Very punctual and polite. Highly recommended!", dateTime: "2026-01-04T10:00:00.000Z", verified: true },
+          { id: "R002", targetType: "driver", targetId: "D001", stars: 4, comment: "Good service, fair price.", dateTime: "2026-01-10T08:30:00.000Z", verified: true },
+          { id: "R003", targetType: "driver", targetId: "D001", stars: 3, comment: "Was a bit late but drove safely.", dateTime: "2026-01-15T14:00:00.000Z", verified: false },
+          { id: "R004", targetType: "doctor", targetId: "DOC001", stars: 5, comment: "Very thorough and explained everything clearly.", dateTime: "2026-01-06T12:00:00.000Z", verified: true }
         ]);
       }
     }
@@ -242,8 +254,10 @@
       drivers: () => Utils.storage.get(KEYS.drivers, []),
       doctors: () => Utils.storage.get(KEYS.doctors, []),
       pending: () => Utils.storage.get(KEYS.pending, []),
+      ratings: () => Utils.storage.get(KEYS.ratings, []),
       saveDrivers: (list) => Utils.storage.set(KEYS.drivers, list),
-      savePending: (list) => Utils.storage.set(KEYS.pending, list)
+      savePending: (list) => Utils.storage.set(KEYS.pending, list),
+      saveRatings: (list) => Utils.storage.set(KEYS.ratings, list)
     };
   })();
 
@@ -407,6 +421,42 @@
         return { ok: true };
       }
 
+      case "getPublicRatings": {
+        const targetType = payload.targetType === "doctor" ? "doctor" : "driver";
+        const targetId = String(payload.targetId || "").trim();
+        if (!targetId) return [];
+        const list = DemoStore.ratings()
+          .filter((r) => r.targetType === targetType && r.targetId === targetId && r.verified === true)
+          .sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime))
+          .map((r) => ({ stars: r.stars, comment: r.comment || "", dateTime: r.dateTime }));
+        return payload.all ? list : list.slice(0, 2);
+      }
+
+      case "submitPublicRating": {
+        const targetType = payload.targetType === "doctor" ? "doctor" : "driver";
+        const targetId = String(payload.targetId || "").trim();
+        const stars = Math.round(Number(payload.stars));
+        if (!targetId || !stars || stars < 1 || stars > 5) {
+          const err = new Error("VALIDATION_FAILED"); err.code = "VALIDATION_FAILED"; throw err;
+        }
+        const targetList = targetType === "doctor" ? DemoStore.doctors() : DemoStore.drivers();
+        const idField = targetType === "doctor" ? "doctorId" : "driverId";
+        const exists = targetList.some((t) => t[idField] === targetId && t.status === "active");
+        if (!exists) {
+          const err = new Error("VALIDATION_FAILED"); err.code = "VALIDATION_FAILED"; throw err;
+        }
+        const ratings = DemoStore.ratings();
+        // New reviews always start unverified — see Public Ratings in
+        // Code.gs for why (the sheet owner approves them manually).
+        ratings.push({
+          id: Utils.uid(), targetType, targetId, stars,
+          comment: String(payload.comment || "").trim().slice(0, 1000),
+          dateTime: new Date().toISOString(), verified: false
+        });
+        DemoStore.saveRatings(ratings);
+        return { ok: true };
+      }
+
       default:
         throw new Error("UNKNOWN_OPERATION");
     }
@@ -425,8 +475,24 @@
     return err;
   }
 
+  /**
+   * Demo-mode equivalent of Code.gs's cached "Public Rating Cache"/
+   * "Public Rating Count" columns — computed live from DemoStore's
+   * ratings array (a tiny local list, so there's no real performance
+   * concern here the way there would be re-scanning a live Sheet).
+   * Only ever counts verified: true rows, same rule as the real backend.
+   */
+  function verifiedRatingSummary(targetType, targetId) {
+    const verified = DemoStore.ratings().filter((r) => r.targetType === targetType && r.targetId === targetId && r.verified === true);
+    const count = verified.length;
+    const avg = count ? verified.reduce((sum, r) => sum + (Number(r.stars) || 0), 0) / count : 0;
+    return { avg: Math.round(avg * 10) / 10, count };
+  }
+
   /** Fields that are safe to expose on the public driver directory. */
   function publicDriverFields(d) {
+    const summary = verifiedRatingSummary("driver", d.driverId);
+    const manualRating = Number(d.manualRating) || 0;
     return {
       driverId: d.driverId,
       name: d.name,
@@ -444,7 +510,12 @@
       vehicleImageUrl: d.vehicleImageUrl || "",
       availability: d.availability,
       emergency: String(d.emergencyContact || "").trim().toUpperCase() === "TRUE",
-      sortStatus: d.sortStatus || ""
+      sortStatus: d.sortStatus || "",
+      personalDetails: d.personalDetails || "",
+      videoUrl: d.videoUrl || "",
+      publicRating: summary.avg,
+      publicRatingCount: summary.count,
+      finalRating: Math.min(summary.avg + manualRating, 5)
     };
   }
 
@@ -454,6 +525,8 @@
    * "Registration Number", and there's no bazar/vehicle filtering.
    */
   function publicDoctorFields(d) {
+    const summary = verifiedRatingSummary("doctor", d.doctorId);
+    const manualRating = Number(d.manualRating) || 0;
     return {
       doctorId: d.doctorId,
       name: d.name,
@@ -468,7 +541,12 @@
       whatsapp: d.whatsapp || "",
       imageUrl: d.imageUrl || "",
       sampleImageUrl: d.sampleImageUrl || "",
-      availability: d.availability
+      availability: d.availability,
+      personalDetails: d.personalDetails || "",
+      videoUrl: d.videoUrl || "",
+      publicRating: summary.avg,
+      publicRatingCount: summary.count,
+      finalRating: Math.min(summary.avg + manualRating, 5)
     };
   }
 
@@ -617,6 +695,20 @@
 
   Api.changePassword = (token, oldPassword, newPassword) =>
     call("changePassword", { token, oldPassword, newPassword });
+
+  /**
+   * Verified reviews for one Driver/Doctor. `all: true` fetches every
+   * verified review (for "View All Reviews"); otherwise only the first
+   * 2, for the Details page's fast initial preview. Never cached —
+   * this only ever runs when a Details page is actually opened or
+   * "View All Reviews" is tapped, not on every driver/doctor list load.
+   */
+  Api.getPublicRatings = (targetType, targetId, all) =>
+    call("getPublicRatings", { targetType, targetId, all: !!all });
+
+  /** A visitor's new review — always starts unverified; see Public Ratings in Code.gs for the approval workflow. */
+  Api.submitPublicRating = (targetType, targetId, stars, comment) =>
+    call("submitPublicRating", { targetType, targetId, stars, comment });
 
   window.Api = Api;
 })(window, window.Utils);

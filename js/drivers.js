@@ -269,11 +269,75 @@
    * comment is typeable, but Submit never saves anything anywhere; it
    * just shows a friendly "not available yet" message.
    */
-  function buildRatingSection() {
+  /** Human-readable date for a review's ISO "Date Time" — falls back to nothing rather than throwing on a bad/missing value. */
+  function formatReviewDate(iso) {
+    if (!iso) return "";
+    try {
+      return new Date(iso).toLocaleDateString(Lang.current() === "bn" ? "bn-BD" : "en-US", { year: "numeric", month: "short", day: "numeric" });
+    } catch (err) { return ""; }
+  }
+
+  function renderReviewList(container, list) {
+    container.innerHTML = "";
+    if (!list.length) {
+      container.appendChild(Utils.el("p", { class: "reviews-empty", text: Lang.t("driver.reviewsEmpty") }));
+      return;
+    }
+    list.forEach((r) => {
+      container.appendChild(Utils.el("div", { class: "review-item" }, [
+        starsNode(r.stars),
+        r.comment ? Utils.el("p", { class: "review-item__comment", text: r.comment }) : null,
+        Utils.el("div", { class: "review-item__date", text: formatReviewDate(r.dateTime) })
+      ].filter(Boolean)));
+    });
+  }
+
+  /**
+   * The full public Rating/Review widget: the driver's blended
+   * rating (verified public reviews + the admin's own Manual Rating,
+   * capped at 5 — see finalRating from the API), a short preview of
+   * verified reviews with a "View All Reviews" option, and the
+   * star + comment submission form. A new submission always starts
+   * unverified and is never shown here until the sheet owner approves
+   * it (see Public Ratings in Code.gs) — so submitting one never
+   * changes what this widget displays.
+   */
+  function buildRatingSection(driver) {
+    const summaryRow = Utils.el("div", { class: "reviews-summary" }, [
+      starsNode(driver.finalRating),
+      Utils.el("span", { class: "reviews-summary__value", text: (Number(driver.finalRating) || 0).toFixed(1) }),
+      Utils.el("span", { class: "reviews-summary__count", text: Lang.t("driver.reviewCount", { n: driver.publicRatingCount || 0 }) })
+    ]);
+
+    const listContainer = Utils.el("div", { class: "reviews-list" }, [ViewHelpers.loadingBlock()]);
+    const viewAllBtn = Utils.el("button", {
+      type: "button", class: "btn btn--ghost btn--sm reviews-view-all-btn", text: Lang.t("driver.viewAllReviews")
+    });
+    if ((driver.publicRatingCount || 0) <= 2) viewAllBtn.style.display = "none";
+
+    Api.getPublicRatings("driver", driver.driverId, false)
+      .then((list) => renderReviewList(listContainer, list))
+      .catch(() => renderReviewList(listContainer, []));
+
+    viewAllBtn.addEventListener("click", async () => {
+      viewAllBtn.disabled = true;
+      try {
+        const all = await Api.getPublicRatings("driver", driver.driverId, true);
+        renderReviewList(listContainer, all);
+        viewAllBtn.style.display = "none";
+      } catch (err) {
+        Toast.show(Lang.t("error.network"), "error");
+      } finally {
+        viewAllBtn.disabled = false;
+      }
+    });
+
     const starButtons = [];
+    let selectedStars = 0;
     const starsRow = Utils.el("div", { class: "rate-stars", role: "radiogroup", "aria-label": Lang.t("driver.ratingSectionTitle") });
 
     function select(n) {
+      selectedStars = n;
       starButtons.forEach((btn, idx) => {
         const filled = idx < n;
         btn.classList.toggle("star--filled", filled);
@@ -302,11 +366,27 @@
     const submitBtn = Utils.el("button", {
       class: "btn btn--primary btn--sm mt-5",
       text: Lang.t("driver.ratingSubmit"),
-      onClick: () => Toast.show(Lang.t("driver.ratingUnavailable"))
+      onClick: async () => {
+        if (!selectedStars) { Toast.show(Lang.t("driver.ratingSelectStars")); return; }
+        submitBtn.disabled = true;
+        try {
+          await Api.submitPublicRating("driver", driver.driverId, selectedStars, commentInput.value);
+          Toast.show(Lang.t("driver.ratingSubmitted"), "success");
+          commentInput.value = "";
+          select(0);
+        } catch (err) {
+          Toast.show(Lang.t("error.generic"), "error");
+        } finally {
+          submitBtn.disabled = false;
+        }
+      }
     });
 
     return Utils.el("div", { class: "rate-section" }, [
       Utils.el("h3", { class: "detail-section-title", text: Lang.t("driver.ratingSectionTitle") }),
+      summaryRow,
+      listContainer,
+      viewAllBtn,
       starsRow,
       commentInput,
       submitBtn
@@ -418,7 +498,22 @@
       children.push(gallery);
     }
 
-    children.push(buildRatingSection());
+    // Personal Details — plain text OR basic HTML from the Sheet,
+    // rendered as-is; the whole section (heading included) is left out
+    // entirely when the column is empty.
+    if (Utils.clean(driver.personalDetails)) {
+      children.push(Utils.el("div", { class: "personal-details-section mt-5" }, [
+        Utils.el("h3", { class: "detail-section-title", text: Lang.t("detail.personalDetails") }),
+        Utils.el("div", { class: "personal-details", html: driver.personalDetails })
+      ]));
+    }
+
+    children.push(buildRatingSection(driver));
+
+    const videoSection = Utils.buildVideoSection(driver.videoUrl, Lang.t("detail.video"));
+    if (videoSection) children.push(Utils.el("div", { class: "mt-5" }, [videoSection]));
+
+    children.push(Utils.buildFooterClone());
 
     openDriverModalWithHistory(Utils.el("div", {}, children));
   }

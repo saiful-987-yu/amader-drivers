@@ -168,5 +168,113 @@
     return String(raw).split(",").map((s) => s.trim()).filter(Boolean);
   };
 
+  /**
+   * A live clone of the site's own <footer class="site-footer"> (see
+   * index.html) — used at the very bottom of the Driver/Doctor Details
+   * modal, per the "Personal Details / Rating / Video / Website
+   * Footer" page order, so Details always ends with the EXACT same
+   * footer as every other page: same brand/nav links, same social
+   * icons from config/config.js's SOCIAL_LINKS (including the
+   * WhatsApp-number-to-wa.me conversion), same copyright line. Left
+   * out here only: the outer `.container` wrapper (the modal already
+   * has its own side padding, and `.site-footer` itself already has
+   * zero horizontal padding of its own) and the language toggle,
+   * since switching language doesn't re-render an already-open modal
+   * (same limitation the rest of this modal's text already has).
+   */
+  Utils.buildFooterClone = function () {
+    const Lang = window.Lang;
+    const Icons = window.Icons;
+    const isLoggedIn = window.Auth && window.Auth.isLoggedIn();
+
+    const nav = Utils.el("nav", { class: "footer-nav", "aria-label": "Footer" }, [
+      Utils.el("a", { href: "#/markets", text: Lang.t("nav.drivers") }),
+      Utils.el("a", { href: "#/registration", text: Lang.t("nav.register") }),
+      isLoggedIn
+        ? Utils.el("a", { href: "#/profile", text: Lang.t("nav.profile") })
+        : Utils.el("a", { href: "#/login", text: Lang.t("nav.login") })
+    ]);
+
+    const brand = Utils.el("a", { class: "footer-brand", href: "#/" }, [
+      Utils.el("span", { class: "brand__mark brand__mark--sm", "aria-hidden": "true", html: Icons.logo }),
+      Utils.el("span", { text: Lang.t("site.name") })
+    ]);
+
+    const socialNav = Utils.el("nav", { class: "footer-social", "aria-label": "Social media" });
+    const socialCfg = (window.NOBI_CONFIG && window.NOBI_CONFIG.SOCIAL_LINKS) || {};
+    [
+      { key: "facebook", icon: Icons.facebook, labelKey: "footer.facebook" },
+      { key: "whatsapp", icon: Icons.whatsapp, labelKey: "footer.whatsapp" },
+      { key: "tiktok", icon: Icons.tiktok, labelKey: "footer.tiktok" },
+      { key: "linkedin", icon: Icons.linkedin, labelKey: "footer.linkedin" }
+    ].forEach((p) => {
+      let href = socialCfg[p.key] || "#";
+      if (p.key === "whatsapp" && href !== "#") href = Utils.waLink(href);
+      socialNav.appendChild(Utils.el("a", { href, target: "_blank", rel: "noopener", "aria-label": Lang.t(p.labelKey), html: p.icon }));
+    });
+
+    const bottomRow = Utils.el("div", { class: "footer-row footer-row--bottom" }, [
+      Utils.el("span", { text: "© " + new Date().getFullYear() + " " + Lang.t("site.name") + " · " + Lang.t("footer.rights") }),
+      socialNav
+    ]);
+
+    return Utils.el("footer", { class: "site-footer" }, [
+      Utils.el("div", { class: "footer-compact" }, [
+        Utils.el("div", { class: "footer-row footer-row--top" }, [brand, nav]),
+        bottomRow
+      ])
+    ]);
+  };
+
+  /**
+   * Turns a YouTube or Google Drive video URL into an embeddable
+   * iframe src, or null for anything else/empty/unrecognized — used
+   * by the Driver/Doctor Details page's Video section, which must stay
+   * completely hidden (heading included) unless this returns a URL.
+   */
+  Utils.videoEmbedUrl = function (rawUrl) {
+    const url = Utils.clean(rawUrl);
+    if (!url) return null;
+
+    const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{6,})/);
+    if (ytMatch && ytMatch[1]) return "https://www.youtube.com/embed/" + ytMatch[1];
+
+    const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/) || url.match(/[?&]id=([^&]+)/);
+    if (url.indexOf("drive.google.com") !== -1 && driveMatch && driveMatch[1]) {
+      return "https://drive.google.com/file/d/" + driveMatch[1] + "/preview";
+    }
+
+    return null;
+  };
+
+  /**
+   * The Video section itself — a 16:9 embedded player, or null if the
+   * URL is empty/unsupported. Even a recognized URL can still fail to
+   * actually load (private video, deleted file, blocked embedding) —
+   * since a cross-origin iframe can't report that reliably, this gives
+   * it a few seconds to fire its `load` event and otherwise removes
+   * the whole section (heading included), per the "never an empty
+   * video box" rule.
+   */
+  Utils.buildVideoSection = function (rawUrl, titleText) {
+    const embedUrl = Utils.videoEmbedUrl(rawUrl);
+    if (!embedUrl) return null;
+
+    const iframe = Utils.el("iframe", {
+      src: embedUrl, title: titleText, loading: "lazy", frameborder: "0", allowfullscreen: "true",
+      allow: "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+    });
+    const section = Utils.el("div", { class: "video-section" }, [
+      Utils.el("h3", { class: "detail-section-title", text: titleText }),
+      Utils.el("div", { class: "video-embed" }, [iframe])
+    ]);
+
+    let loaded = false;
+    iframe.addEventListener("load", () => { loaded = true; });
+    setTimeout(() => { if (!loaded && section.isConnected) section.remove(); }, 8000);
+
+    return section;
+  };
+
   window.Utils = Utils;
 })(window);
