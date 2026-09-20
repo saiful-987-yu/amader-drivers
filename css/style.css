@@ -1283,6 +1283,48 @@ a:hover { text-decoration: underline; }
   resize: vertical;
 }
 
+/* Aggregate rating (verified public reviews + admin Manual Rating,
+   capped at 5) shown above the review list/submission form. */
+.reviews-summary { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3); flex-wrap: wrap; }
+.reviews-summary .stars .star { font-size: 1.1rem; }
+.reviews-summary__value { font-weight: 700; font-size: var(--font-size-md); }
+.reviews-summary__count { font-size: var(--font-size-sm); color: var(--color-ink-soft); }
+
+.reviews-list { margin-bottom: var(--space-3); }
+.reviews-empty { color: var(--color-ink-soft); font-size: var(--font-size-sm); }
+.review-item { padding: var(--space-3) 0; border-bottom: 1px solid var(--color-line); }
+.review-item:last-child { border-bottom: none; }
+.review-item .stars .star { font-size: 0.9rem; }
+.review-item__comment { margin: var(--space-1) 0 0; font-size: var(--font-size-sm); color: var(--color-ink); }
+.review-item__date { margin-top: 2px; font-size: var(--font-size-xs); color: var(--color-ink-soft); }
+.reviews-view-all-btn { margin-bottom: var(--space-4); }
+
+/* ------------------------------------------------------------
+   PERSONAL DETAILS — Sheet-authored plain text or basic HTML,
+   rendered as-is (see Personal Details column in Code.gs). Default
+   typography for the handful of tags an admin is likely to use.
+   ------------------------------------------------------------ */
+.personal-details-section { border-top: 1px solid var(--color-line); padding-top: var(--space-4); }
+.personal-details { font-size: var(--font-size-sm); color: var(--color-ink); line-height: 1.6; }
+.personal-details h1, .personal-details h2, .personal-details h3, .personal-details h4 {
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  margin: var(--space-3) 0 var(--space-1);
+}
+.personal-details h1:first-child, .personal-details h2:first-child, .personal-details h3:first-child, .personal-details h4:first-child { margin-top: 0; }
+.personal-details p { margin: 0 0 var(--space-2); }
+.personal-details ul, .personal-details ol { margin: 0 0 var(--space-2); padding-left: 1.25em; }
+.personal-details li { margin-bottom: 2px; }
+.personal-details a { color: var(--color-primary); }
+.personal-details img { max-width: 100%; border-radius: var(--radius-sm); }
+
+/* ------------------------------------------------------------
+   VIDEO SECTION — embedded YouTube/Google Drive player
+   ------------------------------------------------------------ */
+.video-section { border-top: 1px solid var(--color-line); padding-top: var(--space-4); }
+.video-embed { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: var(--radius-md); overflow: hidden; background: #000; }
+.video-embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
 /* ------------------------------------------------------------
    PROFILE
    ------------------------------------------------------------ */
