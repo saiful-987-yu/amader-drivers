@@ -31,9 +31,10 @@
   <meta name="twitter:description" content="সহজেই স্থানীয় এলাকার সিএনজি, অটো ড্রাইভার ও ডাক্তারের সরাসরি যোগাযোগ নাম্বার পান।" />
   <meta name="twitter:image" content="https://saiful-987-yu.github.io/amader-driver/assets/images/og-cover.jpg" />
 
-  <!-- Favicon & Touch Icons -->
-  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg" />
-  <link rel="apple-touch-icon" href="assets/icons/favicon.svg" />
+  <!-- Favicon & Touch Icons — see assets/brand/README.md for the full asset table -->
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/brand/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/brand/favicon-16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/brand/apple-touch-icon.png" />
 
   <!-- Fonts & Stylesheets -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -138,7 +139,18 @@
     // Small inline glue that doesn't warrant its own file:
     // brand/theme icon injection + footer year.
     document.addEventListener("DOMContentLoaded", function () {
-      document.querySelectorAll(".brand__mark").forEach(function (n) { n.innerHTML = Icons.logo; });
+      document.querySelectorAll(".brand__mark").forEach(function (n) {
+        // New brand logo — falls back to the old drawn icon (never a
+        // broken-image icon, never a blank box) if the file is
+        // missing or fails to load, exactly like every other image
+        // fallback on this site.
+        var img = document.createElement("img");
+        img.src = "assets/brand/logo-low.png";
+        img.alt = "";
+        img.style.cssText = "width:100%;height:100%;object-fit:contain;border-radius:inherit;";
+        img.onerror = function () { n.innerHTML = Icons.logo; };
+        n.appendChild(img);
+      });
       var themeIcon = document.querySelector("[data-theme-icon]");
       function paintThemeIcon() { themeIcon.innerHTML = Theme.current() === "dark" ? Icons.sun : Icons.moon; }
       paintThemeIcon();
