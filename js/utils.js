@@ -195,8 +195,12 @@
         : Utils.el("a", { href: "#/login", text: Lang.t("nav.login") })
     ]);
 
+    const brandMark = Utils.el("span", { class: "brand__mark brand__mark--sm", "aria-hidden": "true" });
+    const brandImg = Utils.el("img", { src: "assets/brand/logo-low.png", alt: "", style: "width:100%;height:100%;object-fit:contain;border-radius:inherit;" });
+    brandImg.addEventListener("error", () => { brandMark.innerHTML = Icons.logo; });
+    brandMark.appendChild(brandImg);
     const brand = Utils.el("a", { class: "footer-brand", href: "#/" }, [
-      Utils.el("span", { class: "brand__mark brand__mark--sm", "aria-hidden": "true", html: Icons.logo }),
+      brandMark,
       Utils.el("span", { text: Lang.t("site.name") })
     ]);
 
@@ -249,29 +253,37 @@
 
   /**
    * The Video section itself — a 16:9 embedded player, or null if the
-   * URL is empty/unsupported. Even a recognized URL can still fail to
-   * actually load (private video, deleted file, blocked embedding) —
-   * since a cross-origin iframe can't report that reliably, this gives
-   * it a few seconds to fire its `load` event and otherwise removes
-   * the whole section (heading included), per the "never an empty
-   * video box" rule.
+   * URL is empty/unsupported (checked immediately, so an invalid URL
+   * never even attempts to load). No fixed timeout: the section starts
+   * completely hidden (see .video-section.is-loading in style.css) and
+   * is revealed the moment the iframe's own `load` event actually
+   * fires — whether that's 3 seconds or 3 minutes later, on however
+   * slow a connection. The Details page itself is never blocked
+   * waiting for this. If the video never loads (private/deleted/
+   * blocked), the section just stays hidden indefinitely — never an
+   * empty header or box.
    */
   Utils.buildVideoSection = function (rawUrl, titleText) {
     const embedUrl = Utils.videoEmbedUrl(rawUrl);
     if (!embedUrl) return null;
 
     const iframe = Utils.el("iframe", {
-      src: embedUrl, title: titleText, loading: "lazy", frameborder: "0", allowfullscreen: "true",
+      // NOT loading="lazy" — this section starts hidden (display:none)
+      // until the iframe's own `load` event fires, and a lazy iframe
+      // never even starts fetching while it has no layout box (i.e.
+      // while its ancestor is display:none), so `load` would never
+      // fire and the section would stay hidden forever. Loading it
+      // eagerly in the background is exactly what lets it reveal
+      // itself the moment it's actually ready.
+      src: embedUrl, title: titleText, frameborder: "0", allowfullscreen: "true",
       allow: "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
     });
-    const section = Utils.el("div", { class: "video-section" }, [
+    const section = Utils.el("div", { class: "video-section is-loading" }, [
       Utils.el("h3", { class: "detail-section-title", text: titleText }),
       Utils.el("div", { class: "video-embed" }, [iframe])
     ]);
 
-    let loaded = false;
-    iframe.addEventListener("load", () => { loaded = true; });
-    setTimeout(() => { if (!loaded && section.isConnected) section.remove(); }, 8000);
+    iframe.addEventListener("load", () => { section.classList.remove("is-loading"); });
 
     return section;
   };

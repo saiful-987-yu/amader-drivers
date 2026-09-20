@@ -265,10 +265,22 @@
       Utils.el("span", { class: "reviews-summary__count", text: Lang.t("driver.reviewCount", { n: doctor.publicRatingCount || 0 }) })
     ]);
 
+    // Preview (unchanged design/behavior) — up to 2 reviews, no scroll area.
     const listContainer = Utils.el("div", { class: "reviews-list" }, [ViewHelpers.loadingBlock()]);
+    // "View All Reviews" expands into its OWN capped-height, scrollable
+    // container instead — never the full list inline on the page — so
+    // 100/500/1000 reviews never make the Details page itself long;
+    // only this one area scrolls.
+    const expandedContainer = Utils.el("div", { class: "reviews-list reviews-list--expanded" });
+    expandedContainer.style.display = "none";
+
     const viewAllBtn = Utils.el("button", {
       type: "button", class: "btn btn--ghost btn--sm reviews-view-all-btn", text: Lang.t("driver.viewAllReviews")
     });
+    const closeReviewsBtn = Utils.el("button", {
+      type: "button", class: "btn btn--ghost btn--sm reviews-view-all-btn", text: Lang.t("driver.closeReviews")
+    });
+    closeReviewsBtn.style.display = "none";
     if ((doctor.publicRatingCount || 0) <= 2) viewAllBtn.style.display = "none";
 
     Api.getPublicRatings("doctor", doctor.doctorId, false)
@@ -279,13 +291,26 @@
       viewAllBtn.disabled = true;
       try {
         const all = await Api.getPublicRatings("doctor", doctor.doctorId, true);
-        renderReviewList(listContainer, all);
+        renderReviewList(expandedContainer, all);
+        listContainer.style.display = "none";
+        expandedContainer.style.display = "";
         viewAllBtn.style.display = "none";
+        closeReviewsBtn.style.display = "";
       } catch (err) {
         Toast.show(Lang.t("error.network"), "error");
       } finally {
         viewAllBtn.disabled = false;
       }
+    });
+
+    closeReviewsBtn.addEventListener("click", () => {
+      // The 2-review preview is still sitting in listContainer exactly
+      // as it was — no re-fetch needed to collapse back to it.
+      expandedContainer.style.display = "none";
+      expandedContainer.innerHTML = "";
+      listContainer.style.display = "";
+      closeReviewsBtn.style.display = "none";
+      if ((doctor.publicRatingCount || 0) > 2) viewAllBtn.style.display = "";
     });
 
     const starButtons = [];
@@ -342,7 +367,9 @@
       Utils.el("h3", { class: "detail-section-title", text: Lang.t("doctor.rateSectionTitle") }),
       summaryRow,
       listContainer,
+      expandedContainer,
       viewAllBtn,
+      closeReviewsBtn,
       starsRow,
       commentInput,
       submitBtn
@@ -453,7 +480,7 @@
     children.push(buildRatingSection(doctor));
 
     const videoSection = Utils.buildVideoSection(doctor.videoUrl, Lang.t("detail.video"));
-    if (videoSection) children.push(Utils.el("div", { class: "mt-5" }, [videoSection]));
+    if (videoSection) { videoSection.classList.add("mt-5"); children.push(videoSection); }
 
     children.push(Utils.buildFooterClone());
 
