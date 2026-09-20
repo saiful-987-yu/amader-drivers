@@ -91,12 +91,13 @@ a:hover { text-decoration: underline; }
   width: 34px;
   height: 34px;
   flex-shrink: 0;
-  border-radius: var(--radius-sm);
+  border-radius: 50%;
   background: var(--color-primary);
   color: var(--color-on-primary);
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
 }
 .brand__mark svg { width: 20px; height: 20px; }
 
@@ -1291,6 +1292,19 @@ a:hover { text-decoration: underline; }
 .reviews-summary__count { font-size: var(--font-size-sm); color: var(--color-ink-soft); }
 
 .reviews-list { margin-bottom: var(--space-3); }
+/* "View All Reviews" expands into this instead of growing the page
+   itself — capped to roughly 8 reviews' worth of height (a review
+   item is ~80px including its border), then scrolls internally for
+   anything beyond that, so 100/500/1000 reviews never push the Star
+   Rating input, Comment box, Submit button, or the Video section that
+   follows unreasonably far down the page. */
+.reviews-list--expanded {
+  max-height: 640px;
+  overflow-y: auto;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-3);
+}
 .reviews-empty { color: var(--color-ink-soft); font-size: var(--font-size-sm); }
 .review-item { padding: var(--space-3) 0; border-bottom: 1px solid var(--color-line); }
 .review-item:last-child { border-bottom: none; }
@@ -1322,6 +1336,11 @@ a:hover { text-decoration: underline; }
    VIDEO SECTION — embedded YouTube/Google Drive player
    ------------------------------------------------------------ */
 .video-section { border-top: 1px solid var(--color-line); padding-top: var(--space-4); }
+/* Starts hidden — no fixed timeout; JS removes this class the moment
+   the iframe's own `load` event actually fires (see buildVideoSection
+   in utils.js), however long that takes. Never shown at all if it
+   never fires. */
+.video-section.is-loading { display: none; }
 .video-embed { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: var(--radius-md); overflow: hidden; background: #000; }
 .video-embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 
