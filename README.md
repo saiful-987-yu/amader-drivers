@@ -111,19 +111,40 @@ tab; a driver's own row is the only source of truth for their login):
 - `Vehicle Categories Image URL` — a category artwork image shown next to the existing small icon on the vehicle-type selection screen (roughly 2:1, wider than tall). This is completely separate from a driver's own `Vehicle Image URL` in the Drivers tab — leave it empty and the category card just shows its icon as before, no broken image.
 
 **Drivers**
-`Driver ID | Name | Bengali Name | Father/Husband Name | Phone | Alternative Phone | Village | Post Office | Union | Upazila | District | Full Address | Vehicle Type | Vehicle Number | Bazar | Service Area | Driving Experience | Driver Image URL | Vehicle Image URL | Username | Password | Status | Availability | Created Date | Updated Date | Star Rating | WhatsApp | Emergency Contact | Sort Status`
+`Driver ID | Name | Bengali Name | Father/Husband Name | Phone | Alternative Phone | Village | Post Office | Union | Upazila | District | Full Address | Vehicle Type | Vehicle Number | Bazar | Service Area | Driving Experience | Driver Image URL | Vehicle Image URL | Username | Password | Status | Availability | Created Date | Updated Date | Star Rating | WhatsApp | Emergency Contact | Sort Status | Personal Details | Video URL | Manual Rating | Public Rating Cache | Public Rating Count`
 
 - `Username` / `Password` — **a driver logs in directly against their own row here.** There is no separate Users sheet at all. `Password` is a SHA-256 hash, never plain text — see "Pending Drivers" below for how a value gets here in the first place.
 - `Sort Status` — one of `1st`, `2nd`, `3rd`, or blank. On a bazar+vehicle-type driver list, this is **always the first sort priority**: every `1st` driver appears before every `2nd`, before every `3rd`, before everyone left blank. Drivers sharing the same Sort Status are then ordered by `Star Rating` (highest first).
 - `Bengali Name` — shown instead of `Name` whenever the site is in বাংলা mode. Leave it blank and the English `Name` is used as a fallback automatically — a driver never shows with a blank name.
-- `Emergency Contact` — `TRUE` (case-insensitive) adds the driver to the homepage's "Emergency Contact" list regardless of their vehicle type or bazar; `FALSE` or blank keeps them out of it. This never affects their normal listing under their own bazar/vehicle type.
-- `Star Rating` — a number from 0–5 (decimals like `4.2` are fine); shown to customers as rounded stars, never as the raw number. Leave empty for 0 stars.
+- `Emergency Contact` — `TRUE` (case-insensitive) adds the driver to the homepage's "Emergency Contact" list regardless of their vehicle type or bazar; `FALSE` or blank keeps them out of it. This never affects their normal listing under their own bazar/vehicle type. This list is ordered by the same `Sort Status` → `Star Rating` rule as a bazar+vehicle-type list — not a separate rule.
+- `Star Rating` — a number from 0–5 (decimals like `4.2` are fine); shown to customers as rounded stars, never as the raw number, in the driver's own basic info row. Leave empty for 0 stars. This is unrelated to the new Rating/Review system below.
 - `WhatsApp` — controls the WhatsApp button on the driver card/profile: `F` uses the main `Phone`, `A` uses `Alternative Phone`, a real phone number is used directly, `N` or empty hides the button.
 - `Bazar`, `Vehicle Type`, and `Vehicle Image URL` all support **multiple values** in one cell, separated by `, ` (comma + space) — e.g. `Nobi Bazar, Bangla Bazar` or `Motorcycle, CNG, Auto` or `image1.jpg, image2.jpg, image3.jpg`. A driver with multiple bazars/vehicle types shows up under every one of them; multiple vehicle images become a clickable thumbnail gallery on the driver detail screen. A single plain value (no comma) still works exactly as before.
 - `Bazar` must match a `Market Name English` value from the Markets tab (matched by a lowercased, hyphenated "slug" of the name — e.g. "Nobi Bazar" → `nobi-bazar`).
 - `Vehicle Type` must similarly match an `English Name` from Vehicle Categories.
 - `Status` = `Active` to make the driver eligible to appear publicly at all.
 - `Availability` = `Active` or `Inactive` — this is the flag the driver controls from their own profile.
+- `Personal Details` — shown as its own "Personal Details" section right after the Photo Gallery on the driver's detail page. Plain text is shown as plain text; you can also use basic HTML (`<h3>`, `<b>`, `<strong>`, `<p>`, `<ul>`, `<li>`, etc.) and it renders formatted, exactly as written. Leave it empty and the whole section — heading included — doesn't appear at all.
+- `Video URL` — shown as its own "Video" section, right after the Rating/Reviews section. A YouTube link plays in an embedded YouTube player; a Google Drive video link plays via Drive's own preview player. Leave it empty, or if the link doesn't actually work, the whole section — heading included — doesn't appear at all.
+- `Manual Rating` — the admin's own rating input, 0–5. Combines with verified public reviews below to make up the driver's displayed Rating (see "Public Ratings" further down): `Final Rating = MIN(Public Rating Cache + Manual Rating, 5)`. Leave empty for 0.
+- `Public Rating Cache` / `Public Rating Count` — **do not edit these by hand** — they're the average and count of that driver's VERIFIED public reviews, kept up to date automatically (see "Public Ratings" below) whenever you mark a review Verified. Leave both empty (they'll read as 0) until the driver has at least one verified review.
+
+**Public Ratings**
+`Rating ID | Target Type | Target ID | Star Rating | Comment | Date Time | Verified`
+
+The Driver/Doctor Details page's public review system — one row per
+submitted review, for both Drivers and Doctors (`Target Type` is
+`driver` or `doctor`, `Target ID` is that Driver/Doctor's own
+`Driver ID`). This tab is created automatically the first time it's
+needed, so you don't have to create it yourself — but you can add
+Column headers ahead of time if you prefer.
+
+- Every new review a visitor submits starts with `Verified` = `FALSE`, and an unverified review is **never** shown publicly and **never** counted in the rating — it only ever exists here for you to review.
+- To publish a review, change its `Verified` cell to `TRUE` yourself, directly in this sheet. The moment you do, that driver's/doctor's `Public Rating Cache`/`Public Rating Count` (on the Drivers or Doctors tab) is **automatically recalculated** — no page reload, no manual math, and nothing else on the site needs to recompute anything. This runs via the `onEdit()` trigger in `Code.gs`, so no separate Apps Script trigger setup is needed — it works as soon as `Code.gs` is deployed on this spreadsheet.
+- Setting `Verified` back to `FALSE` (or anything other than `TRUE`) un-publishes that review and recalculates the average again, minus that review.
+- The Details page only ever loads 2 verified reviews at first (for a fast initial load); the full list is fetched only when a visitor taps "View All Reviews".
+
+
 
 **My Profile (driver-side)**
 A logged-in driver's own "My Profile" page (Change Password + a
@@ -215,10 +236,14 @@ that tab:
 Everything else — `Name`, `Bengali Name`, `Phone`, `Alternative Phone`,
 `WhatsApp`, `Service Area`, `Driving Experience`, `Star Rating`,
 `Driver Image URL` (profile photo), `Vehicle Image URL` (sample/work
-photos, comma-separated for a gallery), `Status`, `Availability` — works
-exactly like the Drivers tab, including multi-value support and the
-Bengali Name fallback. Doctors are **not** filtered by bazar or vehicle
-type; "Find a Doctor" on the homepage always shows every active doctor.
+photos, comma-separated for a gallery), `Status`, `Availability`,
+`Personal Details`, `Video URL`, `Manual Rating`, `Public Rating Cache`,
+`Public Rating Count` — works exactly like the Drivers tab, including
+multi-value support and the Bengali Name fallback. Doctors are **not**
+filtered by bazar or vehicle type; "Find a Doctor" on the homepage
+always shows every active doctor. Doctor reviews live in the SAME
+`Public Ratings` tab as driver reviews — just with `Target Type` =
+`doctor` on those rows.
 
 ---
 
