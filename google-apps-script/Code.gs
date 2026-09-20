@@ -37,6 +37,7 @@ const SHEET_PENDING = "Pending Drivers";
 const SHEET_MARKETS = "Markets";
 const SHEET_VEHICLES = "Vehicle Categories";
 const SHEET_SESSIONS = "Sessions"; // created automatically if missing
+const SHEET_RATINGS = "Public Ratings"; // created automatically if missing
 
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
 
@@ -70,6 +71,8 @@ case "getProfile": return respond({ ok: true, result: getProfile(payload) });
 case "updateAvailability": return respond({ ok: true, result: updateAvailability(payload) });
 case "updateProfile": return respond({ ok: true, result: updateProfile(payload) });
 case "changePassword": return respond({ ok: true, result: changePassword(payload) });
+case "getPublicRatings": return respond({ ok: true, result: getPublicRatings(payload) });
+case "submitPublicRating": return respond({ ok: true, result: submitPublicRating(payload) });
 default: return respond({ ok: false, errorCode: "UNKNOWN_OPERATION" });
 }
 } catch (err) {
@@ -201,6 +204,21 @@ return name.includes(query) || (queryDigits && phoneDigits.includes(queryDigits)
 .map(publicDriverFields);
 }
 
+/**
+* Final Rating = MIN(Verified Public Rating + Admin/Manual Rating, 5).
+* "Public Rating Cache"/"Public Rating Count" are pre-computed columns
+* (kept in sync by recalcTargetRating()/onEdit() below whenever a
+* review's Verified status changes) — reading them here is a plain
+* cell read, never a re-scan of the Public Ratings sheet, so this adds
+* no extra cost to a normal driver/doctor list load.
+*/
+function publicRatingCacheValue(r) { return Number(r["Public Rating Cache"]) || 0; }
+function publicRatingCountValue(r) { return Number(r["Public Rating Count"]) || 0; }
+function manualRatingValue(r) { return Number(r["Manual Rating"]) || 0; }
+function finalRatingValue(r) {
+return Math.min(publicRatingCacheValue(r) + manualRatingValue(r), 5);
+}
+
 /** Only fields safe for the public directory — never Username/Password/private notes. */
 function publicDriverFields(r) {
 return {
@@ -220,7 +238,12 @@ imageUrl: clean(r["Driver Image URL"]),
 vehicleImageUrl: clean(r["Vehicle Image URL"]),
 availability: slugOf(r["Availability"]) === "active" ? "active" : "inactive",
 emergency: slugOf(r["Emergency Contact"]) === "true",
-sortStatus: clean(r["Sort Status"])
+sortStatus: clean(r["Sort Status"]),
+personalDetails: clean(r["Personal Details"]),
+videoUrl: clean(r["Video URL"]),
+publicRating: publicRatingCacheValue(r),
+publicRatingCount: publicRatingCountValue(r),
+finalRating: finalRatingValue(r)
 };
 }
 
@@ -259,7 +282,12 @@ rating: clean(r["Star Rating"]),
 whatsapp: clean(r["WhatsApp"]),
 imageUrl: clean(r["Driver Image URL"]),
 sampleImageUrl: clean(r["Vehicle Image URL"]),
-availability: slugOf(r["Availability"]) === "active" ? "active" : "inactive"
+availability: slugOf(r["Availability"]) === "active" ? "active" : "inactive",
+personalDetails: clean(r["Personal Details"]),
+videoUrl: clean(r["Video URL"]),
+publicRating: publicRatingCacheValue(r),
+publicRatingCount: publicRatingCountValue(r),
+finalRating: finalRatingValue(r)
 };
 }
 
@@ -503,4 +531,159 @@ throw appError("INVALID_CREDENTIALS");
 if (!payload.newPassword || String(payload.newPassword).length < 6) throw appError("VALIDATION_FAILED");
 writeDriverRow(driverId, { "Password": hashPassword(payload.newPassword) });
 return { ok: true };
+}
+
+// ----------------------------------------------------------
+// PUBLIC RATINGS — Driver/Doctor Details page review system.
+//
+// New reviews always start Verified = FALSE and are NEVER returned to
+// the public (getPublicRatings only ever reads Verified = TRUE rows),
+// so an unapproved review can't affect the public rating or show up
+// anywhere on the site. The sheet owner approves a review by editing
+// its "Verified" cell to TRUE directly in the "Public Ratings" tab —
+// no admin login/dashboard, matching the rest of this project.
+//
+// Performance: the average/count of VERIFIED ratings for a target is
+// pre-computed and cached on that target's OWN row (in "Drivers" or
+// "Doctors", see publicRatingCacheValue()/publicRatingCountValue()
+// above) — recalculated automatically by onEdit() below the moment a
+// "Verified" cell changes, not on every page load. A normal
+// getDrivers()/getDoctors() list read never touches this sheet at
+// all; getPublicRatings() only runs when a Details page is actually
+// opened (2-review preview) or "View All Reviews" is tapped.
+// ----------------------------------------------------------
+
+function ensureRatingsSheet() {
+const ss = SpreadsheetApp.getActiveSpreadsheet();
+if (!ss.getSheetByName(SHEET_RATINGS)) {
+const s = ss.insertSheet(SHEET_RATINGS);
+s.appendRow(["Rating ID", "Target Type", "Target ID", "Star Rating", "Comment", "Date Time", "Verified"]);
+}
+}
+
+/**
+* A visitor's new review — always saved as Verified = FALSE. `targetType`
+* is "driver" or "doctor" (kept separate from Target ID since a Driver
+* and a Doctor row can otherwise share the same ID value).
+*/
+function submitPublicRating(payload) {
+const targetType = slugOf(payload.targetType) === "doctor" ? "doctor" : "driver";
+const targetId = clean(payload.targetId);
+const stars = Math.round(Number(payload.stars));
+if (!targetId || !stars || stars < 1 || stars > 5) throw appError("VALIDATION_FAILED");
+
+// The target must be a real, currently-active Driver/Doctor row —
+// never let a review attach to a made-up or inactive ID.
+const targetSheet = targetType === "doctor" ? SHEET_DOCTORS : SHEET_DRIVERS;
+const exists = readRows(targetSheet).some((r) => clean(r["Driver ID"]) === targetId && slugOf(r["Status"]) === "active");
+if (!exists) throw appError("VALIDATION_FAILED");
+
+ensureRatingsSheet();
+appendRow(SHEET_RATINGS, {
+"Rating ID": Utilities.getUuid(),
+"Target Type": targetType,
+"Target ID": targetId,
+"Star Rating": stars,
+"Comment": clean(payload.comment).slice(0, 1000),
+"Date Time": new Date().toISOString(),
+"Verified": "FALSE"
+});
+return { ok: true };
+}
+
+/**
+* Verified reviews for ONE target, newest first. `payload.all` fetches
+* every verified review; otherwise only the first 2 (the Details
+* page's initial preview, before "View All Reviews" is tapped).
+*/
+function getPublicRatings(payload) {
+const targetType = slugOf(payload.targetType) === "doctor" ? "doctor" : "driver";
+const targetId = clean(payload.targetId);
+if (!targetId) return [];
+ensureRatingsSheet();
+const list = readRows(SHEET_RATINGS)
+.filter((r) => slugOf(r["Target Type"]) === targetType)
+.filter((r) => clean(r["Target ID"]) === targetId)
+.filter((r) => slugOf(r["Verified"]) === "true") // never expose an unapproved review
+.sort((a, b) => new Date(b["Date Time"]) - new Date(a["Date Time"]))
+.map((r) => ({
+stars: Number(r["Star Rating"]) || 0,
+comment: clean(r["Comment"]),
+dateTime: r["Date Time"] ? new Date(r["Date Time"]).toISOString() : ""
+}));
+return payload.all ? list : list.slice(0, 2);
+}
+
+/** Recomputes ONE target's cached average/count from its VERIFIED reviews and writes them onto that target's Drivers/Doctors row — an O(that target's reviews) scan, never the whole sheet. */
+function recalcTargetRating(targetType, targetId) {
+const sheetName = targetType === "doctor" ? SHEET_DOCTORS : SHEET_DRIVERS;
+const verified = readRows(SHEET_RATINGS).filter((r) =>
+slugOf(r["Target Type"]) === targetType &&
+clean(r["Target ID"]) === targetId &&
+slugOf(r["Verified"]) === "true"
+);
+const count = verified.length;
+const avg = count ? verified.reduce((sum, r) => sum + (Number(r["Star Rating"]) || 0), 0) / count : 0;
+
+const s = sheet(sheetName);
+const values = s.getDataRange().getValues();
+const headers = values[0].map((h) => String(h).trim());
+const idCol = headers.indexOf("Driver ID");
+const cacheCol = headers.indexOf("Public Rating Cache");
+const countCol = headers.indexOf("Public Rating Count");
+if (idCol === -1) return;
+for (let i = 1; i < values.length; i++) {
+if (clean(values[i][idCol]) === targetId) {
+if (cacheCol !== -1) s.getRange(i + 1, cacheCol + 1).setValue(Math.round(avg * 10) / 10);
+if (countCol !== -1) s.getRange(i + 1, countCol + 1).setValue(count);
+return;
+}
+}
+}
+
+/**
+* Simple (automatic) trigger — Apps Script runs this for every manual
+* edit made directly in the spreadsheet, no separate setup needed. It
+* only ever reacts to an edit inside "Public Ratings"' own "Verified"
+* column; every other edit anywhere else in the workbook returns
+* immediately and does nothing. Wrapped in try/catch because a simple
+* trigger has no way to surface an error to the person editing —
+* failing silently here is safer than interrupting their edit.
+*/
+function onEdit(e) {
+try {
+if (!e || !e.range) return;
+const sh = e.range.getSheet();
+if (sh.getName() !== SHEET_RATINGS) return;
+
+const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map((h) => String(h).trim());
+const verifiedCol = headers.indexOf("Verified") + 1; // 1-based, to compare against e.range
+const targetTypeCol = headers.indexOf("Target Type");
+const targetIdCol = headers.indexOf("Target ID");
+if (verifiedCol < 1 || targetTypeCol === -1 || targetIdCol === -1) return;
+
+const editedFirstCol = e.range.getColumn();
+const editedLastCol = editedFirstCol + e.range.getNumColumns() - 1;
+if (verifiedCol < editedFirstCol || verifiedCol > editedLastCol) return; // this edit never touched Verified
+
+const startRow = e.range.getRow();
+if (startRow < 2) return; // header row — nothing to recalculate
+const numRows = e.range.getNumRows();
+const editedRows = sh.getRange(startRow, 1, numRows, sh.getLastColumn()).getValues();
+
+// A paste/fill can touch several rows (several different targets) at
+// once — recalculate each affected target exactly once.
+const seen = {};
+editedRows.forEach((row) => {
+const type = String(row[targetTypeCol]).trim().toLowerCase() === "doctor" ? "doctor" : "driver";
+const id = String(row[targetIdCol]).trim();
+if (!id) return;
+const key = type + "|" + id;
+if (seen[key]) return;
+seen[key] = true;
+recalcTargetRating(type, id);
+});
+} catch (err) {
+// See function comment — never let this bubble up to the editor.
+}
 }
