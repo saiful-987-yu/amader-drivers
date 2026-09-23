@@ -236,32 +236,53 @@
       return;
     }
 
-    const section = Utils.el("section", { class: "section container" }, [ViewHelpers.loadingBlock()]);
+    // Same cache-then-refresh pattern used for Markets/Vehicle
+    // Categories/Driver+Doctor directories elsewhere in the app: a
+    // synchronous peek paints instantly from the last-known data (if
+    // any) — no loading spinner, no network wait — while Auth.getProfile()
+    // still runs underneath to silently confirm/refresh it. This also
+    // means a plain language toggle (which re-renders the current
+    // route from scratch) never re-triggers a full network load here.
+    const cachedDriver = Auth.peekProfile();
+    const cachedMarkets = Api.peekMarkets();
+    const cachedVehicleCategories = Api.peekVehicleCategories();
+
+    const section = Utils.el("section", { class: "section container" });
     app.appendChild(section);
 
-    let driver, markets, vehicleCategories;
+    if (cachedDriver) {
+      section.classList.add("profile-page");
+      paintProfile(app, section, cachedDriver, cachedMarkets || [], cachedVehicleCategories || []);
+    } else {
+      section.appendChild(ViewHelpers.loadingBlock());
+    }
+
     try {
       const results = await Promise.all([
         Auth.getProfile(),
-        Api.getMarkets().catch(() => []),
-        Api.getVehicleCategories().catch(() => [])
+        Api.getMarkets().catch(() => cachedMarkets || []),
+        Api.getVehicleCategories().catch(() => cachedVehicleCategories || [])
       ]);
-      driver = results[0];
-      markets = results[1] || [];
-      vehicleCategories = results[2] || [];
+      if (!app.contains(section)) return; // navigated away before this settled
+      const driver = results[0];
+      const markets = results[1] || [];
+      const vehicleCategories = results[2] || [];
+      section.classList.add("profile-page");
+      paintProfile(app, section, driver, markets, vehicleCategories);
     } catch (err) {
-      section.innerHTML = "";
+      if (!app.contains(section)) return;
       if (err.code === "SESSION_EXPIRED") {
         Toast.show(Lang.t("error.sessionExpired"), "error");
         Router.navigate("/login");
         return;
       }
+      // A cached profile is already on screen — a failed silent
+      // refresh (e.g. offline/slow network) shouldn't replace it with
+      // an error; just keep showing what we already have.
+      if (cachedDriver) return;
+      section.innerHTML = "";
       section.appendChild(ViewHelpers.errorBlock(Lang.t("error.network"), () => renderProfile(app)));
-      return;
     }
-
-    section.classList.add("profile-page");
-    paintProfile(app, section, driver, markets, vehicleCategories);
   }
 
   function paintProfile(app, section, driver, markets, vehicleCategories) {
@@ -341,8 +362,7 @@
 
     const accountOverviewCard = Utils.el("div", { class: "profile-card" }, [
       Utils.el("div", { class: "profile-card__head" }, [
-        Utils.el("h2", { html: Icons.userLarge + "<span>" + Lang.t("profile.accountOverview") + "</span>" }),
-        editProfileButton()
+        Utils.el("h2", { html: Icons.userLarge + "<span>" + Lang.t("profile.accountOverview") + "</span>" })
       ]),
       overviewGrid
     ]);

@@ -38,6 +38,12 @@
     }
   };
 
+  /** Synchronous cache peek — lets the Profile page paint instantly with the last-known driver data (if any) before its own await Auth.getProfile() confirms/refreshes it. */
+  Auth.peekProfile = function () {
+    const token = Auth.getToken();
+    return token ? Api.peekProfile(token) : undefined;
+  };
+
   Auth.updateAvailability = async function (availability) {
     const token = Auth.getToken();
     if (!token) throw new Error("SESSION_EXPIRED");

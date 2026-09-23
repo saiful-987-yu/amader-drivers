@@ -10,6 +10,16 @@
   const STEP_COUNT = 5;
   const STEP_TITLE_KEYS = ["register.step1.title", "register.step2.title", "register.step3.title", "register.step4.title", "register.step5.title"];
 
+  /**
+   * Holds the in-progress registration form's step + data + live-check
+   * state across a language-switch re-render (app.js re-invokes
+   * renderRegister() from scratch on "nobi:languagechange"). null means
+   * no registration is in progress — a fresh renderRegister() call then
+   * starts a brand-new session at Step 1. Reset to null only after a
+   * successful submission (see the submit handler in renderRegister).
+   */
+  let activeRegistrationSession = null;
+
   function fieldRow({ id, labelKey, type, required, hint, options }) {
     const label = Utils.el("label", { for: id, text: Lang.t(labelKey) + (required ? " *" : "") });
     let control;
@@ -59,6 +69,11 @@
       row, errorMsg
     ]);
     return { wrap };
+  }
+
+  /** Pairs two fieldRow() results (e.g. {wrap,control} results) side by side in one responsive 2-column row — used for the Post Office/Union and Upazila/District address fields in Step 1. */
+  function twoColFieldRow(a, b) {
+    return Utils.el("div", { class: "field-row-2col" }, [a.wrap, b.wrap]);
   }
 
   function setFieldError(app, id, message) {
@@ -180,6 +195,93 @@
   }
 
   /**
+   * Today's date-based PIN (DDMMYY), checked entirely client-side
+   * against the visitor's own device clock — no network call.
+   */
+  function todaysPhotoPin() {
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    return pad(d.getDate()) + pad(d.getMonth() + 1) + String(d.getFullYear()).slice(-2);
+  }
+
+  /**
+   * Confirms a Google Drive image link is actually publicly accessible
+   * by probing it off-DOM (same lightweight technique already used for
+   * market/banner background images elsewhere in this app — never a
+   * backend call). Reuses the cached result when `value` hasn't
+   * changed, exactly like ensureAvailability() above for Mobile/Username.
+   */
+  async function ensureDriveAccessible(cached, value) {
+    if (cached.value === value && cached.available !== null) return cached;
+    return new Promise((resolve) => {
+      const probeUrl = Utils.resolveImageUrl(value);
+      const probe = new Image();
+      probe.onload = () => resolve({ value, available: true });
+      probe.onerror = () => resolve({ value, available: false });
+      probe.src = probeUrl;
+    });
+  }
+
+  /**
+   * Step 3's Driver Photo field — Google Drive share link only. As the
+   * user types (debounced, same UX as Mobile/Username in
+   * availabilityField), it live-checks the link is a Drive URL, then
+   * probes whether it's actually publicly accessible. The definitive
+   * check right before "Next" happens in ensureDriveAccessible() above.
+   */
+  function driveImageField(app, onStatus) {
+    const { wrap, control } = fieldRow({ id: "imageUrl", labelKey: "field.driverPhoto", type: "url" });
+    const inputWrap = Utils.el("div", { class: "drive-image-field" });
+    wrap.replaceChild(inputWrap, control);
+    inputWrap.appendChild(control);
+    const statusIcon = Utils.el("span", { class: "drive-image-field__status", "aria-hidden": "true" });
+    inputWrap.appendChild(statusIcon);
+
+    let requestToken = 0;
+    const check = Utils.debounce(() => {
+      const value = Utils.clean(control.value);
+      const myToken = ++requestToken;
+      statusIcon.classList.remove("is-checking", "is-available");
+      statusIcon.innerHTML = "";
+      setFieldError(app, "imageUrl", "");
+      if (onStatus) onStatus(value, null);
+      if (!value) return;
+      if (!/drive\.google\.com/.test(value)) {
+        setFieldError(app, "imageUrl", Lang.t("validation.driveLinkInvalid"));
+        if (onStatus) onStatus(value, false);
+        return;
+      }
+      statusIcon.classList.add("is-checking");
+      statusIcon.innerHTML = Icons.more;
+      ensureDriveAccessible({ value: null, available: null }, value).then((res) => {
+        if (myToken !== requestToken) return;
+        statusIcon.classList.remove("is-checking");
+        if (res.available) {
+          statusIcon.classList.add("is-available");
+          statusIcon.innerHTML = Icons.checkCircle;
+          setFieldError(app, "imageUrl", "");
+        } else {
+          statusIcon.innerHTML = "";
+          setFieldError(app, "imageUrl", Lang.t("validation.driveLinkNoAccess"));
+        }
+        if (onStatus) onStatus(value, res.available);
+      });
+    }, 500);
+    control.addEventListener("input", check);
+
+    return { wrap, control };
+  }
+
+  /** Clickable WhatsApp help link shown under the Step 3 photo instructions — fixed support number, independent of any driver-entered value. */
+  function photoWhatsappHelpLink() {
+    return Utils.el("a", {
+      href: Utils.waLink("01610253221"), target: "_blank", rel: "noopener",
+      class: "photo-whatsapp-help",
+      html: Icons.whatsapp + "<span>" + Lang.t("register.step3.whatsappHelp") + "</span>"
+    });
+  }
+
+  /**
    * After a failed validateStep(), scroll to and focus the first field
    * still marked .has-error (setFieldError toggles that class in the
    * same order fields were validated), so the user can see immediately
@@ -209,14 +311,29 @@
       return;
     }
 
-    const data = {};
-    let currentStep = 1;
+    // Persisted across re-renders of THIS SAME route (e.g. a language
+    // switch, which re-invokes renderRegister() from scratch via
+    // app.js's "nobi:languagechange" -> renderRoute()) so the user's
+    // current step and already-entered data are never lost. Cleared
+    // only after a successful submission — see the submit handler below.
+    if (!activeRegistrationSession) {
+      activeRegistrationSession = {
+        data: {}, currentStep: 1,
+        phoneCheck: { value: null, available: null },
+        usernameCheck: { value: null, available: null },
+        driveCheck: { value: null, available: null }
+      };
+    }
+    const session = activeRegistrationSession;
+    const data = session.data;
+    let currentStep = session.currentStep;
     // Latest known availability result for Mobile (Step 1) and Username
     // (Step 4), each tracked by value so a stale/pending result never
     // lets that step's Next button through, and an unchanged value is
     // never re-checked/re-loaded a second time — see handleNext().
-    let phoneCheck = { value: null, available: null };
-    let usernameCheck = { value: null, available: null };
+    let phoneCheck = session.phoneCheck;
+    let usernameCheck = session.usernameCheck;
+    let driveCheck = session.driveCheck;
 
     const heading = Utils.el("h2", { text: Lang.t("register.heading") });
     const sub = Utils.el("p", { text: Lang.t("register.sub"), class: "hint mt-5" });
@@ -248,10 +365,14 @@
         fieldRow({ id: "altMobile", labelKey: "field.altMobile", type: "tel" }),
         fieldRow({ id: "whatsapp", labelKey: "field.whatsapp", type: "tel" }),
         fieldRow({ id: "village", labelKey: "field.village" }),
-        fieldRow({ id: "postOffice", labelKey: "field.postOffice" }),
-        fieldRow({ id: "union", labelKey: "field.union" }),
-        fieldRow({ id: "upazila", labelKey: "field.upazila" }),
-        fieldRow({ id: "district", labelKey: "field.district" }),
+        twoColFieldRow(
+          fieldRow({ id: "postOffice", labelKey: "field.postOffice" }),
+          fieldRow({ id: "union", labelKey: "field.union" })
+        ),
+        twoColFieldRow(
+          fieldRow({ id: "upazila", labelKey: "field.upazila" }),
+          fieldRow({ id: "district", labelKey: "field.district" })
+        ),
         fieldRow({ id: "fullAddress", labelKey: "field.fullAddress", type: "textarea" })
       ];
     }
@@ -273,8 +394,19 @@
     }
 
     function buildStep3() {
+      const driveField = driveImageField(app, (value, available) => { driveCheck = { value, available }; session.driveCheck = driveCheck; });
+      // No hint/description under the PIN box at all — it's collected
+      // via WhatsApp (see the header instructions above), never shown
+      // or explained on screen.
+      const pinField = fieldRow({ id: "photoPin", labelKey: "register.step3.pinLabel" });
       return [
-        fieldRow({ id: "imageUrl", labelKey: "field.driverPhoto", type: "url", hint: "https://..." }),
+        Utils.el("div", { class: "photo-instructions hint" }, [
+          Utils.el("p", { text: Lang.t("register.step3.instructions") }),
+          photoWhatsappHelpLink()
+        ]),
+        // Drive Link (~70%) and PIN (~30%) side by side in one row.
+        Utils.el("div", { class: "photo-input-row" }, [driveField.wrap, pinField.wrap]),
+        // Vehicle Photo — unchanged, existing simple optional URL field.
         fieldRow({ id: "vehicleImageUrl", labelKey: "field.vehiclePhoto", type: "url", hint: "https://..." })
       ];
     }
@@ -371,10 +503,31 @@
         });
       }
       if (currentStep === 3) {
-        // Driver/Profile Image URL is required; Vehicle Image URL stays optional.
-        const value = Utils.clean(data.imageUrl);
-        if (!value) { setFieldError(app, "imageUrl", Lang.t("validation.required")); valid = false; }
-        else setFieldError(app, "imageUrl", "");
+        // Either a Google Drive photo link OR a PIN makes this step
+        // valid — the two are independent alternatives, so leftover/
+        // wrong data in one box must never block a valid entry in the
+        // other (e.g. a valid Drive link + stale PIN digits still
+        // passes; a correct PIN + an incomplete Drive link still
+        // passes). Vehicle Photo stays optional either way.
+        const imageValue = Utils.clean(data.imageUrl);
+        const pinValue = Utils.clean(data.photoPin);
+        const pinOk = !!pinValue && pinValue === todaysPhotoPin();
+        const looksLikeDriveLink = !!imageValue && /drive\.google\.com/.test(imageValue);
+        setFieldError(app, "imageUrl", "");
+        setFieldError(app, "photoPin", "");
+        if (!imageValue && !pinValue) {
+          setFieldError(app, "imageUrl", Lang.t("validation.required"));
+          valid = false;
+        } else if (!pinOk && !looksLikeDriveLink) {
+          // Neither method is satisfiable yet — flag whichever the
+          // user actually attempted.
+          if (pinValue) setFieldError(app, "photoPin", Lang.t("validation.pinInvalid"));
+          if (imageValue) setFieldError(app, "imageUrl", Lang.t("validation.driveLinkInvalid"));
+          valid = false;
+        }
+        // Actual Drive-link accessibility is confirmed asynchronously
+        // right before advancing (see the Next handler), the same way
+        // Mobile/Username availability is — never here.
       }
       if (currentStep === 4) {
         ["username", "password", "confirmPassword"].forEach((id) => {
@@ -408,7 +561,7 @@
       if (currentStep > 1) {
         actions.appendChild(Utils.el("button", {
           class: "btn btn--ghost", text: Lang.t("action.back"),
-          onClick: () => { collectStepValues(); currentStep -= 1; renderStep(); }
+          onClick: () => { collectStepValues(); currentStep -= 1; session.currentStep = currentStep; renderStep(); }
         }));
       }
       if (currentStep < STEP_COUNT) {
@@ -427,6 +580,7 @@
             const value = Utils.clean(data.mobile);
             nextBtn.disabled = true;
             phoneCheck = await ensureAvailability(phoneCheck, value, Api.checkPhone);
+            session.phoneCheck = phoneCheck;
             nextBtn.disabled = false;
             if (!phoneCheck.available) {
               setFieldError(app, "mobile", phoneCheck.networkError ? Lang.t("error.network") : Lang.t("field.phoneTaken"));
@@ -434,10 +588,27 @@
               return;
             }
           }
+          if (currentStep === 3) {
+            const imageValue = Utils.clean(data.imageUrl);
+            const pinValue = Utils.clean(data.photoPin);
+            const pinOk = !!pinValue && pinValue === todaysPhotoPin();
+            if (!pinOk && imageValue) {
+              nextBtn.disabled = true;
+              driveCheck = await ensureDriveAccessible(driveCheck, imageValue);
+              session.driveCheck = driveCheck;
+              nextBtn.disabled = false;
+              if (!driveCheck.available) {
+                setFieldError(app, "imageUrl", Lang.t("validation.driveLinkNoAccess"));
+                focusFirstError(stepBody);
+                return;
+              }
+            }
+          }
           if (currentStep === 4) {
             const value = Utils.clean(data.username);
             nextBtn.disabled = true;
             usernameCheck = await ensureAvailability(usernameCheck, value, Api.checkUsername);
+            session.usernameCheck = usernameCheck;
             nextBtn.disabled = false;
             if (!usernameCheck.available) {
               setFieldError(app, "username", usernameCheck.networkError ? Lang.t("error.network") : Lang.t("field.usernameTaken"));
@@ -447,6 +618,7 @@
           }
 
           currentStep += 1;
+          session.currentStep = currentStep;
           renderStep();
         });
         actions.appendChild(nextBtn);
@@ -458,6 +630,7 @@
           try {
             const payload = Object.assign({}, data, { phone: data.mobile, altPhone: data.altMobile });
             const result = await Api.registerDriver(payload);
+            activeRegistrationSession = null;
             renderSuccess(app, result);
           } catch (err) {
             submitBtn.disabled = false;

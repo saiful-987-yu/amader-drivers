@@ -165,8 +165,14 @@
       "field.preferredMarket": "Preferred Bazar",
       "field.serviceArea": "Service Area",
       "field.experience": "Driving Experience (years)",
-      "field.driverPhoto": "Driver Photo (image URL)",
+      "field.driverPhoto": "Enter Drive Link",
       "field.vehiclePhoto": "Vehicle Photo (image URL, optional)",
+      "register.step3.instructions": "Paste your Google Drive photo link below (make sure sharing is set to \"Anyone with the link\"), or use a PIN from admin instead.",
+      "register.step3.whatsappHelp": "Having trouble with your photo? Send it on WhatsApp and collect your PIN: 01610-253221",
+      "register.step3.pinLabel": "Enter PIN",
+      "validation.driveLinkInvalid": "Please enter a valid Google Drive image link.",
+      "validation.driveLinkNoAccess": "This Google Drive photo link isn't accessible. Please set the file's sharing to \"Anyone with the link\" and enter the link again.",
+      "validation.pinInvalid": "Invalid PIN",
       "field.username": "Username or Mobile Number",
       "field.password": "Password",
       "field.confirmPassword": "Confirm Password",
@@ -274,6 +280,7 @@
       "a11y.closeMenu": "Close menu",
       "a11y.openMenu": "Open menu",
       "a11y.closeModal": "Close",
+      "a11y.speak": "Listen: {text}",
 
       "vehicle.icon.default": "Vehicle"
     },
@@ -428,8 +435,14 @@
       "field.preferredMarket": "পছন্দের বাজার",
       "field.serviceArea": "সেবা এলাকা",
       "field.experience": "ড্রাইভিং অভিজ্ঞতা (বছর)",
-      "field.driverPhoto": "ড্রাইভারের ছবি (ইমেজ ইউআরএল)",
+      "field.driverPhoto": "ড্রাইভ লিঙ্ক দিন",
       "field.vehiclePhoto": "যানবাহনের ছবি (ইমেজ ইউআরএল, ঐচ্ছিক)",
+      "register.step3.instructions": "নিচে আপনার Google Drive ছবির Link দিন (Access অবশ্যই \"Anyone with the link\" করা থাকতে হবে), অথবা এডমিনের কাছ থেকে নেওয়া PIN ব্যবহার করুন।",
+      "register.step3.whatsappHelp": "ছবি দিতে সমস্যা হলে WhatsApp-এ ছবি পাঠান এবং পিন সংগ্রহ করুন: 01610-253221",
+      "register.step3.pinLabel": "পিন দিন",
+      "validation.driveLinkInvalid": "অনুগ্রহ করে একটি সঠিক Google Drive ছবির Link দিন।",
+      "validation.driveLinkNoAccess": "এই Google Drive ছবির Link-এ Access পাওয়া যাচ্ছে না। অনুগ্রহ করে File Access 'Anyone with the link' করে আবার Link দিন।",
+      "validation.pinInvalid": "ভুল পিন",
       "field.username": "ইউজারনেম বা মোবাইল নম্বর",
       "field.password": "পাসওয়ার্ড",
       "field.confirmPassword": "পাসওয়ার্ড নিশ্চিত করুন",
@@ -536,6 +549,7 @@
       "a11y.closeMenu": "মেনু বন্ধ করুন",
       "a11y.openMenu": "মেনু খুলুন",
       "a11y.closeModal": "বন্ধ করুন",
+      "a11y.speak": "শুনুন: {text}",
 
       "vehicle.icon.default": "যানবাহন"
     }

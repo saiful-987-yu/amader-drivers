@@ -17,6 +17,72 @@
   function marketName(market) { return Lang.current() === "bn" ? market.nameBn : market.nameEn; }
   function vehicleName(vehicle) { return Lang.current() === "bn" ? vehicle.nameBn : vehicle.nameEn; }
 
+  /**
+   * Click-to-speak button (browser's own built-in speech synthesis —
+   * see Utils.speak) — reused for bazar/vehicle-type names and the
+   * "Choose Your Bazar"/vehicle-type section headings. Always stops
+   * the click from bubbling up, so tapping it inside a clickable
+   * card/heading never also triggers that card's own navigation.
+   */
+  function speakerButton(text) {
+    return Utils.el("button", {
+      type: "button", class: "speak-btn",
+      "aria-label": Lang.t("a11y.speak", { text }),
+      onClick: (e) => { e.stopPropagation(); Utils.speak(text, Lang.current()); },
+      html: Icons.speaker
+    });
+  }
+
+  /** A section <h2> with a click-to-speak button beside it, reading exactly that heading text — used only where explicitly requested (Bazar/Vehicle Type selection headings), not added to every heading site-wide. */
+  function speakableHeading(text) {
+    return Utils.el("h2", { class: "section-head__title-row" }, [
+      Utils.el("span", { text }),
+      speakerButton(text)
+    ]);
+  }
+
+  /**
+   * A heading <h2> with a click-to-speak button beside it, same as
+   * speakableHeading, except the button reads different text than the
+   * heading itself displays (e.g. reading a description below the
+   * heading, not the heading text) — used for the Home page header and
+   * the Vehicle Type page header, per the site's speaker rules.
+   */
+  function speakableHeadingCustom(displayText, spokenText, extraClass) {
+    return Utils.el("h2", { class: "section-head__title-row" + (extraClass ? " " + extraClass : "") }, [
+      Utils.el("span", { text: displayText }),
+      speakerButton(spokenText)
+    ]);
+  }
+
+  /**
+   * Like speakerButton, but its spoken text can be changed later via
+   * the returned .setSpokenText() — used where the correct text isn't
+   * known synchronously yet (Vehicle Type page header, before the
+   * market name has resolved from a network fetch).
+   */
+  function mutableSpeakerButton(initialText) {
+    let spoken = initialText || "";
+    const btn = Utils.el("button", {
+      type: "button", class: "speak-btn",
+      "aria-label": Lang.t("a11y.speak", { text: spoken }),
+      onClick: (e) => { e.stopPropagation(); Utils.speak(spoken, Lang.current()); },
+      html: Icons.speaker
+    });
+    btn.setSpokenText = (text) => {
+      spoken = text || "";
+      btn.setAttribute("aria-label", Lang.t("a11y.speak", { text: spoken }));
+    };
+    return btn;
+  }
+
+  /** Spoken text for the Vehicle Type page header speaker: reads the dynamic "which vehicle type in <market>?" description, never the static heading. */
+  function vehicleHeaderSpeech(marketNameStr) {
+    return Lang.current() === "bn"
+      ? `${marketNameStr} বাজারে আপনি কোন ধরনের গাড়ির ড্রাইভার খুঁজছেন?`
+      : `What type of vehicle driver are you looking for in ${marketNameStr}?`;
+  }
+
   // ---------------------------------------------------------
   // CALL HANDLING
   // ---------------------------------------------------------
@@ -553,7 +619,7 @@
 
     const hero = Utils.el("section", { class: "hero hero--compact" }, [
       Utils.el("div", { class: "container hero__inner" }, [
-        Utils.el("h2", { class: "hero__heading", text: Lang.t("hero.heading") }),
+        speakableHeadingCustom(Lang.t("hero.heading"), Lang.t("hero.tagline"), "hero__heading"),
         Utils.el("p", { class: "hero__tagline", text: Lang.t("hero.tagline") })
       ])
     ]);
@@ -580,7 +646,7 @@
     const cachedMarkets = Api.peekMarkets();
     const marketSection = Utils.el("section", { class: "section section--flush-top container" }, [
       Utils.el("div", { class: "section-head" }, [
-        Utils.el("h2", { text: Lang.t("market.chooseHeading") }),
+        speakableHeading(Lang.t("market.chooseHeading")),
         Utils.el("p", { text: Lang.t("market.chooseSub") })
       ]),
       cachedMarkets
@@ -662,9 +728,22 @@
         img.addEventListener("error", () => imgWrap.remove());
         topChildren.push(imgWrap);
       }
-      const card = Utils.el("button", { class: "chip-card chip-card--vehicle chip-card--market", onClick: () => onSelect(m) }, [
+      const name = marketName(m);
+      // A plain <div role="button"> (not a real <button>) so the small
+      // speak button below can be a real, separately-clickable <button>
+      // nested inside it — real buttons can't be nested inside a
+      // <button> — while keeping identical click/keyboard behavior.
+      const card = Utils.el("div", {
+        class: "chip-card chip-card--vehicle chip-card--market",
+        role: "button", tabindex: "0", "aria-label": name,
+        onClick: () => onSelect(m),
+        onKeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(m); } }
+      }, [
         Utils.el("div", { class: "chip-card__top" }, topChildren),
-        Utils.el("div", { class: "chip-card__name", text: marketName(m) })
+        Utils.el("div", { class: "chip-card__name" }, [
+          Utils.el("span", { class: "chip-card__name-text", text: name }),
+          speakerButton(name)
+        ])
       ]);
       applyMarketCardBackground(card, Utils.resolveImageUrl(m.bgImageUrl));
       return card;
@@ -684,9 +763,18 @@
       topChildren.push(imgWrap);
     }
     const count = onlineCount || 0;
-    return Utils.el("button", { class: "chip-card chip-card--vehicle", onClick: () => onSelect(v) }, [
+    const name = vehicleName(v);
+    return Utils.el("div", {
+      class: "chip-card chip-card--vehicle",
+      role: "button", tabindex: "0", "aria-label": name,
+      onClick: () => onSelect(v),
+      onKeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(v); } }
+    }, [
       Utils.el("div", { class: "chip-card__top" }, topChildren),
-      Utils.el("div", { class: "chip-card__name", text: vehicleName(v) }),
+      Utils.el("div", { class: "chip-card__name" }, [
+        Utils.el("span", { class: "chip-card__name-text", text: name }),
+        speakerButton(name)
+      ]),
       Utils.el("div", { class: "chip-card__online" }, [
         Utils.el("span", { class: "online-dot", "aria-hidden": "true" }),
         Utils.el("span", { text: Lang.t("vehicle.onlineCount", { n: count }) })
@@ -903,7 +991,7 @@
     const section = Utils.el("section", { class: "section container" }, [
       crumb,
       Utils.el("div", { class: "section-head" }, [
-        Utils.el("h2", { text: Lang.t("market.chooseHeading") }),
+        speakableHeading(Lang.t("market.chooseHeading")),
         Utils.el("p", { text: Lang.t("market.chooseSub") })
       ]),
       cachedMarkets
@@ -953,10 +1041,19 @@
       { label: knownMarket ? marketName(knownMarket) : "…" }
     ]);
 
+    // The header's speak button never reads the static heading — it
+    // reads the dynamic "which vehicle type in <market>?" line, and its
+    // text is updated once the market name resolves (see below).
+    const vehicleSpeaker = mutableSpeakerButton(knownMarket ? vehicleHeaderSpeech(marketName(knownMarket)) : "");
+    const vehicleHeadingRow = Utils.el("h2", { class: "section-head__title-row" }, [
+      Utils.el("span", { text: Lang.t("vehicle.chooseHeading") }),
+      vehicleSpeaker
+    ]);
+
     const section = Utils.el("section", { class: "section container" }, [
       crumb,
       Utils.el("div", { class: "section-head" }, [
-        Utils.el("h2", { text: Lang.t("vehicle.chooseHeading") }),
+        vehicleHeadingRow,
         Utils.el("p", { "data-market-sub": "true", text: knownMarket ? Lang.t("vehicle.chooseSub", { market: marketName(knownMarket) }) : "" })
       ]),
       allCachedReady ? buildBody(knownMarket, cachedVehicles, cachedDirectory) : ViewHelpers.loadingBlock(Lang.t("vehicle.loading"))
@@ -977,6 +1074,7 @@
       ]);
       section.replaceChild(freshCrumb, section.firstChild);
       section.querySelector("[data-market-sub]").textContent = Lang.t("vehicle.chooseSub", { market: marketName(market) });
+      vehicleSpeaker.setSpokenText(vehicleHeaderSpeech(marketName(market)));
       section.replaceChild(buildBody(market, vehicles, directory), section.lastChild);
     } catch (err) {
       section.replaceChild(ViewHelpers.errorBlock(Lang.t("error.network"), () => renderVehicles(app, params)), section.lastChild);

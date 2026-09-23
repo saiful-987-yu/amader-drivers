@@ -288,5 +288,26 @@
     return section;
   };
 
+  /**
+   * Click-to-speak, using only the browser's own built-in Speech
+   * Synthesis — no external API, no recording/storage of anything.
+   * Never auto-plays; only ever called from an explicit click handler.
+   * Cancels any currently-playing utterance first so rapid taps don't
+   * queue up and overlap. On a browser with no speech support at all,
+   * this silently does nothing rather than throwing.
+   */
+  Utils.speak = function (text, lang) {
+    const clean = Utils.clean(text);
+    if (!clean || !window.speechSynthesis || typeof SpeechSynthesisUtterance === "undefined") return;
+    try {
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(clean);
+      utter.lang = lang === "bn" ? "bn-BD" : "en-US";
+      window.speechSynthesis.speak(utter);
+    } catch (err) {
+      /* Speech synthesis is a nice-to-have — never let a failure here affect anything else. */
+    }
+  };
+
   window.Utils = Utils;
 })(window);

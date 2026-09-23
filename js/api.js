@@ -638,9 +638,12 @@
   /**
    * Doctors live in their own Google Sheet tab, fetched/cached exactly
    * like the driver directory (one request, cached + persisted, reused
-   * everywhere) — see getDoctors() in Code.gs / demoCall below.
+   * everywhere) — see getDoctors() in Code.gs / demoCall below. Ordered
+   * by the SAME Sort Status → Rating rule as a driver list
+   * (sortBySortStatusThenRating above) — not a separate doctor-only
+   * ordering rule.
    */
-  Api.getDoctorDirectory = () => cachedCall("getDoctors", {}, STATUS_CACHE_TTL);
+  Api.getDoctorDirectory = () => cachedCall("getDoctors", {}, STATUS_CACHE_TTL).then(sortBySortStatusThenRating);
   Api.peekDoctorDirectory = () => peek("getDoctors", {}, STATUS_CACHE_TTL);
 
   // Synchronous cache peeks — used by views to skip the loading
@@ -679,10 +682,23 @@
   Api.checkPhone = (phone) => call("checkPhone", { phone });
 
   Api.login = (identifier, password) => call("login", { identifier, password });
-  Api.getProfile = (token) => call("getProfile", { token });
+  /**
+   * Cached exactly like Markets/Vehicle Categories/Driver+Doctor
+   * directories elsewhere (see cachedCall above): a fresh visit within
+   * the cache window, or an offline/slow-network visit with a
+   * previously-persisted profile, is served instantly — with a silent
+   * background refresh checking for anything new — instead of the
+   * Profile page depending on the network every single time it's
+   * opened (including on a plain language toggle, which re-renders
+   * the current route from scratch).
+   */
+  Api.getProfile = (token) => cachedCall("getProfile", { token }, STATUS_CACHE_TTL);
+  Api.peekProfile = (token) => peek("getProfile", { token }, STATUS_CACHE_TTL);
+
   Api.updateAvailability = (token, availability) =>
     call("updateAvailability", { token, availability }).then((res) => {
       invalidateCache("getDrivers");
+      invalidateCache("getProfile"); // otherwise a revisit within the cache window would show the pre-change value
       return res;
     });
 
@@ -690,6 +706,7 @@
   Api.updateProfile = (token, fields) =>
     call("updateProfile", Object.assign({ token }, fields)).then((res) => {
       invalidateCache("getDrivers"); // altPhone/WhatsApp/Service Area/Vehicle Number can all show up in the public directory
+      invalidateCache("getProfile"); // otherwise a revisit within the cache window would show the pre-edit value
       return res;
     });
 
