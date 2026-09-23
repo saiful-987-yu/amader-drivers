@@ -39,7 +39,7 @@ window.NOBI_CONFIG = {
   // Leave this as null to run the site in DEMO MODE with
   // built-in sample data (no Google Sheet required). This is
   // useful for local testing before you connect a real sheet.
-  API_BASE_URL: "https://script.google.com/macros/s/AKfycbxTDwvteGPc3Gwep61uKwvlZe-K6m6VDiqHD0OoVUIO140DtPT7EnwiedvAl5bWhtG7iw/exec",
+  API_BASE_URL: "https://script.google.com/macros/s/AKfycbz5iG5_fjd3G3ebICfhK9PY1Q83rJ4ZJzE53aqGSGzRume3NgfVKsH7n7fViX9uD0zWgw/exec",
 
   // --------------------------------------------------------
   // WEBSITE IDENTITY
