@@ -433,8 +433,37 @@ a:hover { text-decoration: underline; }
   justify-content: center;
 }
 .chip-card__icon svg { width: 24px; height: 24px; }
-.chip-card__name { font-weight: 600; font-size: var(--font-size-md); }
+.chip-card__name { display: flex; align-items: center; gap: 4px; width: 100%; font-weight: 600; font-size: var(--font-size-md); }
+/* Keeps the name on one line even with the speak button beside it, so
+   a long bazar/vehicle name never wraps and grows the card taller. */
+.chip-card__name-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chip-card__sub { font-size: var(--font-size-xs); color: var(--color-ink-soft); }
+
+/* Click-to-speak button — reused for card names and section headings.
+   Deliberately tiny and unpadded so it drops into existing text/line
+   height without adding any extra size to its container. */
+.speak-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-primary);
+  opacity: 0.85;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.speak-btn:hover, .speak-btn:active { opacity: 1; }
+.speak-btn svg { width: 18px; height: 18px; }
+.section-head__title-row { display: flex; align-items: center; gap: 6px; }
+.section-head__title-row .speak-btn { width: 24px; height: 24px; }
+.section-head__title-row .speak-btn svg { width: 20px; height: 20px; }
+/* The hero heading keeps its centered text alignment even though it's
+   now a flex row (heading span + speak button). */
+.hero__heading.section-head__title-row { justify-content: center; }
 
 /* Vehicle-category card: existing small icon + new (optional) wider
    category image sitting beside it, name stays below as before. */
@@ -841,6 +870,20 @@ a:hover { text-decoration: underline; }
   margin: 0 auto;
 }
 .field { margin-bottom: var(--space-4); }
+/* Post Office/Union and Upazila/District: two related address fields
+   side by side in one row, responsive down to narrow phone widths.
+   Each child keeps its own existing .field (label/input/hint/error),
+   so validation and spacing stay exactly as before — this only
+   changes how the two fields sit next to each other. */
+.field-row-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+.field-row-2col .field { margin-bottom: var(--space-4); min-width: 0; }
+@media (max-width: 360px) {
+  .field-row-2col { grid-template-columns: 1fr; gap: 0; }
+}
 .field label {
   display: block;
   font-size: var(--font-size-sm);
@@ -980,6 +1023,57 @@ a:hover { text-decoration: underline; }
 .phone-field__status svg { width: 20px; height: 20px; }
 .phone-field__status.is-checking { color: var(--color-ink-soft); animation: username-checking 1s linear infinite; }
 .phone-field__status.is-available { color: var(--color-focus-ring); }
+
+/* Step 3 photo submission: Google Drive link accessibility indicator —
+   same look/behavior as the Mobile/Username availability indicators. */
+.drive-image-field { position: relative; }
+/* Higher specificity than the shared ".field input[type="url"]" rule
+   (which sets padding on all four sides) so this padding-right survives
+   and the accessibility tick/cross icon never overlaps the link text. */
+.field .drive-image-field input[type="url"] { padding-right: 44px; }
+.drive-image-field__status {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  width: 20px;
+  height: 20px;
+  color: var(--color-ink-soft);
+}
+.drive-image-field__status svg { width: 20px; height: 20px; }
+.drive-image-field__status.is-checking { color: var(--color-ink-soft); animation: username-checking 1s linear infinite; }
+.drive-image-field__status.is-available { color: var(--color-focus-ring); }
+
+/* Step 3 photo instructions + WhatsApp help line. */
+.photo-instructions { margin-bottom: var(--space-4); }
+.photo-instructions p { margin: 0 0 var(--space-2); }
+.photo-whatsapp-help {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+.photo-whatsapp-help svg { width: 16px; height: 16px; }
+.photo-whatsapp-help:hover, .photo-whatsapp-help:active { text-decoration: underline; }
+
+/* Drive Link (~70%) and PIN (~30%) side by side on one row. Each child
+   keeps its own existing .field (label/input/hint/error) untouched —
+   this only changes how the two fields sit next to each other. Falls
+   back to a single column on very narrow phones so neither box gets
+   crushed. */
+.photo-input-row {
+  display: grid;
+  grid-template-columns: 7fr 3fr;
+  gap: var(--space-3);
+  align-items: start;
+}
+.photo-input-row .field { margin-bottom: var(--space-4); min-width: 0; }
+@media (max-width: 360px) {
+  .photo-input-row { grid-template-columns: 1fr; gap: 0; }
+}
 
 .step-indicator {
   display: flex;
