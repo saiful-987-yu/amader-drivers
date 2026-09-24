@@ -61,13 +61,6 @@
     return false;
   };
 
-  /** Escape a string for safe insertion as text (defense in depth; we mostly use textContent). */
-  Utils.escapeHtml = function (str) {
-    const div = document.createElement("div");
-    div.textContent = str == null ? "" : String(str);
-    return div.innerHTML;
-  };
-
   /** Try to turn a Google Drive share link into a direct-view image URL. */
   Utils.resolveImageUrl = function (url) {
     if (!url) return "";
