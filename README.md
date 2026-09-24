@@ -1,4 +1,4 @@
-# Amader Drivers
+# Amader Drivers {_Saiful_Islam_}
 
 A lightweight, bilingual (English/বাংলা) local driver directory. A customer
 scans a QR code, picks a bazar, picks a vehicle type (CNG / Auto / Van /
