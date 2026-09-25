@@ -899,7 +899,6 @@ a:hover { text-decoration: underline; }
   display: none;
 }
 .field.has-error .error-msg { display: block; }
-.field.has-success .error-msg { display: block; color: var(--color-success); }
 .field.has-error input,
 .field.has-error select,
 .field.has-error textarea { border-color: var(--color-danger); }
@@ -922,7 +921,6 @@ a:hover { text-decoration: underline; }
   font-family: inherit;
 }
 .field textarea { min-height: 88px; resize: vertical; }
-.field textarea.is-readonly { background: var(--color-line); cursor: default; }
 .field input:focus, .field select:focus, .field textarea:focus {
   border-color: var(--color-primary);
 }
@@ -1060,117 +1058,6 @@ a:hover { text-decoration: underline; }
 }
 .photo-whatsapp-help svg { width: 16px; height: 16px; }
 .photo-whatsapp-help:hover, .photo-whatsapp-help:active { text-decoration: underline; }
-
-/* Step 3's new, first/most-prominent "Photo Upload" option — a big
-   native-looking tap target, deliberately styled to stand out well
-   above the existing Drive Link/PIN row beneath it. Three visual
-   states: idle (dashed tap area), chosen (thumbnail + Send button),
-   and confirmed (solid brand-color card, no tap target). */
-.photo-upload-card { margin-bottom: var(--space-4); }
-.photo-upload-card__drop {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  width: 100%;
-  padding: var(--space-4);
-  border: 2px dashed var(--color-primary);
-  border-radius: var(--radius-md);
-  background: var(--color-primary-soft);
-  color: var(--color-primary-dark);
-  cursor: pointer;
-  text-align: left;
-  font-family: inherit;
-}
-.photo-upload-card__icon {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-pill);
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-}
-.photo-upload-card__icon svg { width: 24px; height: 24px; }
-.photo-upload-card__title { font-size: var(--font-size-md); font-weight: 700; }
-.photo-upload-card__subtitle { font-size: var(--font-size-xs); color: var(--color-ink-soft); margin-top: 2px; }
-
-.photo-upload-card__preview {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3);
-  border: 1px solid var(--color-line-strong);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-}
-.photo-upload-card__thumb {
-  flex: 0 0 auto;
-  width: 52px;
-  height: 52px;
-  border-radius: var(--radius-sm);
-  object-fit: cover;
-  border: 1px solid var(--color-line);
-}
-.photo-upload-card__filename {
-  font-size: var(--font-size-sm);
-  word-break: break-all;
-  flex: 1 1 auto;
-}
-.photo-upload-card__change {
-  flex: 0 0 auto;
-  background: none;
-  border: none;
-  color: var(--color-primary);
-  font-size: var(--font-size-xs);
-  font-weight: 600;
-  cursor: pointer;
-  padding: var(--space-1);
-}
-.photo-upload-card__actions { margin-top: var(--space-3); display: flex; flex-direction: column; gap: var(--space-2); }
-.photo-upload-card__hint { font-size: var(--font-size-xs); color: var(--color-ink-soft); }
-.photo-upload-card__link { align-self: flex-start; background: none; border: none; padding: 0; color: var(--color-primary); font-size: var(--font-size-xs); font-weight: 600; cursor: pointer; text-decoration: underline; }
-
-.photo-upload-card.is-confirmed .photo-upload-card__drop {
-  border: 1px solid var(--color-primary);
-  border-style: solid;
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-  cursor: default;
-}
-.photo-upload-card.is-confirmed .photo-upload-card__icon { background: var(--color-on-primary); color: var(--color-primary); }
-.photo-upload-card.is-confirmed .photo-upload-card__subtitle { color: var(--color-on-primary); opacity: 0.85; }
-.photo-upload-card__undo {
-  margin-top: var(--space-2);
-  background: none;
-  border: none;
-  padding: 0;
-  color: var(--color-ink-soft);
-  font-size: var(--font-size-xs);
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-/* "অথবা / OR" divider between the Photo Upload card and the existing
-   Drive Link/PIN row beneath it. */
-.photo-method-divider {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin: var(--space-4) 0;
-  color: var(--color-ink-soft);
-  font-size: var(--font-size-xs);
-  font-weight: 700;
-  text-transform: uppercase;
-}
-.photo-method-divider::before,
-.photo-method-divider::after {
-  content: "";
-  flex: 1 1 auto;
-  height: 1px;
-  background: var(--color-line);
-}
 
 /* Drive Link (~70%) and PIN (~30%) side by side on one row. Each child
    keeps its own existing .field (label/input/hint/error) untouched —
