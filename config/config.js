@@ -39,38 +39,7 @@ window.NOBI_CONFIG = {
   // Leave this as null to run the site in DEMO MODE with
   // built-in sample data (no Google Sheet required). This is
   // useful for local testing before you connect a real sheet.
-  API_BASE_URL: "https://script.google.com/macros/s/AKfycby93KRpwGKmhugI8ZbCRgBPEKC3Bb9Aw76N5mAzvJWAgCPGhX1dawQ1Dfzpl0S4NOs-/exec",
-
-  // --------------------------------------------------------
-  // PROFILE PHOTO — GOOGLE FORM (Registration Step 3, "Photo Upload")
-  // --------------------------------------------------------
-  // URL is the existing Google Form used for the direct photo-upload
-  // option. Google Forms' "file upload" question type always requires
-  // the respondent to sign in with a Google account and can never be
-  // embedded in an iframe or auto-submitted from JavaScript (this is a
-  // hard restriction on Google's side, not something this site can
-  // work around) — so the form itself has to open in its own browser
-  // tab for the actual upload step. To at least skip re-typing the
-  // Mobile Number there, set MOBILE_ENTRY_ID to that field's prefill
-  // entry ID and the number the driver already typed in Step 1 will be
-  // filled in automatically.
-  //
-  // HOW TO FIND MOBILE_ENTRY_ID:
-  //   1. Open the form's edit link in Google Forms (not the public
-  //      viewform link) and open the Mobile Number question.
-  //   2. Click the ⋮ (More) menu on that question → "Get pre-filled
-  //      link".
-  //   3. Fill in any sample value and click "Get link", then "Copy
-  //      link". The copied URL contains "...&entry.123456789=...";
-  //      the "entry.123456789" part (with your own numbers) is the
-  //      value to paste below, as a quoted string.
-  //   Leave as null to open the form without pre-filling the number —
-  //   everything else keeps working, the driver just has to type their
-  //   number again inside the Google Form itself.
-  GOOGLE_FORM: {
-    URL: "https://docs.google.com/forms/d/e/1FAIpQLSfWSXqhzab6o0Yh6lFrRzXz_F-jxgnvvzoB29mvBg5yDiRnIA/viewform",
-    MOBILE_ENTRY_ID: 2002266671
-  },
+  API_BASE_URL: "https://script.google.com/macros/s/AKfycbz5iG5_fjd3G3ebICfhK9PY1Q83rJ4ZJzE53aqGSGzRume3NgfVKsH7n7fViX9uD0zWgw/exec",
 
   // --------------------------------------------------------
   // WEBSITE IDENTITY
