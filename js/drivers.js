@@ -1158,7 +1158,6 @@
       const alreadyCached = !!Api.peekDriverDirectory();
       if (!alreadyCached) {
         resultsWrap.innerHTML = "";
-        renderedCards.clear();
         resultsWrap.appendChild(ViewHelpers.loadingBlock(Lang.t("drivers.loading")));
       }
       try {
@@ -1167,26 +1166,14 @@
         renderResults(list, query);
       } catch (err) {
         resultsWrap.innerHTML = "";
-        renderedCards.clear();
         resultsWrap.appendChild(ViewHelpers.errorBlock(Lang.t("error.network"), () => load(query)));
       }
     }
 
-    // driverId -> { node, sig } for whatever's currently on screen, so a
-    // re-run of renderResults() (typing in Search, toggling "Available
-    // only", or simply re-opening this same list) only touches drivers
-    // that are actually new/changed/removed — a driver whose data is
-    // byte-for-byte the same as last time keeps its exact existing card
-    // (photo already loaded and all) instead of being torn down and
-    // rebuilt. With hundreds/thousands of drivers and only a handful
-    // changing, this avoids replacing the whole grid for nothing.
-    let renderedCards = new Map();
-
     function renderResults(list, query) {
+      resultsWrap.innerHTML = "";
       section.querySelector("[data-count]").textContent = Lang.t("drivers.count", { count: list.length });
       if (!list.length) {
-        resultsWrap.innerHTML = "";
-        renderedCards.clear();
         resultsWrap.appendChild(ViewHelpers.emptyBlock({
           message: query ? Lang.t("empty.noSearchResults") : Lang.t("empty.noDrivers"),
           sub: query ? undefined : Lang.t("empty.noDriversSub"),
@@ -1195,40 +1182,8 @@
         }));
         return;
       }
-      let grid = resultsWrap.querySelector(".driver-grid");
-      if (!grid) {
-        resultsWrap.innerHTML = "";
-        grid = Utils.el("div", { class: "driver-grid" });
-        resultsWrap.appendChild(grid);
-        renderedCards.clear();
-      }
       // Api.getDrivers() already returns Active drivers before Inactive ones.
-      const nextIds = new Set();
-      list.forEach((d) => {
-        const id = d.driverId;
-        nextIds.add(id);
-        const sig = JSON.stringify(d);
-        const existing = renderedCards.get(id);
-        let node;
-        if (existing && existing.sig === sig) {
-          node = existing.node; // nothing about this driver changed — reuse the exact same card/photo
-        } else {
-          node = driverCard(d, vehicleName(vehicle), crumbTrail);
-          if (existing && existing.node.parentNode) existing.node.parentNode.removeChild(existing.node);
-          renderedCards.set(id, { node, sig });
-        }
-        // appendChild on a node already in the grid just repositions it
-        // (same element instance — its <img> never re-fetches); on a
-        // brand-new node it inserts it. Iterating in list order this way
-        // leaves the grid in the correct final order either way.
-        grid.appendChild(node);
-      });
-      renderedCards.forEach((entry, id) => {
-        if (!nextIds.has(id)) {
-          if (entry.node.parentNode) entry.node.parentNode.removeChild(entry.node);
-          renderedCards.delete(id);
-        }
-      });
+      resultsWrap.appendChild(Utils.el("div", { class: "driver-grid" }, list.map((d) => driverCard(d, vehicleName(vehicle), crumbTrail))));
     }
 
     const debouncedSearch = Utils.debounce((q) => load(q), 250);
