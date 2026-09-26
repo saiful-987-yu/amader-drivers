@@ -292,7 +292,16 @@
       "a11y.closeModal": "Close",
       "a11y.speak": "Listen: {text}",
 
-      "vehicle.icon.default": "Vehicle"
+      "vehicle.icon.default": "Vehicle",
+
+      "pwa.install.title": "Install Amader Drivers",
+      "pwa.install.body": "Add it to your home screen for instant one-tap access, even offline.",
+      "pwa.install.action": "Install",
+      "pwa.install.dismiss": "Not now",
+      "pwa.install.iosTitle": "Install Amader Drivers",
+      "pwa.install.iosBody": "Tap Share, then \"Add to Home Screen\".",
+      "pwa.updateReady.body": "A new version is ready.",
+      "pwa.updateReady.action": "Refresh"
     },
 
     bn: {
@@ -571,7 +580,16 @@
       "a11y.closeModal": "বন্ধ করুন",
       "a11y.speak": "শুনুন: {text}",
 
-      "vehicle.icon.default": "যানবাহন"
+      "vehicle.icon.default": "যানবাহন",
+
+      "pwa.install.title": "আমাদের ড্রাইভার ইনস্টল করুন",
+      "pwa.install.body": "হোম স্ক্রিনে যোগ করুন — এক ট্যাপেই খুলবে, অফলাইনেও কাজ করবে।",
+      "pwa.install.action": "ইনস্টল করুন",
+      "pwa.install.dismiss": "এখন না",
+      "pwa.install.iosTitle": "আমাদের ড্রাইভার ইনস্টল করুন",
+      "pwa.install.iosBody": "Share বাটনে চাপুন, তারপর \"Add to Home Screen\" নির্বাচন করুন।",
+      "pwa.updateReady.body": "নতুন ভার্সন প্রস্তুত।",
+      "pwa.updateReady.action": "রিফ্রেশ করুন"
     }
   };
 

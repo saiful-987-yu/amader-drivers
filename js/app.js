@@ -323,16 +323,15 @@
     if (window.Api && window.Api.preload) window.Api.preload().catch(() => {});
     renderRoute();
 
-    // sw.js: this used to run an image-caching Service Worker, but that
-    // approach broke image loading for some browsers/devices, so sw.js
-    // now safely disables/removes itself instead. Still registering it
-    // here (rather than deleting this block) is what actually delivers
-    // that self-removal to anyone whose browser already installed the
-    // old broken version — once healed, this registration call keeps
-    // doing nothing going forward. Any failure here (unsupported
-    // browser, not served over HTTPS, etc.) is silently ignored either way.
+    // sw.js caches this app's own HTML/CSS/JS (the "app shell") so the
+    // whole site keeps working with no internet after the first visit —
+    // it deliberately never touches Drive photos or the Apps Script
+    // backend (see sw.js's own header comment for why). js/pwa-install.js
+    // uses this same registration to show the "new version ready" toast.
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("sw.js").catch(() => {});
+      navigator.serviceWorker.register("sw.js").then((reg) => {
+        window.dispatchEvent(new CustomEvent("nobi:swregistered", { detail: { registration: reg } }));
+      }).catch(() => {});
     }
   });
 
