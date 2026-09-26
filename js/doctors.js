@@ -78,8 +78,8 @@
     const url = Utils.resolveImageUrl(doctor.imageUrl);
     if (url) {
       const img = Utils.el("img", { alt: Utils.driverDisplayName(doctor), loading: "lazy", decoding: "async" });
+      Utils.wireImageFallback(img, doctor.imageUrl, () => { wrap.innerHTML = size === "large" ? Icons.userLarge : Icons.user; });
       img.src = url;
-      img.addEventListener("error", () => { wrap.innerHTML = size === "large" ? Icons.userLarge : Icons.user; });
       wrap.appendChild(img);
     } else {
       wrap.innerHTML = size === "large" ? Icons.userLarge : Icons.user;

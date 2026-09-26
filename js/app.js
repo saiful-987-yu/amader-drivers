@@ -322,6 +322,18 @@
     // simply hits the same cached promise if preload got there first.
     if (window.Api && window.Api.preload) window.Api.preload().catch(() => {});
     renderRoute();
+
+    // sw.js: this used to run an image-caching Service Worker, but that
+    // approach broke image loading for some browsers/devices, so sw.js
+    // now safely disables/removes itself instead. Still registering it
+    // here (rather than deleting this block) is what actually delivers
+    // that self-removal to anyone whose browser already installed the
+    // old broken version — once healed, this registration call keeps
+    // doing nothing going forward. Any failure here (unsupported
+    // browser, not served over HTTPS, etc.) is silently ignored either way.
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    }
   });
 
   document.addEventListener("nobi:languagechange", () => {

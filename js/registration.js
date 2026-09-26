@@ -20,6 +20,19 @@
    */
   let activeRegistrationSession = null;
 
+  /**
+   * Points at the currently-mounted registration form's collectStepValues()
+   * (set inside renderRegister below), so that whatever is on-screen but
+   * not yet committed via Next/Back can still be saved the instant
+   * something forces a full re-render out from under the user — most
+   * importantly a language switch ("nobi:languagechange" -> renderRoute()
+   * -> renderRegister() from scratch). Without this, only Next/Back ever
+   * wrote the DOM's live values into activeRegistrationSession.data, so
+   * switching language mid-typing silently discarded whatever hadn't
+   * been committed yet. Reset to null right after each use.
+   */
+  let flushActiveSessionFields = null;
+
   function fieldRow({ id, labelKey, type, required, hint, options }) {
     const label = Utils.el("label", { for: id, text: Lang.t(labelKey) + (required ? " *" : "") });
     let control;
@@ -282,6 +295,98 @@
   }
 
   /**
+   * Builds the pre-filled URL for the existing Google Form used by the
+   * Photo Upload option (see config.js's GOOGLE_FORM). Only the Mobile
+   * Number field can be pre-filled this way — the Profile Photo /
+   * Vehicle Photo upload questions themselves are filled in by the
+   * driver directly inside the Google Form.
+   */
+  function buildPhotoFormUrl(mobile) {
+    const cfg = (window.NOBI_CONFIG && window.NOBI_CONFIG.GOOGLE_FORM) || {};
+    const base = cfg.URL || "https://docs.google.com/forms/d/e/1FAIpQLSfWSXqhzab6o0Yh6lFrRzXz_F-jxgnvvzoB29mvBg5yDiRnIA/viewform";
+    const parts = ["usp=pp_url"];
+    if (cfg.MOBILE_ENTRY_ID && mobile) {
+      parts.push(cfg.MOBILE_ENTRY_ID + "=" + encodeURIComponent(mobile));
+    }
+    return base + (base.indexOf("?") === -1 ? "?" : "&") + parts.join("&");
+  }
+
+  /**
+   * Step 3's "Photo Upload" option — first and most prominent, per
+   * spec. The large drop card is now a direct shortcut to the
+   * existing Google Form: tapping it never opens this site's own
+   * camera/gallery picker or shows a local preview — it just opens
+   * the Google Form (pre-filled with the Mobile Number already
+   * entered in Step 1), where the driver attaches their Profile
+   * Photo and Vehicle Photo and taps Submit. Coming back here and
+   * tapping the confirm button marks this method VALID. That
+   * confirmation is self-reported by the driver, exactly the way the
+   * existing PIN method already works (PIN is also just a self/
+   * WhatsApp-coordinated confirmation, never something this site
+   * verifies against the Sheet either) — so this never claims a
+   * server-verified "success" the site has no technical way to check.
+   *
+   * stage moves idle -> opened -> confirmed.
+   */
+  function photoUploadField(session, mobile, rerender) {
+    const state = session.photoUpload;
+
+    const confirmed = state.stage === "confirmed";
+    const drop = Utils.el("button", {
+      type: "button", class: "photo-upload-card__drop",
+      onClick: () => {
+        if (state.stage !== "idle") return;
+        window.open(buildPhotoFormUrl(mobile), "_blank", "noopener");
+        state.stage = "opened";
+        session.photoUpload = state;
+        rerender();
+      }
+    }, [
+      Utils.el("span", { class: "photo-upload-card__icon", html: confirmed ? Icons.checkCircle : Icons.upload }),
+      Utils.el("div", {}, [
+        Utils.el("div", {
+          class: "photo-upload-card__title",
+          text: Lang.t(confirmed ? "register.step3.photoUpload.confirmedTitle" : "register.step3.photoUpload.title")
+        }),
+        Utils.el("div", {
+          class: "photo-upload-card__subtitle",
+          text: Lang.t(confirmed ? "register.step3.photoUpload.confirmedSubtitle" : "register.step3.photoUpload.subtitle")
+        })
+      ])
+    ]);
+
+    const card = Utils.el("div", { class: "photo-upload-card" + (confirmed ? " is-confirmed" : "") }, [drop]);
+
+    if (state.stage === "opened") {
+      const actions = Utils.el("div", { class: "photo-upload-card__actions" });
+      actions.appendChild(Utils.el("button", {
+        type: "button", class: "photo-upload-card__link", text: Lang.t("register.step3.photoUpload.reopenForm"),
+        onClick: () => window.open(buildPhotoFormUrl(mobile), "_blank", "noopener")
+      }));
+      actions.appendChild(Utils.el("button", {
+        type: "button", class: "btn btn--primary", text: Lang.t("register.step3.photoUpload.confirmButton"),
+        onClick: () => { state.stage = "confirmed"; state.valid = true; session.photoUpload = state; rerender(); }
+      }));
+      card.appendChild(actions);
+    }
+
+    if (confirmed) {
+      card.appendChild(Utils.el("button", {
+        type: "button", class: "photo-upload-card__undo", text: Lang.t("register.step3.photoUpload.undo"),
+        onClick: () => {
+          window.open(buildPhotoFormUrl(mobile), "_blank", "noopener");
+          state.stage = "opened";
+          state.valid = false;
+          session.photoUpload = state;
+          rerender();
+        }
+      }));
+    }
+
+    return { wrap: card };
+  }
+
+  /**
    * After a failed validateStep(), scroll to and focus the first field
    * still marked .has-error (setFieldError toggles that class in the
    * same order fields were validated), so the user can see immediately
@@ -299,6 +404,14 @@
   }
 
   async function renderRegister(app) {
+    // If a registration form is already live on screen, this is a forced
+    // re-render (a language switch is the only case today) rather than a
+    // fresh visit — save whatever's currently typed, still on the OLD
+    // page, into the session before that page is torn down below.
+    if (flushActiveSessionFields) {
+      flushActiveSessionFields();
+      flushActiveSessionFields = null;
+    }
     app.innerHTML = "";
 
     let markets = [], vehicles = [];
@@ -321,7 +434,12 @@
         data: {}, currentStep: 1,
         phoneCheck: { value: null, available: null },
         usernameCheck: { value: null, available: null },
-        driveCheck: { value: null, available: null }
+        driveCheck: { value: null, available: null },
+        // Step 3's Photo Upload option — see photoUploadField()'s
+        // comment. stage moves idle -> opened -> confirmed;
+        // valid only ever becomes true once the driver has explicitly
+        // self-confirmed the Submit step on the actual Google Form.
+        photoUpload: { valid: false, stage: "idle" }
       };
     }
     const session = activeRegistrationSession;
@@ -334,6 +452,12 @@
     let phoneCheck = session.phoneCheck;
     let usernameCheck = session.usernameCheck;
     let driveCheck = session.driveCheck;
+    // Set by buildStep1() each time Step 1 is (re)built; renderStep()
+    // calls it right after hydrateStepValues() so the read-only "সম্পূর্ণ
+    // ঠিকানা" box reflects data restored from `data` (e.g. after Back,
+    // or a language switch) exactly the same way typing does — never
+    // left showing a stale/old value.
+    let syncFullAddress = null;
 
     const heading = Utils.el("h2", { text: Lang.t("register.heading") });
     const sub = Utils.el("p", { text: Lang.t("register.sub"), class: "hint mt-5" });
@@ -357,23 +481,46 @@
     }
 
     function buildStep1() {
+      const villageField = fieldRow({ id: "village", labelKey: "field.village" });
+      const postOfficeField = fieldRow({ id: "postOffice", labelKey: "field.postOffice" });
+      const unionField = fieldRow({ id: "union", labelKey: "field.union" });
+      const upazilaField = fieldRow({ id: "upazila", labelKey: "field.upazila" });
+      const districtField = fieldRow({ id: "district", labelKey: "field.district" });
+      // "সম্পূর্ণ ঠিকানা" — read-only, auto-built from the five fields
+      // above in order (গ্রাম → ডাকঘর → ইউনিয়ন → উপজেলা → জেলা), only
+      // the non-empty ones, comma-separated. This is a frontend-only
+      // convenience: the five individual fields still go to the Sheet
+      // exactly as before (see collectStepValues()/Api.registerDriver),
+      // fullAddress is collected too but is now always derived, never
+      // hand-typed.
+      const fullAddressField = fieldRow({ id: "fullAddress", labelKey: "field.fullAddress", type: "textarea" });
+      fullAddressField.control.readOnly = true;
+      fullAddressField.control.classList.add("is-readonly");
+
+      const addressParts = [villageField, postOfficeField, unionField, upazilaField, districtField];
+      syncFullAddress = () => {
+        fullAddressField.control.value = addressParts
+          .map((f) => Utils.clean(f.control.value))
+          .filter(Boolean)
+          .join(", ");
+      };
+      addressParts.forEach((f) => f.control.addEventListener("input", syncFullAddress));
+
       return [
         fieldRow({ id: "fullName", labelKey: "field.fullName", required: true }),
-        fieldRow({ id: "fullNameBn", labelKey: "field.fullNameBn", required: true }),
-        fieldRow({ id: "guardianName", labelKey: "field.guardianName" }),
+        twoColFieldRow(
+          fieldRow({ id: "fullNameBn", labelKey: "field.fullNameBn", required: true }),
+          fieldRow({ id: "guardianName", labelKey: "field.guardianName" })
+        ),
         mobileField(app, (value, available) => { phoneCheck = { value, available }; }),
-        fieldRow({ id: "altMobile", labelKey: "field.altMobile", type: "tel" }),
-        fieldRow({ id: "whatsapp", labelKey: "field.whatsapp", type: "tel" }),
-        fieldRow({ id: "village", labelKey: "field.village" }),
         twoColFieldRow(
-          fieldRow({ id: "postOffice", labelKey: "field.postOffice" }),
-          fieldRow({ id: "union", labelKey: "field.union" })
+          fieldRow({ id: "altMobile", labelKey: "field.altMobile", type: "tel" }),
+          fieldRow({ id: "whatsapp", labelKey: "field.whatsapp", type: "tel" })
         ),
-        twoColFieldRow(
-          fieldRow({ id: "upazila", labelKey: "field.upazila" }),
-          fieldRow({ id: "district", labelKey: "field.district" })
-        ),
-        fieldRow({ id: "fullAddress", labelKey: "field.fullAddress", type: "textarea" })
+        villageField,
+        twoColFieldRow(postOfficeField, unionField),
+        twoColFieldRow(upazilaField, districtField),
+        fullAddressField
       ];
     }
 
@@ -394,12 +541,42 @@
     }
 
     function buildStep3() {
+      // Re-renders just this step in place after a Photo Upload state
+      // change (file chosen / form opened / confirmed) — collects
+      // whatever's currently typed into Drive Link/PIN first, exactly
+      // like the existing Back button does, so neither is ever lost.
+      const rerenderStep3 = () => { collectStepValues(); renderStep(); };
+      const photoUploadRow = photoUploadField(session, Utils.clean(data.mobile), rerenderStep3);
       const driveField = driveImageField(app, (value, available) => { driveCheck = { value, available }; session.driveCheck = driveCheck; });
       // No hint/description under the PIN box at all — it's collected
       // via WhatsApp (see the header instructions above), never shown
       // or explained on screen.
       const pinField = fieldRow({ id: "photoPin", labelKey: "register.step3.pinLabel" });
+      // Lightweight live feedback only (client-side, same today's-date
+      // PIN check as todaysPhotoPin()/Next already do) — just tells the
+      // driver "PIN ভুল"/"PIN সঠিক" as they type; it never blocks Next
+      // and never replaces the existing submit-time PIN validation.
+      const pinCheck = Utils.debounce(() => {
+        const field = app.querySelector('[data-field="photoPin"]');
+        if (!field) return;
+        const err = field.querySelector(".error-msg");
+        const value = Utils.clean(pinField.control.value);
+        field.classList.remove("has-error", "has-success");
+        if (err) err.textContent = "";
+        if (!value) return;
+        if (value === todaysPhotoPin()) {
+          field.classList.add("has-success");
+          if (err) err.textContent = Lang.t("validation.pinCorrect");
+        } else {
+          field.classList.add("has-error");
+          if (err) err.textContent = Lang.t("validation.pinWrong");
+        }
+      }, 300);
+      pinField.control.addEventListener("input", pinCheck);
       return [
+        // Photo Upload — first and most prominent, per spec.
+        photoUploadRow,
+        Utils.el("div", { class: "photo-method-divider", text: Lang.t("register.step3.orDivider") }),
         Utils.el("div", { class: "photo-instructions hint" }, [
           Utils.el("p", { text: Lang.t("register.step3.instructions") }),
           photoWhatsappHelpLink()
@@ -450,6 +627,13 @@
     function collectStepValues() {
       const checkboxGroups = {};
       Utils.qsa("input, select, textarea", stepBody).forEach((el) => {
+        // The Photo Upload card manages its own state on
+        // `session.photoUpload` (idle/opened/confirmed), separate from
+        // this generic field collection. This guard is kept defensively
+        // in case any file input is ever reintroduced — a browser also
+        // throws if a file input's .value is set back to anything but
+        // "", which hydrateStepValues() below would hit.
+        if (el.type === "file") return;
         const key = el.name || el.id;
         if (el.type === "checkbox") {
           if (!checkboxGroups[key]) checkboxGroups[key] = [];
@@ -468,9 +652,13 @@
         data.experience = "";
       }
     }
+    // Always points at THIS render's collectStepValues, whatever step is
+    // currently showing — see flushActiveSessionFields's own comment above.
+    flushActiveSessionFields = collectStepValues;
 
     function hydrateStepValues() {
       Utils.qsa("input, select, textarea", stepBody).forEach((el) => {
+        if (el.type === "file") return; // see collectStepValues() above
         const key = el.name || el.id;
         if (el.type === "checkbox") {
           const selected = Utils.splitMulti(data[key]);
@@ -503,27 +691,31 @@
         });
       }
       if (currentStep === 3) {
-        // Either a Google Drive photo link OR a PIN makes this step
-        // valid — the two are independent alternatives, so leftover/
-        // wrong data in one box must never block a valid entry in the
-        // other (e.g. a valid Drive link + stale PIN digits still
-        // passes; a correct PIN + an incomplete Drive link still
-        // passes). Vehicle Photo stays optional either way.
+        // Photo Upload OR a Google Drive photo link OR a PIN makes this
+        // step valid — any ONE of the three is enough, and they're
+        // independent alternatives, so leftover/wrong data in one box
+        // must never block a valid entry via another (e.g. a confirmed
+        // Photo Upload still passes even with stale PIN digits or a
+        // half-typed Drive link left in the other boxes). Vehicle Photo
+        // stays optional either way.
+        const photoUploadOk = !!(session.photoUpload && session.photoUpload.valid);
         const imageValue = Utils.clean(data.imageUrl);
         const pinValue = Utils.clean(data.photoPin);
         const pinOk = !!pinValue && pinValue === todaysPhotoPin();
         const looksLikeDriveLink = !!imageValue && /drive\.google\.com/.test(imageValue);
         setFieldError(app, "imageUrl", "");
         setFieldError(app, "photoPin", "");
-        if (!imageValue && !pinValue) {
-          setFieldError(app, "imageUrl", Lang.t("validation.required"));
-          valid = false;
-        } else if (!pinOk && !looksLikeDriveLink) {
-          // Neither method is satisfiable yet — flag whichever the
-          // user actually attempted.
-          if (pinValue) setFieldError(app, "photoPin", Lang.t("validation.pinInvalid"));
-          if (imageValue) setFieldError(app, "imageUrl", Lang.t("validation.driveLinkInvalid"));
-          valid = false;
+        if (!photoUploadOk) {
+          if (!imageValue && !pinValue) {
+            setFieldError(app, "imageUrl", Lang.t("validation.required"));
+            valid = false;
+          } else if (!pinOk && !looksLikeDriveLink) {
+            // Neither method is satisfiable yet — flag whichever the
+            // user actually attempted.
+            if (pinValue) setFieldError(app, "photoPin", Lang.t("validation.pinInvalid"));
+            if (imageValue) setFieldError(app, "imageUrl", Lang.t("validation.driveLinkInvalid"));
+            valid = false;
+          }
         }
         // Actual Drive-link accessibility is confirmed asynchronously
         // right before advancing (see the Next handler), the same way
@@ -549,9 +741,11 @@
 
     function renderStep() {
       stepBody.innerHTML = "";
+      syncFullAddress = null;
       const rows = STEP_BUILDERS[currentStep - 1]();
       rows.forEach((row) => stepBody.appendChild(row.wrap || row));
       hydrateStepValues();
+      if (currentStep === 1 && syncFullAddress) syncFullAddress();
       updateIndicator();
       renderActions();
     }
@@ -589,10 +783,14 @@
             }
           }
           if (currentStep === 3) {
+            const photoUploadOk = !!(session.photoUpload && session.photoUpload.valid);
             const imageValue = Utils.clean(data.imageUrl);
             const pinValue = Utils.clean(data.photoPin);
             const pinOk = !!pinValue && pinValue === todaysPhotoPin();
-            if (!pinOk && imageValue) {
+            // A confirmed Photo Upload already makes this step valid on
+            // its own — never block Next on stale/incomplete Drive-link
+            // text left in that other box.
+            if (!photoUploadOk && !pinOk && imageValue) {
               nextBtn.disabled = true;
               driveCheck = await ensureDriveAccessible(driveCheck, imageValue);
               session.driveCheck = driveCheck;
@@ -631,6 +829,7 @@
             const payload = Object.assign({}, data, { phone: data.mobile, altPhone: data.altMobile });
             const result = await Api.registerDriver(payload);
             activeRegistrationSession = null;
+            flushActiveSessionFields = null;
             renderSuccess(app, result);
           } catch (err) {
             submitBtn.disabled = false;

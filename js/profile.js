@@ -97,7 +97,8 @@
    * when the driver has no vehicle images at all.
    */
   function buildVehicleGallery(driver) {
-    const urls = Utils.splitMulti(driver.vehicleImageUrl).map(Utils.resolveImageUrl).filter(Boolean);
+    const rawUrls = Utils.splitMulti(driver.vehicleImageUrl).filter(Boolean);
+    const urls = rawUrls.map(Utils.resolveImageUrl);
     if (!urls.length) {
       return Utils.el("div", { class: "vehicle-gallery-empty" }, [
         Utils.el("div", { html: Icons.gallery }),
@@ -111,6 +112,7 @@
 
     function show(index) {
       current = (index + urls.length) % urls.length;
+      Utils.wireImageFallback(mainImg, rawUrls[current], () => {});
       mainImg.src = urls[current];
       thumbButtons.forEach((btn, i) => btn.classList.toggle("is-active", i === current));
     }
@@ -134,6 +136,7 @@
     if (urls.length > 1) {
       const thumbs = urls.map((url, i) => {
         const thumbImg = Utils.el("img", { alt: "", loading: "lazy" });
+        Utils.wireImageFallback(thumbImg, rawUrls[i], () => {});
         thumbImg.src = url;
         const btn = Utils.el("button", {
           type: "button", class: "gallery__thumb", "aria-label": (i + 1) + " / " + urls.length,
@@ -293,8 +296,8 @@
     const photoUrl = Utils.resolveImageUrl(driver.imageUrl);
     if (photoUrl) {
       const img = Utils.el("img", { alt: Utils.driverDisplayName(driver) });
+      Utils.wireImageFallback(img, driver.imageUrl, () => { photoWrap.innerHTML = Icons.userLarge; });
       img.src = photoUrl;
-      img.addEventListener("error", () => { photoWrap.innerHTML = Icons.userLarge; });
       photoWrap.appendChild(img);
     } else {
       photoWrap.innerHTML = Icons.userLarge;
@@ -387,12 +390,13 @@
     ].filter(Boolean));
 
     // ---------- Vehicle Information ----------
-    const vehiclePhotoUrls = Utils.splitMulti(driver.vehicleImageUrl).map(Utils.resolveImageUrl).filter(Boolean);
+    const vehiclePhotoUrlsRaw = Utils.splitMulti(driver.vehicleImageUrl).filter(Boolean);
+    const vehiclePhotoUrls = vehiclePhotoUrlsRaw.map(Utils.resolveImageUrl);
     const thumb = Utils.el("button", { type: "button", class: "vehicle-thumb", onClick: () => openVehiclePhotosModal(driver) });
     if (vehiclePhotoUrls.length) {
       const img = Utils.el("img", { alt: "", loading: "lazy" });
+      Utils.wireImageFallback(img, vehiclePhotoUrlsRaw[0], () => { thumb.innerHTML = Icons.vehicle(primarySlug || "other"); });
       img.src = vehiclePhotoUrls[0];
-      img.addEventListener("error", () => { thumb.innerHTML = Icons.vehicle(primarySlug || "other"); });
       thumb.appendChild(img);
     } else {
       thumb.innerHTML = Icons.vehicle(primarySlug || "other");
@@ -404,12 +408,14 @@
     // photos beyond these 4 (still all reachable in the same gallery
     // modal, unchanged).
     const sideUrls = vehiclePhotoUrls.slice(1, 4);
+    const sideUrlsRaw = vehiclePhotoUrlsRaw.slice(1, 4);
     let sideColumn = null;
     if (sideUrls.length) {
       const extraCount = vehiclePhotoUrls.length - 4;
       const sideThumbs = sideUrls.map((url, i) => {
         const isLast = i === sideUrls.length - 1;
         const img = Utils.el("img", { alt: "", loading: "lazy" });
+        Utils.wireImageFallback(img, sideUrlsRaw[i], () => { img.remove(); });
         img.src = url;
         const children = [img];
         if (isLast && extraCount > 0) children.push(Utils.el("span", { class: "vehicle-side-thumb__badge", text: "+" + extraCount }));

@@ -165,10 +165,10 @@
       // photo. `loading="lazy"` defers off-screen photos so a long
       // driver grid doesn't fetch every image up front.
       const img = Utils.el("img", { alt: Utils.driverDisplayName(driver), loading: "lazy", decoding: "async" });
-      img.src = url;
-      img.addEventListener("error", () => {
+      Utils.wireImageFallback(img, driver.imageUrl, () => {
         wrap.innerHTML = size === "large" ? Icons.userLarge : Icons.user;
       });
+      img.src = url;
       wrap.appendChild(img);
     } else {
       wrap.innerHTML = size === "large" ? Icons.userLarge : Icons.user;
@@ -282,7 +282,8 @@
    * has no vehicle images at all, so callers can skip the section entirely.
    */
   function buildGallery(driver) {
-    const urls = Utils.splitMulti(driver.vehicleImageUrl).map(Utils.resolveImageUrl).filter(Boolean);
+    const rawUrls = Utils.splitMulti(driver.vehicleImageUrl).filter(Boolean);
+    const urls = rawUrls.map(Utils.resolveImageUrl);
     if (!urls.length) return null;
 
     const mainImg = Utils.el("img", { alt: Utils.driverDisplayName(driver), loading: "lazy", decoding: "async" });
@@ -291,6 +292,7 @@
 
     function show(index) {
       current = (index + urls.length) % urls.length;
+      Utils.wireImageFallback(mainImg, rawUrls[current], () => {});
       mainImg.src = urls[current];
       thumbButtons.forEach((btn, i) => btn.classList.toggle("is-active", i === current));
     }
@@ -314,6 +316,7 @@
     if (urls.length > 1) {
       const thumbs = urls.map((url, i) => {
         const thumbImg = Utils.el("img", { alt: "", loading: "lazy" });
+        Utils.wireImageFallback(thumbImg, rawUrls[i], () => {});
         thumbImg.src = url;
         const btn = Utils.el("button", {
           type: "button", class: "gallery__thumb", "aria-label": (i + 1) + " / " + urls.length,
@@ -722,10 +725,11 @@
       const imgUrl = Utils.resolveImageUrl(m.imageUrl);
       if (imgUrl) {
         const img = Utils.el("img", { alt: "", loading: "lazy" });
-        img.src = imgUrl;
         const imgWrap = Utils.el("div", { class: "chip-card__image" }, [img]);
-        // No image URL, or a broken one -> just fall back to the icon alone.
-        img.addEventListener("error", () => imgWrap.remove());
+        // No image URL, or a genuinely broken one (after a same-host
+        // retry for Drive links) -> fall back to the icon alone.
+        Utils.wireImageFallback(img, m.imageUrl, () => imgWrap.remove());
+        img.src = imgUrl;
         topChildren.push(imgWrap);
       }
       const name = marketName(m);
@@ -756,10 +760,11 @@
     const imgUrl = Utils.resolveImageUrl(v.imageUrl);
     if (imgUrl) {
       const img = Utils.el("img", { alt: "", loading: "lazy" });
-      img.src = imgUrl;
       const imgWrap = Utils.el("div", { class: "chip-card__image" }, [img]);
-      // No image URL, or a broken one -> just fall back to the icon alone (never a broken-image icon).
-      img.addEventListener("error", () => imgWrap.remove());
+      // No image URL, or a genuinely broken one (after a same-host retry
+      // for Drive links) -> fall back to the icon alone (never a broken-image icon).
+      Utils.wireImageFallback(img, v.imageUrl, () => imgWrap.remove());
+      img.src = imgUrl;
       topChildren.push(imgWrap);
     }
     const count = onlineCount || 0;
@@ -1158,6 +1163,7 @@
       const alreadyCached = !!Api.peekDriverDirectory();
       if (!alreadyCached) {
         resultsWrap.innerHTML = "";
+        renderedCards.clear();
         resultsWrap.appendChild(ViewHelpers.loadingBlock(Lang.t("drivers.loading")));
       }
       try {
@@ -1166,14 +1172,26 @@
         renderResults(list, query);
       } catch (err) {
         resultsWrap.innerHTML = "";
+        renderedCards.clear();
         resultsWrap.appendChild(ViewHelpers.errorBlock(Lang.t("error.network"), () => load(query)));
       }
     }
 
+    // driverId -> { node, sig } for whatever's currently on screen, so a
+    // re-run of renderResults() (typing in Search, toggling "Available
+    // only", or simply re-opening this same list) only touches drivers
+    // that are actually new/changed/removed — a driver whose data is
+    // byte-for-byte the same as last time keeps its exact existing card
+    // (photo already loaded and all) instead of being torn down and
+    // rebuilt. With hundreds/thousands of drivers and only a handful
+    // changing, this avoids replacing the whole grid for nothing.
+    let renderedCards = new Map();
+
     function renderResults(list, query) {
-      resultsWrap.innerHTML = "";
       section.querySelector("[data-count]").textContent = Lang.t("drivers.count", { count: list.length });
       if (!list.length) {
+        resultsWrap.innerHTML = "";
+        renderedCards.clear();
         resultsWrap.appendChild(ViewHelpers.emptyBlock({
           message: query ? Lang.t("empty.noSearchResults") : Lang.t("empty.noDrivers"),
           sub: query ? undefined : Lang.t("empty.noDriversSub"),
@@ -1182,8 +1200,40 @@
         }));
         return;
       }
+      let grid = resultsWrap.querySelector(".driver-grid");
+      if (!grid) {
+        resultsWrap.innerHTML = "";
+        grid = Utils.el("div", { class: "driver-grid" });
+        resultsWrap.appendChild(grid);
+        renderedCards.clear();
+      }
       // Api.getDrivers() already returns Active drivers before Inactive ones.
-      resultsWrap.appendChild(Utils.el("div", { class: "driver-grid" }, list.map((d) => driverCard(d, vehicleName(vehicle), crumbTrail))));
+      const nextIds = new Set();
+      list.forEach((d) => {
+        const id = d.driverId;
+        nextIds.add(id);
+        const sig = JSON.stringify(d);
+        const existing = renderedCards.get(id);
+        let node;
+        if (existing && existing.sig === sig) {
+          node = existing.node; // nothing about this driver changed — reuse the exact same card/photo
+        } else {
+          node = driverCard(d, vehicleName(vehicle), crumbTrail);
+          if (existing && existing.node.parentNode) existing.node.parentNode.removeChild(existing.node);
+          renderedCards.set(id, { node, sig });
+        }
+        // appendChild on a node already in the grid just repositions it
+        // (same element instance — its <img> never re-fetches); on a
+        // brand-new node it inserts it. Iterating in list order this way
+        // leaves the grid in the correct final order either way.
+        grid.appendChild(node);
+      });
+      renderedCards.forEach((entry, id) => {
+        if (!nextIds.has(id)) {
+          if (entry.node.parentNode) entry.node.parentNode.removeChild(entry.node);
+          renderedCards.delete(id);
+        }
+      });
     }
 
     const debouncedSearch = Utils.debounce((q) => load(q), 250);

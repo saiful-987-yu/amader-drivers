@@ -61,24 +61,118 @@
     return false;
   };
 
-  /** Escape a string for safe insertion as text (defense in depth; we mostly use textContent). */
-  Utils.escapeHtml = function (str) {
-    const div = document.createElement("div");
-    div.textContent = str == null ? "" : String(str);
-    return div.innerHTML;
-  };
-
-  /** Try to turn a Google Drive share link into a direct-view image URL. */
+  /**
+   * Try to turn a Google Drive share link into a direct-view image URL.
+   * Matches every common share-link shape Drive produces (share dialog
+   * "/file/d/ID/view", "docs.google.com/.../d/ID/...", and any link
+   * carrying "?id=..." or "&id=..."), not just one specific pattern.
+   * Returns the first (most reliable) of driveImageCandidates() below.
+   */
   Utils.resolveImageUrl = function (url) {
     if (!url) return "";
     const trimmed = String(url).trim();
     if (!trimmed) return "";
-    const driveMatch = trimmed.match(/drive\.google\.com\/file\/d\/([^/]+)/) ||
-      trimmed.match(/[?&]id=([^&]+)/);
-    if (trimmed.includes("drive.google.com") && driveMatch && driveMatch[1]) {
-      return `https://lh3.googleusercontent.com/d/${driveMatch[1]}=w600`;
+    const candidates = Utils.driveImageCandidates(trimmed);
+    return candidates.length ? candidates[0] : trimmed;
+  };
+
+  /** Extracts just the Drive file ID from any Drive share-link shape, or "" if this isn't a Drive link. */
+  Utils.driveFileId = function (url) {
+    const trimmed = String(url || "").trim();
+    if (!trimmed || !/drive\.google\.com|docs\.google\.com/.test(trimmed)) return "";
+    const match = trimmed.match(/\/d\/([a-zA-Z0-9_-]{10,})/) || trimmed.match(/[?&]id=([a-zA-Z0-9_-]{10,})/);
+    return match ? match[1] : "";
+  };
+
+  /**
+   * All the direct-image URL formats worth trying for one Google Drive
+   * file, most-reliable first. Google has been tightening hotlinking
+   * over time (the old "drive.google.com/uc?export=view" link is now
+   * widely blocked for embedding on outside sites), so this always
+   * tries the "/thumbnail" endpoint — Google's own embedding/thumbnail
+   * service — first, then falls back through the older formats that
+   * still work for some files/accounts. Empty array if this isn't a
+   * Drive link at all (a plain direct image URL never needs any of this).
+   */
+  Utils.driveImageCandidates = function (url) {
+    const id = Utils.driveFileId(url);
+    if (!id) return [];
+    return [
+      `https://drive.google.com/thumbnail?id=${id}&sz=w1000`,
+      `https://lh3.googleusercontent.com/d/${id}`,
+      `https://drive.google.com/uc?export=view&id=${id}`
+    ];
+  };
+
+  /**
+   * Wires an <img>'s load-failure handling so a real photo is NEVER
+   * permanently given up on early. On a genuine failure (never "still
+   * loading" — the browser only raises "error" once a request has
+   * actually finished failing):
+   *   1. First cycles through every direct-URL format for this Drive
+   *      file (see driveImageCandidates above) immediately, since a
+   *      wrong/blocked format fails fast and the next is worth trying
+   *      right away.
+   *   2. Once every format has failed once, this KEEPS RETRYING the
+   *      same formats with growing gaps (2s, 5s, 10s, 20s, 30s) for
+   *      about a minute — because a large/older photo can genuinely
+   *      just take Google's Drive-preview service a while to generate
+   *      on a device/browser that has never fetched it before (this is
+   *      exactly what was seen: a heavy old photo failed instantly on a
+   *      brand-new phone/browser but worked fine once already visited).
+   *      A photo is only given up on (onFallback, i.e. the placeholder
+   *      icon) after this whole run of retries has genuinely failed.
+   *   3. Stops retrying on its own once the <img> is no longer on
+   *      screen (img.isConnected false — e.g. its card was removed by a
+   *      list re-render), so this never keeps a removed card's photo
+   *      quietly retrying forever in the background.
+   * Uses img.onerror (not addEventListener) so re-wiring the same <img>
+   * for a new photo — as the vehicle-photo gallery does on every
+   * next/prev tap — cleanly replaces the previous handler instead of
+   * stacking listeners.
+   *
+   * VISUAL NOTE: while candidates are being tried/retried, the <img>
+   * has no valid picture yet, and a browser's OWN default behaviour is
+   * to draw a small "broken image" glyph inside it the instant a src
+   * fails — before our retry has even set the next candidate. With
+   * several retries firing close together this glyph flashes in and
+   * out, which reads as the whole placeholder "jumping"/flickering.
+   * To prevent that, the <img> is kept invisible (opacity: 0) for as
+   * long as it has no successfully-loaded photo, and is only faded in
+   * once a "load" event actually fires — so every failed attempt stays
+   * silent (just the card's own background box) and the photo simply
+   * appears, once, the moment it's really ready. This is a pure visual
+   * change; it does not alter which URLs are tried, the retry timing,
+   * or when onFallback (the placeholder icon) is ultimately shown.
+   */
+  Utils.wireImageFallback = function (img, originalUrl, onFallback) {
+    const candidates = Utils.driveImageCandidates(originalUrl);
+    const urls = candidates.length ? candidates : [originalUrl];
+    const laterDelaysMs = [2000, 5000, 10000, 20000, 30000];
+    let attempt = 1; // urls[0] is whatever the caller already set as img.src before wiring this up
+
+    img.style.opacity = "0";
+    img.style.transition = "opacity 0.25s ease";
+    img.onload = function () {
+      img.style.opacity = "1";
+    };
+
+    function retry() {
+      if (!img.isConnected) return; // card no longer on screen — nothing to update, stop here
+      const totalAttempts = urls.length + laterDelaysMs.length;
+      if (attempt >= totalAttempts) { onFallback(); return; }
+      const isFirstRound = attempt < urls.length;
+      const url = urls[attempt % urls.length];
+      const delay = isFirstRound ? 0 : laterDelaysMs[attempt - urls.length];
+      attempt++;
+      if (delay === 0) {
+        img.src = url;
+      } else {
+        setTimeout(() => { if (img.isConnected) img.src = url; }, delay);
+      }
     }
-    return trimmed;
+
+    img.onerror = retry;
   };
 
   /** Simple UID for client-side temporary keys. */
