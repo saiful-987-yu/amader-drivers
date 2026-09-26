@@ -1,6 +1,6 @@
 /**
 * ============================================================
-* AMADER DRIVERS — GOOGLE APPS SCRIPT BACKEND CODE
+* AMADER DRIVERS — GOOGLE APPS SCRIPT BACKEND
 * ============================================================
 *
 * This script is the ONLY thing that ever talks to your Google
