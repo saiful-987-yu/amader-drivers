@@ -1,0 +1,28 @@
+{
+  "name": "Amader Drivers - Find Local Drivers & Doctors",
+  "short_name": "AmaderDriver",
+  "description": "Find local CNG, auto, bike drivers and doctors near you. Amader Drivers (আমাদের ড্রাইভার) works offline too.",
+  "id": "./",
+  "start_url": "./#/",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#F4F7F5",
+  "theme_color": "#1F6E4A",
+  "lang": "en",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "assets/brand/pwa-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/brand/pwa-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

@@ -38,6 +38,15 @@
   <link rel="icon" type="image/png" sizes="32x32" href="assets/brand/favicon-32.png" />
   <link rel="icon" type="image/png" sizes="16x16" href="assets/brand/favicon-16.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/brand/apple-touch-icon.png" />
+
+  <!-- PWA: manifest + iOS install support (Safari never reads manifest.json
+       for these three, so they're repeated here even though the manifest
+       already has an icon/theme-color/name of its own). -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="AmaderDriver" />
+  <meta name="mobile-web-app-capable" content="yes" />
   
   <!-- SEO Regional & Language Tags -->
   <meta name="geo.region" content="BD-13">
@@ -75,6 +84,7 @@
   <link rel="stylesheet" href="css/themes.css" />
   <link rel="stylesheet" href="css/style.css" />
   <link rel="stylesheet" href="css/responsive.css" />
+  <link rel="stylesheet" href="css/pwa.css" />
 </head>
 <body>
   <a class="skip-link" href="#app" data-i18n="a11y.skipToContent">Skip to content</a>
@@ -147,6 +157,10 @@
 
   <div class="toast-region" id="toast-region" aria-live="polite"></div>
 
+  <!-- PWA install banner — built/shown/hidden entirely by js/pwa-install.js.
+       Empty here; hidden by default via CSS until JS has something to show. -->
+  <div class="pwa-install-banner" id="pwa-install-banner" hidden></div>
+
   <!-- Public configuration (no secrets — see config/config.example.js) -->
   <script src="config/config.js"></script>
 
@@ -159,6 +173,7 @@
   <script src="js/auth.js"></script>
   <script src="js/search.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/pwa-install.js"></script>
 
   <!-- Screens (each registers its own route(s) with the router) -->
   <script src="js/drivers.js"></script>
