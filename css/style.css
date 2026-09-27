@@ -159,21 +159,98 @@ a:hover { text-decoration: underline; }
 
 .menu-toggle { display: inline-flex; }
 
+/* Floating "popup" panel — visually separated from the header and from
+   the page edges (not full-width/edge-to-edge anymore), with a small
+   speech-bubble tail pointing up at the hamburger button that opened
+   it, so it reads as its own popup rather than blending into the page. */
 .mobile-nav {
   display: none;
-  border-top: 1px solid var(--color-line);
-  background: var(--color-surface);
+  position: fixed;
+  top: calc(var(--header-height) + var(--space-3));
+  left: var(--space-4);
+  right: var(--space-4);
+  z-index: 65;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-float);
 }
-.mobile-nav.is-open { display: block; }
-.mobile-nav ul { display: flex; flex-direction: column; padding: var(--space-2) var(--space-4) var(--space-4); gap: var(--space-1); }
+.mobile-nav.is-open { display: block; animation: mobile-nav-in var(--duration-base) var(--ease); }
+@keyframes mobile-nav-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+/* The tail: a small rotated square, half tucked behind the card's own
+   top edge, sharing the card's background + border so the two visible
+   edges line up seamlessly into one triangular point. Positioned near
+   the card's right side, roughly under the hamburger button. */
+.mobile-nav::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  right: 22px;
+  width: 14px;
+  height: 14px;
+  background: var(--color-surface-raised);
+  border-left: 1px solid var(--color-line);
+  border-top: 1px solid var(--color-line);
+  border-radius: 2px 0 0 0;
+  transform: rotate(45deg);
+}
+.mobile-nav ul {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  max-height: calc(100vh - var(--header-height) - (var(--space-3) * 2));
+  overflow-y: auto;
+}
+.mobile-nav__full { grid-column: 1 / -1; }
 .mobile-nav a {
-  display: block;
-  padding: var(--space-3) var(--space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
   color: var(--color-ink);
   font-weight: 500;
   border-radius: var(--radius-sm);
+  border: 1px solid var(--color-line);
 }
 .mobile-nav a:hover { background: var(--color-primary-soft); text-decoration: none; }
+.mobile-nav__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  color: var(--color-primary);
+}
+.mobile-nav__icon svg { width: 20px; height: 20px; }
+.mobile-nav__avatar {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  background: var(--color-primary-soft);
+}
+.mobile-nav__avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--color-primary);
+}
+.mobile-nav__avatar-fallback svg { width: 16px; height: 16px; }
+.mobile-nav__avatar img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 
 /* ------------------------------------------------------------
    BUTTONS
@@ -743,18 +820,28 @@ a:hover { text-decoration: underline; }
 /* ------------------------------------------------------------
    HOW IT WORKS
    ------------------------------------------------------------ */
-.steps { display: grid; grid-template-columns: 1fr; gap: var(--space-4); }
+/* Staggered layout: step 1 hugs the left, step 2 sits centered, step 3
+   hugs the right — reads as a left-to-right progression instead of
+   three identical stacked blocks. Each step also gets its own accent
+   colour (left border + number badge) for a little visual rhythm. */
+.steps { display: flex; flex-direction: column; gap: var(--space-4); }
 .step-card {
+  width: 76%;
   background: var(--color-surface);
   border: 1px solid var(--color-line);
+  border-left: 4px solid var(--step-accent, var(--color-primary));
   border-radius: var(--radius-md);
   padding: var(--space-4);
+  box-shadow: var(--shadow-float);
 }
+.step-card--1 { align-self: flex-start; --step-accent: var(--color-primary); }
+.step-card--2 { align-self: center; --step-accent: var(--color-accent); }
+.step-card--3 { align-self: flex-end; --step-accent: var(--color-primary-dark); }
 .step-card__num {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: var(--color-primary);
+  background: var(--step-accent, var(--color-primary));
   color: var(--color-on-primary);
   display: flex;
   align-items: center;
@@ -830,8 +917,8 @@ a:hover { text-decoration: underline; }
 .brand__mark--sm { width: 24px; height: 24px; }
 .brand__mark--sm svg { width: 15px; height: 15px; }
 
-.footer-nav { display: flex; gap: var(--space-4); flex-wrap: wrap; }
-.footer-nav a { color: var(--color-ink-soft); font-size: var(--font-size-sm); font-weight: 500; }
+.footer-nav { display: flex; gap: var(--space-3); flex-wrap: wrap; }
+.footer-nav a { color: var(--color-ink-soft); font-size: var(--font-size-xs); font-weight: 500; }
 .footer-nav a:hover { color: var(--color-primary); text-decoration: none; }
 
 .lang-toggle--sm button { padding: 4px var(--space-2); font-size: 0.7rem; }
