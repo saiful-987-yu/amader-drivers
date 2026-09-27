@@ -118,11 +118,12 @@
 
     <nav class="mobile-nav" id="mobile-nav" aria-label="Mobile">
       <ul>
-        <li><a href="#/" data-i18n="nav.home">Home</a></li>
-        <li><a href="#/markets" data-i18n="nav.drivers">Drivers</a></li>
-        <li><a href="#/registration" data-i18n="nav.register">Register</a></li>
-        <li><a href="#/login" data-auth-link="loggedOut" data-i18n="nav.login">Login</a></li>
-        <li><a href="#/profile" data-auth-link="loggedIn" data-i18n="nav.profile">Profile</a></li>
+        <li><a href="#/"><span class="mobile-nav__icon" aria-hidden="true"></span><span data-i18n="nav.home">Home</span></a></li>
+        <li><a href="#/registration"><span class="mobile-nav__icon" aria-hidden="true"></span><span data-i18n="nav.register">Register</span></a></li>
+        <li><a href="#/markets"><span class="mobile-nav__icon" aria-hidden="true"></span><span data-i18n="nav.drivers">Drivers</span></a></li>
+        <li><a href="#/doctor"><span class="mobile-nav__icon" aria-hidden="true"></span><span data-i18n="nav.doctor">Doctor</span></a></li>
+        <li class="mobile-nav__full"><a href="#/login" data-auth-link="loggedOut"><span class="mobile-nav__icon" aria-hidden="true"></span><span data-i18n="nav.login">Login</span></a></li>
+        <li class="mobile-nav__full"><a href="#/profile" data-auth-link="loggedIn" id="mobile-nav-profile"><span class="mobile-nav__icon" aria-hidden="true"></span><span data-i18n="nav.profile">Profile</span></a></li>
       </ul>
     </nav>
   </header>
@@ -138,6 +139,7 @@
         </a>
         <nav class="footer-nav" aria-label="Footer">
           <a href="#/markets" data-i18n="nav.drivers">Drivers</a>
+          <a href="#/doctor" data-i18n="nav.doctor">Doctor</a>
           <a href="#/registration" data-i18n="nav.register">Register</a>
           <a href="#/login" data-i18n="nav.login">Login</a>
         </nav>
@@ -203,9 +205,24 @@
       document.addEventListener("nobi:themechange", paintThemeIcon);
       var menuIcon = document.getElementById("menu-toggle");
       menuIcon.innerHTML = Icons.menu;
-      menuIcon.addEventListener("click", function () {
-        var open = document.getElementById("mobile-nav").classList.contains("is-open");
-        menuIcon.innerHTML = open ? Icons.menu : Icons.close;
+
+      // Mobile menu item icons — matched by href so icons.js stays the
+      // single source of truth for the actual SVGs. The Profile item's
+      // icon is a fixed starting point only; app.js's updateAuthNav()
+      // replaces this whole link's content with an avatar + name once a
+      // driver is actually logged in.
+      var mobileNavIcons = {
+        "#/": Icons.home,
+        "#/registration": Icons.formPlus,
+        "#/markets": Icons.car,
+        "#/doctor": Icons.doctor,
+        "#/login": Icons.user,
+        "#/profile": Icons.user
+      };
+      document.querySelectorAll(".mobile-nav a").forEach(function (a) {
+        var iconSpan = a.querySelector(".mobile-nav__icon");
+        var svg = mobileNavIcons[a.getAttribute("href")];
+        if (iconSpan && svg) iconSpan.innerHTML = svg;
       });
       var yearEl = document.querySelector("[data-year]");
       if (yearEl) yearEl.textContent = new Date().getFullYear();
