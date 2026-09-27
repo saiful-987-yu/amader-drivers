@@ -33,7 +33,7 @@
 
   const STORAGE_DISMISS_INSTALL = "nobi.pwa.installDismissedAt";
   const STORAGE_DISMISS_IOS = "nobi.pwa.iosDismissedAt";
-  const DISMISS_COOLDOWN_DAYS = 14;
+  const DISMISS_COOLDOWN_DAYS = 1;
 
   const banner = document.getElementById("pwa-install-banner");
   if (!banner) return;

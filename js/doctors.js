@@ -79,7 +79,6 @@
     if (url) {
       const img = Utils.el("img", { alt: Utils.driverDisplayName(doctor), loading: "lazy", decoding: "async" });
       Utils.wireImageFallback(img, doctor.imageUrl, () => { wrap.innerHTML = size === "large" ? Icons.userLarge : Icons.user; });
-      img.src = url;
       wrap.appendChild(img);
     } else {
       wrap.innerHTML = size === "large" ? Icons.userLarge : Icons.user;
@@ -176,7 +175,8 @@
 
   /** Same thumbnail + main-image gallery pattern as the driver's Vehicle Photos, sourced from "Doctor Sample Photos". */
   function buildGallery(doctor) {
-    const urls = Utils.splitMulti(doctor.sampleImageUrl).map(Utils.resolveImageUrl).filter(Boolean);
+    const rawUrls = Utils.splitMulti(doctor.sampleImageUrl).filter(Boolean);
+    const urls = rawUrls.map(Utils.resolveImageUrl);
     if (!urls.length) return null;
 
     const mainImg = Utils.el("img", { alt: Utils.driverDisplayName(doctor), loading: "lazy", decoding: "async" });
@@ -185,7 +185,7 @@
 
     function show(index) {
       current = (index + urls.length) % urls.length;
-      mainImg.src = urls[current];
+      Utils.wireImageFallback(mainImg, rawUrls[current], () => {});
       thumbButtons.forEach((btn, i) => btn.classList.toggle("is-active", i === current));
     }
 
@@ -208,7 +208,7 @@
     if (urls.length > 1) {
       const thumbs = urls.map((url, i) => {
         const thumbImg = Utils.el("img", { alt: "", loading: "lazy" });
-        thumbImg.src = url;
+        Utils.wireImageFallback(thumbImg, rawUrls[i], () => {});
         const btn = Utils.el("button", {
           type: "button", class: "gallery__thumb", "aria-label": (i + 1) + " / " + urls.length,
           onClick: () => show(i)

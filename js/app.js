@@ -270,11 +270,47 @@
   // ---------------------------------------------------------
   // HEADER / NAV WIRING
   // ---------------------------------------------------------
+  let mobileNavScrollGuardActive = false;
+
   function closeMobileMenu() {
     const nav = Utils.qs("#mobile-nav");
     const toggle = Utils.qs("#menu-toggle");
     if (nav) nav.classList.remove("is-open");
-    if (toggle) toggle.setAttribute("aria-expanded", "false");
+    if (toggle) {
+      toggle.setAttribute("aria-expanded", "false");
+      toggle.innerHTML = Icons.menu;
+    }
+    if (mobileNavScrollGuardActive) {
+      window.removeEventListener("scroll", closeMobileMenu);
+      mobileNavScrollGuardActive = false;
+    }
+    document.removeEventListener("mousedown", onOutsideMenuClick);
+  }
+
+  function openMobileMenu() {
+    const nav = Utils.qs("#mobile-nav");
+    const toggle = Utils.qs("#menu-toggle");
+    if (nav) nav.classList.add("is-open");
+    if (toggle) {
+      toggle.setAttribute("aria-expanded", "true");
+      toggle.innerHTML = Icons.close;
+    }
+    // Passive + only bound while open: closes the menu the instant the
+    // page scrolls (any direction, any amount) instead of leaving it
+    // floating over content the user has scrolled away from.
+    window.addEventListener("scroll", closeMobileMenu, { passive: true });
+    mobileNavScrollGuardActive = true;
+    // Registered on the NEXT tick so the very click that opened the menu
+    // (a mousedown on the hamburger button itself) doesn't immediately
+    // count as an "outside" click and instantly close it again.
+    setTimeout(() => document.addEventListener("mousedown", onOutsideMenuClick), 0);
+  }
+
+  function onOutsideMenuClick(e) {
+    const nav = Utils.qs("#mobile-nav");
+    const toggle = Utils.qs("#menu-toggle");
+    if (nav && (nav.contains(e.target) || (toggle && toggle.contains(e.target)))) return;
+    closeMobileMenu();
   }
 
   function wireHeader() {
@@ -282,8 +318,8 @@
     const mobileNav = Utils.qs("#mobile-nav");
     if (menuToggle && mobileNav) {
       menuToggle.addEventListener("click", () => {
-        const isOpen = mobileNav.classList.toggle("is-open");
-        menuToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+        if (mobileNav.classList.contains("is-open")) closeMobileMenu();
+        else openMobileMenu();
       });
     }
 
@@ -307,6 +343,39 @@
       const shouldShow = showWhen === "loggedIn" ? loggedIn : !loggedIn;
       link.style.display = shouldShow ? "" : "none";
     });
+    paintMobileNavProfile(loggedIn);
+  }
+
+  /**
+   * Logged-out: the Profile menu item is hidden anyway (Login shows
+   * instead), so it's left at its default icon+"Profile" text. Logged
+   * in: replaced with the driver's own round photo + name, so the menu
+   * item is instantly recognizable as "you" rather than a generic label
+   * — same cache-then-refresh pattern used elsewhere (Auth.peekProfile
+   * paints instantly from whatever was last seen, then the real
+   * Auth.getProfile() call quietly confirms/updates it).
+   */
+  function paintMobileNavProfile(loggedIn) {
+    const link = Utils.qs("#mobile-nav-profile");
+    if (!link || !window.Auth) return;
+    if (!loggedIn) return;
+    const paint = (driver) => {
+      if (!driver) return;
+      link.innerHTML = "";
+      const avatar = Utils.el("span", { class: "mobile-nav__icon mobile-nav__avatar", "aria-hidden": "true" }, [
+        Utils.el("span", { class: "mobile-nav__avatar-fallback", html: Icons.user })
+      ]);
+      const url = Utils.resolveImageUrl(driver.imageUrl);
+      if (url) {
+        const img = Utils.el("img", { alt: "" });
+        Utils.wireImageFallback(img, driver.imageUrl, () => {}); // failure just leaves the user-icon fallback showing underneath
+        avatar.appendChild(img);
+      }
+      link.appendChild(avatar);
+      link.appendChild(Utils.el("span", { text: Utils.driverDisplayName(driver) }));
+    };
+    paint(window.Auth.peekProfile && window.Auth.peekProfile());
+    window.Auth.getProfile().then(paint).catch(() => {});
   }
 
   // ---------------------------------------------------------
@@ -335,9 +404,17 @@
     }
   });
 
-  document.addEventListener("nobi:languagechange", () => {
+  document.addEventListener("nobi:languagechange", async () => {
     // Re-render current view so dynamic content (not just static
-    // [data-i18n] nodes) picks up the new language immediately.
-    renderRoute();
+    // [data-i18n] nodes) picks up the new language immediately. This
+    // rebuilds #app from scratch, which — being a fresh DOM — would
+    // otherwise silently reset the page to the very top. Capturing the
+    // scroll position first and restoring it right after keeps whoever
+    // was scrolled deep into a long list (Doctors, Drivers, Profile...)
+    // exactly where they were, in the same list, same spot.
+    const scrollY = window.scrollY;
+    await renderRoute();
+    window.scrollTo(0, scrollY);
+    updateAuthNav(); // re-paints the mobile-nav profile name in the new language
   });
 })(window, document, window.Utils, window.Lang, window.Theme, window.Icons);

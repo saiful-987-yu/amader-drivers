@@ -105,15 +105,110 @@
   };
 
   /**
+   * Local Drive-photo cache (IndexedDB), separate from the browser's own
+   * HTTP cache — this is what makes a driver/vehicle/doctor photo survive
+   * things like a phone's "Clean/boost" app clearing browser cache,
+   * since IndexedDB is treated as this site's own app data, not cache.
+   *
+   * DESIGN — kept 100% additive on purpose, after the earlier lesson
+   * that any image-loading change that can ITSELF block a photo from
+   * showing is too risky here:
+   *   - Reading a cached photo (get) never touches the network at all.
+   *   - Writing (put) only ever happens quietly in the background,
+   *     AFTER a photo has already displayed successfully the normal way
+   *     — so a failed/blocked write can never affect what's on screen.
+   *   - Whether writing even works depends on Google's Drive/thumbnail
+   *     hosts allowing a cross-origin fetch() read (CORS) — some do,
+   *     some may not. If not, put() below simply never succeeds and
+   *     the site behaves exactly as it does today (ordinary browser
+   *     HTTP cache only) — there is no failure mode that makes things
+   *     worse than that.
+   */
+  Utils.photoCache = (function () {
+    const DB_NAME = "amader-photo-cache";
+    const DB_VERSION = 1;
+    const STORE = "photos";
+    const MAX_BLOB_BYTES = 8 * 1024 * 1024; // safety cap — real driver/vehicle/doctor photos are always far smaller
+    let dbPromise = null;
+
+    function openDb() {
+      if (!window.indexedDB) return Promise.resolve(null);
+      if (dbPromise) return dbPromise;
+      dbPromise = new Promise((resolve) => {
+        let req;
+        try {
+          req = window.indexedDB.open(DB_NAME, DB_VERSION);
+        } catch (e) { resolve(null); return; }
+        req.onupgradeneeded = () => {
+          try {
+            if (!req.result.objectStoreNames.contains(STORE)) {
+              req.result.createObjectStore(STORE, { keyPath: "url" });
+            }
+          } catch (e) { /* ignore — worst case, get/put below just fail closed */ }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => resolve(null);
+      });
+      return dbPromise;
+    }
+
+    /** Resolves the cached Blob for this photo's original (sheet) URL, or null. Never rejects, never touches the network. */
+    function get(url) {
+      return openDb().then((db) => {
+        if (!db) return null;
+        return new Promise((resolve) => {
+          try {
+            const req = db.transaction(STORE, "readonly").objectStore(STORE).get(url);
+            req.onsuccess = () => resolve(req.result ? req.result.blob : null);
+            req.onerror = () => resolve(null);
+          } catch (e) { resolve(null); }
+        });
+      }).catch(() => null);
+    }
+
+    /** Best-effort save; silently does nothing on any failure (quota, no IndexedDB support, etc.). */
+    function put(url, blob) {
+      if (!blob || !blob.size || blob.size > MAX_BLOB_BYTES) return Promise.resolve();
+      return openDb().then((db) => {
+        if (!db) return;
+        return new Promise((resolve) => {
+          try {
+            const tx = db.transaction(STORE, "readwrite");
+            tx.objectStore(STORE).put({ url, blob, savedAt: Date.now() });
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => resolve();
+          } catch (e) { resolve(); }
+        });
+      }).catch(() => {});
+    }
+
+    return { get, put };
+  })();
+
+  /**
+   * Once a cross-origin fetch() of a Drive photo fails (almost always
+   * because that host doesn't send CORS headers allowing script to read
+   * the bytes), it will keep failing for every other Drive photo too —
+   * so this remembers that after the first failure, instead of spending
+   * a second, doomed network request on every single photo forever.
+   * Reset to false the moment any attempt actually succeeds.
+   */
+  const CORS_BACKFILL_BLOCKED_KEY = "nobi.photoCache.corsBlocked";
+
+  /**
    * Wires an <img>'s load-failure handling so a real photo is NEVER
    * permanently given up on early. On a genuine failure (never "still
    * loading" — the browser only raises "error" once a request has
    * actually finished failing):
-   *   1. First cycles through every direct-URL format for this Drive
-   *      file (see driveImageCandidates above) immediately, since a
-   *      wrong/blocked format fails fast and the next is worth trying
-   *      right away.
-   *   2. Once every format has failed once, this KEEPS RETRYING the
+   *   1. First checks the local photo cache (IndexedDB, see
+   *      Utils.photoCache above) — a hit shows the photo instantly with
+   *      no network at all, and survives things a phone's cache-cleaner
+   *      would otherwise wipe.
+   *   2. On a cache miss, cycles through every direct-URL format for
+   *      this Drive file (see driveImageCandidates above) immediately,
+   *      since a wrong/blocked format fails fast and the next is worth
+   *      trying right away.
+   *   3. Once every format has failed once, this KEEPS RETRYING the
    *      same formats with growing gaps (2s, 5s, 10s, 20s, 30s) for
    *      about a minute — because a large/older photo can genuinely
    *      just take Google's Drive-preview service a while to generate
@@ -122,14 +217,18 @@
    *      brand-new phone/browser but worked fine once already visited).
    *      A photo is only given up on (onFallback, i.e. the placeholder
    *      icon) after this whole run of retries has genuinely failed.
-   *   3. Stops retrying on its own once the <img> is no longer on
+   *   4. The moment a photo displays successfully over the network (not
+   *      from the local cache), a background attempt quietly tries to
+   *      save its real bytes into the local cache for next time — see
+   *      Utils.photoCache's own comment for why this can never affect
+   *      what's on screen even if it fails.
+   *   5. Stops retrying on its own once the <img> is no longer on
    *      screen (img.isConnected false — e.g. its card was removed by a
    *      list re-render), so this never keeps a removed card's photo
    *      quietly retrying forever in the background.
-   * Uses img.onerror (not addEventListener) so re-wiring the same <img>
-   * for a new photo — as the vehicle-photo gallery does on every
-   * next/prev tap — cleanly replaces the previous handler instead of
-   * stacking listeners.
+   * This function now sets img.src itself (callers should NOT set it
+   * beforehand) so it can check the local cache before ever touching
+   * the network.
    *
    * VISUAL NOTE: while candidates are being tried/retried, the <img>
    * has no valid picture yet, and a browser's OWN default behaviour is
@@ -141,21 +240,32 @@
    * long as it has no successfully-loaded photo, and is only faded in
    * once a "load" event actually fires — so every failed attempt stays
    * silent (just the card's own background box) and the photo simply
-   * appears, once, the moment it's really ready. This is a pure visual
-   * change; it does not alter which URLs are tried, the retry timing,
-   * or when onFallback (the placeholder icon) is ultimately shown.
+   * appears, once, the moment it's really ready.
    */
   Utils.wireImageFallback = function (img, originalUrl, onFallback) {
     const candidates = Utils.driveImageCandidates(originalUrl);
     const urls = candidates.length ? candidates : [originalUrl];
     const laterDelaysMs = [2000, 5000, 10000, 20000, 30000];
-    let attempt = 1; // urls[0] is whatever the caller already set as img.src before wiring this up
+    let attempt = 1; // urls[0] is the first one this function itself sets as img.src below
+    let servedFromCache = false;
 
     img.style.opacity = "0";
     img.style.transition = "opacity 0.25s ease";
     img.onload = function () {
       img.style.opacity = "1";
+      if (servedFromCache) return; // already-cached bytes — nothing new to save
+      const loadedUrl = img.src;
+      if (Utils.storage.get(CORS_BACKFILL_BLOCKED_KEY, false)) return;
+      fetch(loadedUrl, { mode: "cors" })
+        .then((res) => (res && res.ok ? res.blob() : null))
+        .then((blob) => { if (blob) Utils.photoCache.put(originalUrl, blob); })
+        .catch(() => { Utils.storage.set(CORS_BACKFILL_BLOCKED_KEY, true); });
     };
+
+    function startNetworkRetryChain() {
+      img.onerror = retry;
+      img.src = urls[0];
+    }
 
     function retry() {
       if (!img.isConnected) return; // card no longer on screen — nothing to update, stop here
@@ -172,7 +282,16 @@
       }
     }
 
-    img.onerror = retry;
+    Utils.photoCache.get(originalUrl).then((blob) => {
+      if (!img.isConnected) return; // card already gone by the time IndexedDB answered
+      if (blob) {
+        servedFromCache = true;
+        img.onerror = startNetworkRetryChain; // extremely unlikely (corrupted entry) — fall back to the normal network path
+        img.src = URL.createObjectURL(blob);
+      } else {
+        startNetworkRetryChain();
+      }
+    });
   };
 
   /** Simple UID for client-side temporary keys. */

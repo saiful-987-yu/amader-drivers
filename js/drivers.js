@@ -168,7 +168,6 @@
       Utils.wireImageFallback(img, driver.imageUrl, () => {
         wrap.innerHTML = size === "large" ? Icons.userLarge : Icons.user;
       });
-      img.src = url;
       wrap.appendChild(img);
     } else {
       wrap.innerHTML = size === "large" ? Icons.userLarge : Icons.user;
@@ -293,7 +292,6 @@
     function show(index) {
       current = (index + urls.length) % urls.length;
       Utils.wireImageFallback(mainImg, rawUrls[current], () => {});
-      mainImg.src = urls[current];
       thumbButtons.forEach((btn, i) => btn.classList.toggle("is-active", i === current));
     }
 
@@ -317,7 +315,6 @@
       const thumbs = urls.map((url, i) => {
         const thumbImg = Utils.el("img", { alt: "", loading: "lazy" });
         Utils.wireImageFallback(thumbImg, rawUrls[i], () => {});
-        thumbImg.src = url;
         const btn = Utils.el("button", {
           type: "button", class: "gallery__thumb", "aria-label": (i + 1) + " / " + urls.length,
           onClick: () => show(i)
@@ -729,7 +726,6 @@
         // No image URL, or a genuinely broken one (after a same-host
         // retry for Drive links) -> fall back to the icon alone.
         Utils.wireImageFallback(img, m.imageUrl, () => imgWrap.remove());
-        img.src = imgUrl;
         topChildren.push(imgWrap);
       }
       const name = marketName(m);
@@ -764,7 +760,6 @@
       // No image URL, or a genuinely broken one (after a same-host retry
       // for Drive links) -> fall back to the icon alone (never a broken-image icon).
       Utils.wireImageFallback(img, v.imageUrl, () => imgWrap.remove());
-      img.src = imgUrl;
       topChildren.push(imgWrap);
     }
     const count = onlineCount || 0;
@@ -824,7 +819,7 @@
     app.appendChild(Utils.el("section", { class: "section container" }, [
       Utils.el("div", { class: "section-head" }, [Utils.el("h2", { text: Lang.t("howItWorks.heading") })]),
       Utils.el("div", { class: "steps" }, [1, 2, 3].map((n) =>
-        Utils.el("div", { class: "step-card" }, [
+        Utils.el("div", { class: "step-card step-card--" + n }, [
           Utils.el("div", { class: "step-card__num", text: String(n) }),
           Utils.el("h3", { text: Lang.t(`howItWorks.step${n}.title`) }),
           Utils.el("p", { text: Lang.t(`howItWorks.step${n}.text`) })
@@ -870,7 +865,7 @@
 
   /**
    * Homepage banner — 3 slides (home-banner-01/02/03), auto-advancing
-   * every 3s, swipeable. Slide 1 is dynamic: it always shows the
+   * every 5s, swipeable. Slide 1 is dynamic: it always shows the
    * automatic site headline/text (translated live) on a solid
    * background — the SAME default background as the Doctor/
    * Registration sections — and only swaps that solid background for
@@ -878,6 +873,20 @@
    * Slides 2/3 use their own configured image paths, falling back to a
    * clean placeholder (never a broken-image icon) until a real image
    * is added.
+   *
+   * DIRECTION: "forward" (auto-advance, or a left-swipe) always slides
+   * the new banner in from the right; "backward" (a right-swipe) always
+   * slides the new banner in from the left — including across the
+   * wrap-around (slide 3 -> slide 1 is still a forward move, so it
+   * still comes from the right, the same as slide 1 -> 2 and 2 -> 3).
+   * This is done with a classic clone-at-both-ends filmstrip: the track
+   * actually holds [clone-of-last, slide1, slide2, slide3,
+   * clone-of-first]. Animating past the real slides onto a clone still
+   * looks correct (the clone is visually identical), and the moment
+   * that animation finishes, the track jumps back to the matching REAL
+   * slide with transitions briefly turned off — invisible to the eye,
+   * but resets the counter so the next move has clones to travel to
+   * again in either direction, forever.
    */
   function buildBanner() {
     const bannerImages = window.NOBI_CONFIG.BANNER_IMAGES || {};
@@ -886,9 +895,16 @@
       { src: bannerImages.slide2 },
       { src: bannerImages.slide3 }
     ];
+    const realCount = slideDefs.length;
+    const frameCount = realCount + 2; // + leading clone-of-last + trailing clone-of-first
+    const stepPercent = 100 / frameCount;
 
     const track = Utils.el("div", { class: "banner__track" });
+    track.style.width = (frameCount * 100) + "%";
+    track.appendChild(buildSlide(slideDefs[realCount - 1])); // leading clone
     slideDefs.forEach((def) => track.appendChild(buildSlide(def)));
+    track.appendChild(buildSlide(slideDefs[0])); // trailing clone
+    Utils.qsa(".banner__slide", track).forEach((el) => { el.style.width = stepPercent + "%"; });
 
     const dots = slideDefs.map((_, i) =>
       Utils.el("button", { type: "button", class: "banner__dot" + (i === 0 ? " is-active" : ""), "aria-label": "Slide " + (i + 1) })
@@ -898,31 +914,61 @@
     const viewport = Utils.el("div", { class: "banner__viewport" }, [track]);
     const root = Utils.el("div", { class: "banner" }, [Utils.el("div", { class: "container" }, [viewport, dotsRow])]);
 
-    let index = 0;
+    let real = 0; // logical slide, 0..realCount-1 — this is what the dots reflect
+    let frame = 1; // actual track position, 0..frameCount-1 (1 == real slide 0, since frame 0 is the leading clone)
     let intervalId = null;
 
-    function paint() {
-      track.style.transform = "translateX(-" + (index * 33.3333) + "%)";
-      dots.forEach((d, i) => d.classList.toggle("is-active", i === index));
+    function paint(animate) {
+      track.style.transition = animate ? "" : "none";
+      track.style.transform = "translateX(-" + (frame * stepPercent) + "%)";
+      dots.forEach((d, i) => d.classList.toggle("is-active", i === real));
+      if (!animate) {
+        void track.offsetHeight; // force a reflow so the transition re-enables cleanly for the NEXT move
+        track.style.transition = "";
+      }
     }
-    function goTo(i) {
-      index = (i + slideDefs.length) % slideDefs.length;
-      paint();
+
+    // Direct jump (dot click): goes straight to that real slide. Only
+    // the timer/swipe moves below need the clone illusion, since those
+    // are always exactly one step and can land on a clone frame.
+    function goToIndex(i) {
+      real = (i + realCount) % realCount;
+      frame = real + 1;
+      paint(true);
     }
+
+    // delta is always +1 (forward/next) or -1 (backward/previous).
+    function step(delta) {
+      real = (real + delta + realCount) % realCount;
+      frame += delta;
+      paint(true);
+    }
+
+    track.addEventListener("transitionend", () => {
+      // Landed on either boundary clone frame (0 = clone-of-last,
+      // frameCount-1 = clone-of-first) — silently re-point the track at
+      // the matching REAL slide's frame (transitions off for this one
+      // jump only), so there are always clones to travel to next time,
+      // in either direction, forever.
+      if (frame === 0 || frame === frameCount - 1) { frame = real + 1; paint(false); }
+    });
+
     function startTimer() {
       if (intervalId) clearInterval(intervalId);
       intervalId = setInterval(() => {
         // If this banner is no longer on screen (user navigated away),
         // stop advancing it instead of leaking an interval forever.
         if (!document.body.contains(root)) { clearInterval(intervalId); return; }
-        goTo(index + 1);
-      }, 3000);
+        step(1);
+      }, 5000);
     }
 
-    dots.forEach((d, i) => d.addEventListener("click", () => { goTo(i); startTimer(); }));
+    dots.forEach((d, i) => d.addEventListener("click", () => { goToIndex(i); startTimer(); }));
 
-    // Touch/swipe: left = next, right = previous, then restart the timer
-    // (never stacking a duplicate one).
+    // Touch/swipe: dragging left (finger moves left) = next = forward =
+    // always in from the right; dragging right = previous = backward =
+    // always in from the left. Then restart the timer (never stacking
+    // a duplicate one).
     let touchStartX = null;
     viewport.addEventListener("touchstart", (e) => { touchStartX = e.touches[0].clientX; }, { passive: true });
     viewport.addEventListener("touchend", (e) => {
@@ -930,11 +976,11 @@
       const dx = e.changedTouches[0].clientX - touchStartX;
       touchStartX = null;
       if (Math.abs(dx) < 30) return; // ignore tiny/accidental movements
-      goTo(index + (dx < 0 ? 1 : -1));
+      step(dx < 0 ? 1 : -1);
       startTimer();
     }, { passive: true });
 
-    paint();
+    paint(false);
     startTimer();
     return root;
   }
