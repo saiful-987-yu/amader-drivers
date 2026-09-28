@@ -479,7 +479,11 @@ a:hover { text-decoration: underline; }
    ------------------------------------------------------------ */
 .chip-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  /* minmax(0, 1fr): columns stay exactly equal — a long name can no longer
+     stretch one column. grid-auto-rows: 1fr: every card gets the height of
+     the tallest one, so all bazar / vehicle cards stay the same size. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
   gap: var(--space-3);
 }
 .chip-card {
@@ -511,9 +515,17 @@ a:hover { text-decoration: underline; }
 }
 .chip-card__icon svg { width: 24px; height: 24px; }
 .chip-card__name { display: flex; align-items: center; gap: 4px; width: 100%; font-weight: 600; font-size: var(--font-size-md); }
-/* Keeps the name on one line even with the speak button beside it, so
-   a long bazar/vehicle name never wraps and grows the card taller. */
-.chip-card__name-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Long names wrap to at most 2 lines inside the card (card size is fixed
+   by the grid, so a long name never resizes its column). */
+.chip-card__name-text {
+  min-width: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
 .chip-card__sub { font-size: var(--font-size-xs); color: var(--color-ink-soft); }
 
 /* Click-to-speak button — reused for card names and section headings.
@@ -1174,6 +1186,13 @@ a:hover { text-decoration: underline; }
    states: idle (dashed tap area), chosen (thumbnail + Send button),
    and confirmed (solid brand-color card, no tap target). */
 .photo-upload-card { margin-bottom: var(--space-4); }
+.photo-upload-card__status { margin-top: var(--space-2); }
+.photo-upload-card__status:empty { display: none; }
+.photo-status { display: inline-flex; align-items: center; gap: 6px; font-size: var(--font-size-sm); color: var(--color-ink-soft); }
+.photo-status svg { width: 16px; height: 16px; flex-shrink: 0; }
+.photo-status--success { color: var(--color-primary-dark); }
+.photo-status--error { color: var(--color-danger); }
+.photo-preview { display: block; width: 80px; height: 80px; object-fit: cover; border-radius: var(--radius-sm); margin-bottom: var(--space-2); }
 .photo-upload-card__drop {
   display: flex;
   align-items: center;
@@ -1186,8 +1205,47 @@ a:hover { text-decoration: underline; }
   color: var(--color-primary-dark);
   cursor: pointer;
   text-align: left;
-  font-family: inherit;
+  font-family: inherit;  /* Fixed 3:1 shape (width : height) at every screen size, so the
+     background photo can be prepared at a 3:1 size (e.g. 1200 x 400 px). */
+  aspect-ratio: 3 / 1;
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-2);
 }
+/* Optional background photo (set inline from config's
+   SECTION_BACKGROUNDS.registerPhotoUpload). A soft-green overlay keeps the
+   text readable; with no photo file, only the plain soft-green shows. */
+.photo-upload-card__drop {
+  position: relative;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.photo-upload-card__drop::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--color-primary-soft);
+  opacity: 0.72;
+  pointer-events: none;
+}
+.photo-upload-card__drop > * { position: relative; }
+
+/* "Send via Google Form" button inside the Vehicle Photo header. */
+.photo-form-link-btn {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 4px 12px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  color: #1b1b1b;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.photo-form-link-btn:hover, .photo-form-link-btn:active { background: var(--color-accent-dark); color: #fff; }
+
 .photo-upload-card__icon {
   flex: 0 0 auto;
   display: flex;

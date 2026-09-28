@@ -5,7 +5,7 @@
 
 /* Small phones: tighten spacing a touch */
 @media (max-width: 359px) {
-  .chip-grid { grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+  .chip-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
   .detail-row { flex-direction: column; gap: var(--space-2); }
   .gallery__thumbs { width: 52px; }
   .gallery__thumb { width: 52px; height: 52px; }
@@ -23,7 +23,7 @@
   .banner .container { max-width: 640px; }
   .cta-band { max-width: 480px; margin: 0 auto; }
 
-  .chip-grid { grid-template-columns: repeat(3, 1fr); }
+  .chip-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .driver-grid { grid-template-columns: repeat(2, 1fr); }
   .steps { grid-template-columns: repeat(3, 1fr); }
   .skeleton-grid { grid-template-columns: repeat(2, 1fr); }
@@ -34,7 +34,7 @@
 
 /* Small laptop and up */
 @media (min-width: 1024px) {
-  .chip-grid { grid-template-columns: repeat(4, 1fr); }
+  .chip-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .driver-grid { grid-template-columns: repeat(3, 1fr); }
 
   .hero__inner { max-width: 680px; }
