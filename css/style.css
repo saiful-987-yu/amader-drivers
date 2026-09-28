@@ -538,6 +538,26 @@ a:hover { text-decoration: underline; }
 .section-head__title-row { display: flex; align-items: center; gap: 6px; }
 .section-head__title-row .speak-btn { width: 24px; height: 24px; }
 .section-head__title-row .speak-btn svg { width: 20px; height: 20px; }
+/* Tiny, deliberately unobtrusive — a single icon, no label — so it
+   doesn't compete visually with the heading itself. */
+.section-head__sort-btn { margin-left: auto; width: 28px; height: 28px; color: var(--color-ink-soft); }
+.section-head__sort-btn svg { width: 18px; height: 18px; }
+
+.market-order-hint { font-size: var(--font-size-sm); color: var(--color-ink-soft); margin-bottom: var(--space-3); }
+.market-order-list { display: flex; flex-direction: column; gap: var(--space-2); max-height: 50vh; overflow-y: auto; }
+.market-order-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+}
+.market-order-row__name { font-weight: 500; }
+.market-order-row__btns { display: flex; gap: var(--space-1); flex-shrink: 0; }
+.market-order-row__btns .icon-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.market-order-actions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-4); }
 /* The hero heading keeps its centered text alignment even though it's
    now a flex row (heading span + speak button). */
 .hero__heading.section-head__title-row { justify-content: center; }
