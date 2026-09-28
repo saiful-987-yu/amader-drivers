@@ -36,6 +36,10 @@
   const CONFIG = window.NOBI_CONFIG || {};
   const IS_DEMO = !CONFIG.API_BASE_URL;
   const TIMEOUT_MS = CONFIG.REQUEST_TIMEOUT_MS || 12000;
+  // Photo upload sends up to 3 MB and Apps Script then saves it to Drive, which
+  // can legitimately take longer than a normal 12 s request. Timing out early made
+  // the site show "upload failed" even though the file had already reached Drive.
+  const UPLOAD_TIMEOUT_MS = Math.max(TIMEOUT_MS, 60000);
   const CACHE_TTL = CONFIG.CACHE_TTL_MS || 5 * 60 * 1000;
   const STATUS_CACHE_TTL = CONFIG.STATUS_CACHE_TTL_MS || 60 * 1000;
 
@@ -78,12 +82,13 @@
 
   async function realCall(operation, payload) {
     const url = CONFIG.API_BASE_URL + "?op=" + encodeURIComponent(operation);
+    const timeoutMs = operation === "uploadDriverPhoto" ? UPLOAD_TIMEOUT_MS : TIMEOUT_MS;
     const response = await withTimeout(fetch(url, {
       method: "POST",
       // text/plain avoids a CORS preflight against Apps Script Web Apps.
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(payload || {})
-    }), TIMEOUT_MS);
+    }), timeoutMs);
     if (!response.ok) throw new Error("HTTP_" + response.status);
     const data = await response.json();
     if (data && data.ok === false) {
@@ -338,6 +343,22 @@
         }));
         DemoStore.savePending(pending);
         return { applicationId };
+      }
+
+      case "uploadDriverPhoto": {
+        // No real Drive access in demo mode — the data: URI itself
+        // works as an <img src>, so it's used directly as the "url",
+        // same size rule enforced as the real backend.
+        const base64Data = String(payload.imageBase64 || "");
+        const mimeType = String(payload.mimeType || "");
+        if (!base64Data || ["image/jpeg", "image/png", "image/webp"].indexOf(mimeType) === -1) {
+          const err = new Error("VALIDATION_FAILED"); err.code = "VALIDATION_FAILED"; throw err;
+        }
+        const byteLength = Math.floor((base64Data.length * 3) / 4);
+        if (byteLength < 50 * 1024 || byteLength > 3 * 1024 * 1024) {
+          const err = new Error("VALIDATION_FAILED"); err.code = "VALIDATION_FAILED"; throw err;
+        }
+        return { url: "data:" + mimeType + ";base64," + base64Data };
       }
 
       case "login": {
@@ -677,6 +698,9 @@
       return markets;
     });
   };
+
+  /** Registration Step 3's "Upload Photo" — plain base64 image data, returns { url } once saved to Drive (real backend) or a data: URI (demo mode). No token/session needed — same as registerDriver, this runs before the driver has an account. */
+  Api.uploadDriverPhoto = (imageBase64, mimeType) => call("uploadDriverPhoto", { imageBase64, mimeType });
 
   Api.registerDriver = (formData) => call("registerDriver", formData)
     .then((res) => {

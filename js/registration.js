@@ -312,78 +312,102 @@
   }
 
   /**
-   * Step 3's "Photo Upload" option — first and most prominent, per
-   * spec. The large drop card is now a direct shortcut to the
-   * existing Google Form: tapping it never opens this site's own
-   * camera/gallery picker or shows a local preview — it just opens
-   * the Google Form (pre-filled with the Mobile Number already
-   * entered in Step 1), where the driver attaches their Profile
-   * Photo and Vehicle Photo and taps Submit. Coming back here and
-   * tapping the confirm button marks this method VALID. That
-   * confirmation is self-reported by the driver, exactly the way the
-   * existing PIN method already works (PIN is also just a self/
-   * WhatsApp-coordinated confirmation, never something this site
-   * verifies against the Sheet either) — so this never claims a
-   * server-verified "success" the site has no technical way to check.
-   *
-   * stage moves idle -> opened -> confirmed.
+   * Step 3's top "Profile Photo Upload" button. Clicking it opens the
+   * phone's gallery; the chosen photo is sent to the Apps Script
+   * backend (Api.uploadDriverPhoto), which saves it in the Drive
+   * folder and returns its link. Under the button it shows
+   * "Uploading…", the photo preview + a success message, or an error.
+   * State lives on `session.photoUpload` so it survives Back/Next and
+   * language switches; `valid` is only true after a successful upload.
+   * If SECTION_BACKGROUNDS.registerPhotoUpload isn't in the folder,
+   * the plain soft-green color stays.
    */
-  function photoUploadField(session, mobile, rerender) {
-    const state = session.photoUpload;
-
-    const confirmed = state.stage === "confirmed";
-    const drop = Utils.el("button", {
-      type: "button", class: "photo-upload-card__drop",
-      onClick: () => {
-        if (state.stage !== "idle") return;
-        window.open(buildPhotoFormUrl(mobile), "_blank", "noopener");
-        state.stage = "opened";
-        session.photoUpload = state;
-        rerender();
-      }
-    }, [
-      Utils.el("span", { class: "photo-upload-card__icon", html: confirmed ? Icons.checkCircle : Icons.upload }),
+  function photoUploadField(session) {
+    const up = session.photoUpload;
+    const fileInput = Utils.el("input", { type: "file", accept: "image/*", style: "display:none;" });
+    const drop = Utils.el("button", { type: "button", class: "photo-upload-card__drop", onClick: () => fileInput.click() }, [
+      Utils.el("span", { class: "photo-upload-card__icon", html: Icons.upload }),
       Utils.el("div", {}, [
-        Utils.el("div", {
-          class: "photo-upload-card__title",
-          text: Lang.t(confirmed ? "register.step3.photoUpload.confirmedTitle" : "register.step3.photoUpload.title")
-        }),
-        Utils.el("div", {
-          class: "photo-upload-card__subtitle",
-          text: Lang.t(confirmed ? "register.step3.photoUpload.confirmedSubtitle" : "register.step3.photoUpload.subtitle")
-        })
+        Utils.el("div", { class: "photo-upload-card__title", text: Lang.t("register.step3.photoUpload.title") }),
+        Utils.el("div", { class: "photo-upload-card__subtitle", text: Lang.t("register.step3.photoUpload.subtitle") })
       ])
     ]);
+    const bg = (window.NOBI_CONFIG.SECTION_BACKGROUNDS || {}).registerPhotoUpload;
+    if (bg) drop.style.backgroundImage = 'url("' + bg + '")';
+    const status = Utils.el("div", { class: "photo-upload-card__status" });
+    const wrap = Utils.el("div", { class: "photo-upload-card" }, [drop, fileInput, status]);
 
-    const card = Utils.el("div", { class: "photo-upload-card" + (confirmed ? " is-confirmed" : "") }, [drop]);
-
-    if (state.stage === "opened") {
-      const actions = Utils.el("div", { class: "photo-upload-card__actions" });
-      actions.appendChild(Utils.el("button", {
-        type: "button", class: "photo-upload-card__link", text: Lang.t("register.step3.photoUpload.reopenForm"),
-        onClick: () => window.open(buildPhotoFormUrl(mobile), "_blank", "noopener")
-      }));
-      actions.appendChild(Utils.el("button", {
-        type: "button", class: "btn btn--primary", text: Lang.t("register.step3.photoUpload.confirmButton"),
-        onClick: () => { state.stage = "confirmed"; state.valid = true; session.photoUpload = state; rerender(); }
-      }));
-      card.appendChild(actions);
+    // Draws the area under the button from session.photoUpload.
+    function render() {
+      status.innerHTML = "";
+      drop.disabled = up.stage === "uploading";
+      if (up.stage === "uploading") {
+        status.appendChild(Utils.el("span", { class: "photo-status", text: Lang.t("field.photoUploading") }));
+      } else if (up.stage === "confirmed" && up.valid) {
+        const preview = Utils.el("img", { class: "photo-preview", alt: "" });
+        preview.src = up.preview;
+        status.appendChild(preview);
+        status.appendChild(Utils.el("span", { class: "photo-status photo-status--success", html: Icons.checkCircle + "<span>" + Lang.t("field.photoUploadSuccess") + "</span>" }));
+      } else if (up.stage === "error") {
+        status.appendChild(Utils.el("span", { class: "photo-status photo-status--error", text: Lang.t(up.error) }));
+      }
+    }
+    // Records the result on the session; redraws only if this card is
+    // still on screen (the driver may have moved to another step).
+    function finish(patch) {
+      Object.assign(up, patch);
+      if (wrap.isConnected) render();
+    }
+    function failed(errorKey) {
+      finish({ valid: false, stage: "error", error: errorKey, url: "", preview: "" });
     }
 
-    if (confirmed) {
-      card.appendChild(Utils.el("button", {
-        type: "button", class: "photo-upload-card__undo", text: Lang.t("register.step3.photoUpload.undo"),
-        onClick: () => {
-          window.open(buildPhotoFormUrl(mobile), "_blank", "noopener");
-          state.stage = "opened";
-          state.valid = false;
-          session.photoUpload = state;
-          rerender();
+    fileInput.addEventListener("change", () => {
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) return;
+      fileInput.value = ""; // lets the same file be chosen again for a retry
+      if (up.stage === "uploading") return; // never send a second request for the same upload
+      if (!file.type || file.type.indexOf("image/") !== 0) { failed("field.photoTypeError"); return; }
+      if (file.size < 50 * 1024 || file.size > 3 * 1024 * 1024) { failed("field.photoSizeError"); return; }
+      finish({ valid: false, stage: "uploading", error: "", url: "", preview: "" });
+
+      const reader = new FileReader();
+      reader.onerror = () => failed("field.photoUploadError");
+      reader.onload = async () => {
+        const dataUrl = String(reader.result || "");
+        const base64 = dataUrl.split(",")[1] || "";
+        try {
+          // ONE request only — no automatic retry. api.js gives uploads a longer timeout.
+          const res = await Api.uploadDriverPhoto(base64, file.type);
+          if (!res || !res.url) { failed("field.photoUploadError"); return; }
+          finish({ valid: true, stage: "confirmed", error: "", url: res.url, preview: dataUrl });
+        } catch (err) {
+          failed("field.photoUploadError");
         }
-      }));
-    }
+      };
+      reader.readAsDataURL(file);
+    });
 
-    return { wrap: card };
+    render();
+    return { wrap };
+  }
+
+  /**
+   * Vehicle Photo field (Step 3): the same optional URL input as before,
+   * but its header now reads "Enter the vehicle photo link or [Send via
+   * Google Form]" — the second part is a button that opens the same
+   * Google Form (pre-filled with the Mobile Number from Step 1) in a new
+   * tab. Coming back changes nothing on this page.
+   */
+  function vehiclePhotoField(mobile) {
+    const row = fieldRow({ id: "vehicleImageUrl", labelKey: "register.step3.vehicleLabelPrefix", type: "url", hint: "https://..." });
+    const label = row.wrap.querySelector("label");
+    label.textContent = Lang.t("register.step3.vehicleLabelPrefix") + " ";
+    label.appendChild(Utils.el("button", {
+      type: "button", class: "photo-form-link-btn", text: Lang.t("register.step3.vehicleLabelButton"),
+      onClick: () => window.open(buildPhotoFormUrl(mobile), "_blank", "noopener")
+    }));
+    return row;
   }
 
   /**
@@ -436,10 +460,10 @@
         usernameCheck: { value: null, available: null },
         driveCheck: { value: null, available: null },
         // Step 3's Photo Upload option — see photoUploadField()'s
-        // comment. stage moves idle -> opened -> confirmed;
-        // valid only ever becomes true once the driver has explicitly
-        // self-confirmed the Submit step on the actual Google Form.
-        photoUpload: { valid: false, stage: "idle" }
+        // comment. stage moves idle -> uploading -> confirmed (or
+        // error); valid only becomes true once the photo has been
+        // saved to Drive, and `url` then holds its Drive link.
+        photoUpload: { valid: false, stage: "idle", url: "", preview: "", error: "" }
       };
     }
     const session = activeRegistrationSession;
@@ -541,12 +565,7 @@
     }
 
     function buildStep3() {
-      // Re-renders just this step in place after a Photo Upload state
-      // change (file chosen / form opened / confirmed) — collects
-      // whatever's currently typed into Drive Link/PIN first, exactly
-      // like the existing Back button does, so neither is ever lost.
-      const rerenderStep3 = () => { collectStepValues(); renderStep(); };
-      const photoUploadRow = photoUploadField(session, Utils.clean(data.mobile), rerenderStep3);
+      const photoUploadRow = photoUploadField(session);
       const driveField = driveImageField(app, (value, available) => { driveCheck = { value, available }; session.driveCheck = driveCheck; });
       // No hint/description under the PIN box at all — it's collected
       // via WhatsApp (see the header instructions above), never shown
@@ -574,17 +593,16 @@
       }, 300);
       pinField.control.addEventListener("input", pinCheck);
       return [
-        // Photo Upload — first and most prominent, per spec.
+        // Profile Photo Upload button — opens the gallery and uploads to Drive.
         photoUploadRow,
         Utils.el("div", { class: "photo-method-divider", text: Lang.t("register.step3.orDivider") }),
         Utils.el("div", { class: "photo-instructions hint" }, [
-          Utils.el("p", { text: Lang.t("register.step3.instructions") }),
           photoWhatsappHelpLink()
         ]),
         // Drive Link (~70%) and PIN (~30%) side by side in one row.
         Utils.el("div", { class: "photo-input-row" }, [driveField.wrap, pinField.wrap]),
-        // Vehicle Photo — unchanged, existing simple optional URL field.
-        fieldRow({ id: "vehicleImageUrl", labelKey: "field.vehiclePhoto", type: "url", hint: "https://..." })
+        // Vehicle Photo — same optional URL field; header now has the Google Form button.
+        vehiclePhotoField(Utils.clean(data.mobile))
       ];
     }
 
@@ -827,6 +845,8 @@
           submitBtn.textContent = Lang.t("action.submitting");
           try {
             const payload = Object.assign({}, data, { phone: data.mobile, altPhone: data.altMobile });
+            // A successfully uploaded profile photo's Drive link is what gets saved as the Driver Image URL.
+            if (session.photoUpload && session.photoUpload.valid && session.photoUpload.url) payload.imageUrl = session.photoUpload.url;
             const result = await Api.registerDriver(payload);
             activeRegistrationSession = null;
             flushActiveSessionFields = null;
