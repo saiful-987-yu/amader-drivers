@@ -64,6 +64,7 @@ case "getVehicleCategories": return respond({ ok: true, result: getVehicleCatego
 case "getDrivers": return respond({ ok: true, result: getDrivers(payload) });
 case "getDoctors": return respond({ ok: true, result: getDoctors() });
 case "registerDriver": return respond({ ok: true, result: registerDriver(payload) });
+case "uploadDriverPhoto": return respond({ ok: true, result: uploadDriverPhoto(payload) });
 case "checkUsername": return respond({ ok: true, result: checkUsernameAvailable(payload) });
 case "checkPhone": return respond({ ok: true, result: checkPhoneAvailable(payload) });
 case "login": return respond({ ok: true, result: login(payload) });
@@ -363,6 +364,54 @@ appendRow(SHEET_PENDING, {
 });
 
 return { applicationId };
+}
+
+// ----------------------------------------------------------
+// DRIVER PHOTO UPLOAD (Registration Step 3 — "Upload Photo")
+// ----------------------------------------------------------
+const DRIVER_PHOTOS_FOLDER_NAME = "Amader Drivers - Driver Photos";
+const MIN_PHOTO_BYTES = 50 * 1024; // 50 KB
+const MAX_PHOTO_BYTES = 3 * 1024 * 1024; // 3 MB
+
+function ensureDriverPhotosFolder() {
+const existing = DriveApp.getFoldersByName(DRIVER_PHOTOS_FOLDER_NAME);
+if (existing.hasNext()) return existing.next();
+return DriveApp.createFolder(DRIVER_PHOTOS_FOLDER_NAME);
+}
+
+/**
+* Registration Step 3's "Upload Photo" — a plain base64 image saved
+* straight into a dedicated Drive folder (auto-created on first use,
+* same pattern as ensureSessionsSheet()/ensureRatingsSheet() above),
+* shared as "Anyone with the link" so the SAME Utils.resolveImageUrl()
+* already used for every other Drive-hosted photo on this site can
+* display it — no other code needs to change. No session/account
+* required — this runs before the driver even has one, alongside
+* registerDriver() itself.
+*/
+function uploadDriverPhoto(payload) {
+const base64Data = String(payload.imageBase64 || "");
+const mimeType = String(payload.mimeType || "");
+if (!base64Data) throw appError("VALIDATION_FAILED");
+if (["image/jpeg", "image/png", "image/webp"].indexOf(mimeType) === -1) throw appError("VALIDATION_FAILED");
+
+let bytes;
+try {
+bytes = Utilities.base64Decode(base64Data);
+} catch (err) {
+throw appError("VALIDATION_FAILED");
+}
+// Same 50 KB–3 MB rule as the client-side check — enforced here too
+// in case that's ever bypassed.
+if (bytes.length < MIN_PHOTO_BYTES || bytes.length > MAX_PHOTO_BYTES) throw appError("VALIDATION_FAILED");
+
+const extension = mimeType.split("/")[1] || "jpg";
+const fileName = "driver-photo-" + new Date().getTime() + "." + extension;
+const blob = Utilities.newBlob(bytes, mimeType, fileName);
+const folder = ensureDriverPhotosFolder();
+const file = folder.createFile(blob);
+file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+return { url: file.getUrl() };
 }
 
 // ----------------------------------------------------------
