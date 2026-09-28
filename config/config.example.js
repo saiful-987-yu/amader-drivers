@@ -129,7 +129,8 @@ window.NOBI_CONFIG = {
   // --------------------------------------------------------
   SECTION_BACKGROUNDS: {
     registration: "assets/home-banners/home-registration-banner.jpg",
-    doctor: "assets/home-banners/home-doctor-banner.jpg"
+    doctor: "assets/home-banners/home-doctor-banner.jpg",
+    registerPhotoUpload: "assets/home-banners/register-photo-upload-bg.jpg"
   },
 
   // --------------------------------------------------------

@@ -39,7 +39,7 @@ window.NOBI_CONFIG = {
   // Leave this as null to run the site in DEMO MODE with
   // built-in sample data (no Google Sheet required). This is
   // useful for local testing before you connect a real sheet.
-  API_BASE_URL: "https://script.google.com/macros/s/AKfycby93KRpwGKmhugI8ZbCRgBPEKC3Bb9Aw76N5mAzvJWAgCPGhX1dawQ1Dfzpl0S4NOs-/exec",
+  API_BASE_URL: "https://script.google.com/macros/s/AKfycbxl-ugxSBPMx4qubUwECfpllEGqPu3yGx-tYlPb7CTi1HKHPWRGBdDtDKpvSaFVMBU/exec",
 
   // --------------------------------------------------------
   // PROFILE PHOTO — GOOGLE FORM (Registration Step 3, "Photo Upload")
@@ -123,7 +123,10 @@ window.NOBI_CONFIG = {
   // isn't there yet — nothing to configure beyond the filenames.
   SECTION_BACKGROUNDS: {
     registration: "assets/home-banners/home-registration-banner.jpg",
-    doctor: "assets/home-banners/home-doctor-banner.jpg"
+    doctor: "assets/home-banners/home-doctor-banner.jpg",
+    // Background of the top "Upload your profile photo" button on
+    // Registration Step 3. Missing file = the plain soft-green color.
+    registerPhotoUpload: "assets/home-banners/register-photo-upload-bg.jpg"
   },
 
   // Footer social links — leave as "#" until a real URL is available.
