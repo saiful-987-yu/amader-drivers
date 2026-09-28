@@ -159,15 +159,19 @@
   function driverPhotoNode(driver, size) {
     const wrap = Utils.el("div", { class: size === "large" ? "detail-photo" : "driver-card__photo" });
     const url = Utils.resolveImageUrl(driver.imageUrl);
-    if (url) {
+    const localUrl = Utils.localFixtureUrl("profile", driver.driverId);
+    if (url || localUrl) {
       // Driver text info is already rendered by the time this image
       // starts loading — the card/detail body never waits on the
       // photo. `loading="lazy"` defers off-screen photos so a long
-      // driver grid doesn't fetch every image up front.
+      // driver grid doesn't fetch every image up front. Tier 1 is a
+      // local file named after this driver's ID (if one was added to
+      // assets/local-photos/profilePhoto/), then the Sheet's link,
+      // then the placeholder icon.
       const img = Utils.el("img", { alt: Utils.driverDisplayName(driver), loading: "lazy", decoding: "async" });
       Utils.wireImageFallback(img, driver.imageUrl, () => {
         wrap.innerHTML = size === "large" ? Icons.userLarge : Icons.user;
-      });
+      }, localUrl);
       wrap.appendChild(img);
     } else {
       wrap.innerHTML = size === "large" ? Icons.userLarge : Icons.user;
@@ -644,11 +648,13 @@
     ]));
 
     const cachedMarkets = Api.peekMarkets();
-    const marketSection = Utils.el("section", { class: "section section--flush-top container" }, [
-      Utils.el("div", { class: "section-head" }, [
-        speakableHeading(Lang.t("market.chooseHeading")),
-        Utils.el("p", { text: Lang.t("market.chooseSub") })
-      ]),
+    let marketSection; // forward-declared so the sort-modal's refresh callback (built below, but only ever called later, on click) can reference it
+    const refreshMarketGrid = () => {
+      const fresh = Api.peekMarkets();
+      if (fresh && marketSection) marketSection.replaceChild(marketGrid(fresh, (m) => Router.navigate(`/markets/${m.slug}`)), marketSection.lastChild);
+    };
+    marketSection = Utils.el("section", { class: "section section--flush-top container" }, [
+      marketSectionHead(refreshMarketGrid),
       cachedMarkets
         ? marketGrid(cachedMarkets, (m) => Router.navigate(`/markets/${m.slug}`))
         : ViewHelpers.loadingBlock(Lang.t("market.loading"))
@@ -705,27 +711,128 @@
    * (white in Light Mode, dark in Dark Mode) in place. Never a broken
    * image, never touches the small market image/icon in the card.
    */
-  function applyMarketCardBackground(card, url) {
-    if (!url) return;
-    const probe = new Image();
-    probe.onload = () => {
-      card.style.backgroundImage = `linear-gradient(rgba(10, 30, 20, 0.45), rgba(10, 30, 20, 0.45)), url("${url}")`;
+  /** Same local-fixture -> Drive-link(+retry+cache) -> nothing chain as every other image here — see Utils.wireImageFallback's own comment. The probe <img> is never added to the page; only its eventual src (a real URL, a Drive one, or an IndexedDB object URL) is used, as the card's CSS background. */
+  const MARKET_ORDER_KEY = "nobi.marketOrder";
+
+  /**
+   * Everyone sees the Sheet's own market order by default. If this
+   * person has customized it (see openMarketOrderModal below), their
+   * saved slug order takes over instead — purely on this device/
+   * browser, nothing sent anywhere. Any market not in a saved order
+   * (e.g. a brand new one added after they last customized it) simply
+   * falls in at the end, in whatever order the Sheet already had it.
+   */
+  function applyCustomMarketOrder(markets) {
+    const order = Utils.storage.get(MARKET_ORDER_KEY, null);
+    if (!order || !order.length) return markets;
+    const rank = new Map(order.map((slug, i) => [slug, i]));
+    return markets.slice().sort((a, b) => {
+      const ra = rank.has(a.slug) ? rank.get(a.slug) : order.length;
+      const rb = rank.has(b.slug) ? rank.get(b.slug) : order.length;
+      return ra - rb;
+    });
+  }
+
+  /**
+   * The small sort icon-button next to "Choose your Market" (Home page
+   * preview AND the full /markets page both call this, so fixing/
+   * changing it once covers both). `onSaved` lets whichever page opened
+   * this modal refresh its own on-screen grid the instant the order
+   * changes, without a full page reload.
+   */
+  function marketSectionHead(onSaved) {
+    const heading = speakableHeading(Lang.t("market.chooseHeading"));
+    heading.appendChild(Utils.el("button", {
+      type: "button", class: "icon-btn section-head__sort-btn",
+      "aria-label": Lang.t("marketOrder.button"), title: Lang.t("marketOrder.button"),
+      html: Icons.sort,
+      onClick: () => openMarketOrderModal(onSaved)
+    }));
+    return Utils.el("div", { class: "section-head" }, [
+      heading,
+      Utils.el("p", { text: Lang.t("market.chooseSub") })
+    ]);
+  }
+
+  /** Tap-up/tap-down reordering (not drag — far more reliable on a touchscreen) for this device's own market order. */
+  function openMarketOrderModal(onSaved) {
+    const markets = Api.peekMarkets();
+    if (!markets || !markets.length) { Toast.show(Lang.t("market.loading")); return; }
+    let order = applyCustomMarketOrder(markets).map((m) => m.slug);
+    const listWrap = Utils.el("div", { class: "market-order-list" });
+
+    function renderRows() {
+      listWrap.innerHTML = "";
+      order.forEach((slug, i) => {
+        const m = markets.find((mm) => mm.slug === slug);
+        if (!m) return;
+        const upBtn = Utils.el("button", {
+          type: "button", class: "icon-btn", "aria-label": Lang.t("marketOrder.moveUp"), html: Icons.chevronUp,
+          onClick: () => { if (i === 0) return; [order[i - 1], order[i]] = [order[i], order[i - 1]]; renderRows(); }
+        });
+        const downBtn = Utils.el("button", {
+          type: "button", class: "icon-btn", "aria-label": Lang.t("marketOrder.moveDown"), html: Icons.chevronDown,
+          onClick: () => { if (i === order.length - 1) return; [order[i + 1], order[i]] = [order[i], order[i + 1]]; renderRows(); }
+        });
+        upBtn.disabled = i === 0;
+        downBtn.disabled = i === order.length - 1;
+        listWrap.appendChild(Utils.el("div", { class: "market-order-row" }, [
+          Utils.el("span", { class: "market-order-row__name", text: marketName(m) }),
+          Utils.el("div", { class: "market-order-row__btns" }, [upBtn, downBtn])
+        ]));
+      });
+    }
+    renderRows();
+
+    const saveBtn = Utils.el("button", { type: "button", class: "btn btn--primary", text: Lang.t("marketOrder.save") });
+    saveBtn.addEventListener("click", () => {
+      Utils.storage.set(MARKET_ORDER_KEY, order);
+      Modal.close();
+      Toast.show(Lang.t("marketOrder.saved"), "success");
+      if (onSaved) onSaved();
+    });
+    const resetBtn = Utils.el("button", { type: "button", class: "btn btn--ghost", text: Lang.t("marketOrder.reset") });
+    resetBtn.addEventListener("click", () => {
+      Utils.storage.remove(MARKET_ORDER_KEY);
+      Modal.close();
+      Toast.show(Lang.t("marketOrder.resetDone"));
+      if (onSaved) onSaved();
+    });
+
+    Modal.open(Utils.el("div", {}, [
+      Utils.el("div", { class: "modal-head" }, [
+        Utils.el("h3", { text: Lang.t("marketOrder.title") }),
+        Utils.el("button", { class: "icon-btn", "aria-label": Lang.t("a11y.closeModal"), html: Icons.close, onClick: () => Modal.close() })
+      ]),
+      Utils.el("p", { class: "market-order-hint", text: Lang.t("marketOrder.hint") }),
+      listWrap,
+      Utils.el("div", { class: "market-order-actions" }, [resetBtn, saveBtn])
+    ]));
+  }
+
+  function applyMarketCardBackground(card, url, localUrl) {
+    if (!url && !localUrl) return;
+    const probe = Utils.el("img", { alt: "" });
+    Utils.wireImageFallback(probe, url, () => {}, localUrl, () => {
+      card.style.backgroundImage = `linear-gradient(rgba(10, 30, 20, 0.45), rgba(10, 30, 20, 0.45)), url("${probe.src}")`;
       card.classList.add("chip-card--market-has-bg");
-    };
-    probe.src = url;
+    });
   }
 
   function marketGrid(markets, onSelect) {
     if (!markets.length) return ViewHelpers.emptyBlock({ message: Lang.t("market.empty") });
+    markets = applyCustomMarketOrder(markets);
     return cappedChipGrid(markets, (m) => {
       const topChildren = [Utils.el("div", { class: "chip-card__icon", html: Icons.map })];
       const imgUrl = Utils.resolveImageUrl(m.imageUrl);
-      if (imgUrl) {
+      const localImgUrl = Utils.localFixtureUrl("market", m.slug);
+      if (imgUrl || localImgUrl) {
         const img = Utils.el("img", { alt: "", loading: "lazy" });
         const imgWrap = Utils.el("div", { class: "chip-card__image" }, [img]);
-        // No image URL, or a genuinely broken one (after a same-host
-        // retry for Drive links) -> fall back to the icon alone.
-        Utils.wireImageFallback(img, m.imageUrl, () => imgWrap.remove());
+        // No image at all (no local fixture AND no Sheet link), or a
+        // genuinely broken one after every tier's retries -> fall back
+        // to the icon alone.
+        Utils.wireImageFallback(img, m.imageUrl, () => imgWrap.remove(), localImgUrl);
         topChildren.push(imgWrap);
       }
       const name = marketName(m);
@@ -745,7 +852,7 @@
           speakerButton(name)
         ])
       ]);
-      applyMarketCardBackground(card, Utils.resolveImageUrl(m.bgImageUrl));
+      applyMarketCardBackground(card, Utils.resolveImageUrl(m.bgImageUrl), Utils.localFixtureUrl("marketBg", m.slug));
       return card;
     });
   }
@@ -754,12 +861,13 @@
   function vehicleChip(v, onSelect, onlineCount) {
     const topChildren = [Utils.el("div", { class: "chip-card__icon", html: Icons.vehicle(v.slug) })];
     const imgUrl = Utils.resolveImageUrl(v.imageUrl);
-    if (imgUrl) {
+    const localImgUrl = Utils.localFixtureUrl("vehicle", v.slug);
+    if (imgUrl || localImgUrl) {
       const img = Utils.el("img", { alt: "", loading: "lazy" });
       const imgWrap = Utils.el("div", { class: "chip-card__image" }, [img]);
-      // No image URL, or a genuinely broken one (after a same-host retry
-      // for Drive links) -> fall back to the icon alone (never a broken-image icon).
-      Utils.wireImageFallback(img, v.imageUrl, () => imgWrap.remove());
+      // No image at all, or a genuinely broken one after every tier's
+      // retries -> fall back to the icon alone (never a broken-image icon).
+      Utils.wireImageFallback(img, v.imageUrl, () => imgWrap.remove(), localImgUrl);
       topChildren.push(imgWrap);
     }
     const count = onlineCount || 0;
@@ -1039,12 +1147,14 @@
     ]);
 
     const cachedMarkets = Api.peekMarkets();
-    const section = Utils.el("section", { class: "section container" }, [
+    let section; // forward-declared for the same reason as in renderHome above
+    const refreshMarketGrid = () => {
+      const fresh = Api.peekMarkets();
+      if (fresh && section) section.replaceChild(marketGrid(fresh, (m) => Router.navigate(`/markets/${m.slug}`)), section.lastChild);
+    };
+    section = Utils.el("section", { class: "section container" }, [
       crumb,
-      Utils.el("div", { class: "section-head" }, [
-        speakableHeading(Lang.t("market.chooseHeading")),
-        Utils.el("p", { text: Lang.t("market.chooseSub") })
-      ]),
+      marketSectionHead(refreshMarketGrid),
       cachedMarkets
         ? marketGrid(cachedMarkets, (m) => Router.navigate(`/markets/${m.slug}`))
         : ViewHelpers.loadingBlock(Lang.t("market.loading"))

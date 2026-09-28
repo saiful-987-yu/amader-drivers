@@ -76,9 +76,10 @@
   function doctorPhotoNode(doctor, size) {
     const wrap = Utils.el("div", { class: size === "large" ? "detail-photo" : "driver-card__photo" });
     const url = Utils.resolveImageUrl(doctor.imageUrl);
-    if (url) {
+    const localUrl = Utils.localFixtureUrl("profile", doctor.doctorId);
+    if (url || localUrl) {
       const img = Utils.el("img", { alt: Utils.driverDisplayName(doctor), loading: "lazy", decoding: "async" });
-      Utils.wireImageFallback(img, doctor.imageUrl, () => { wrap.innerHTML = size === "large" ? Icons.userLarge : Icons.user; });
+      Utils.wireImageFallback(img, doctor.imageUrl, () => { wrap.innerHTML = size === "large" ? Icons.userLarge : Icons.user; }, localUrl);
       wrap.appendChild(img);
     } else {
       wrap.innerHTML = size === "large" ? Icons.userLarge : Icons.user;

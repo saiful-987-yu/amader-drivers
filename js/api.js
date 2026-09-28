@@ -580,10 +580,19 @@
    * list — 1st, then 2nd, then 3rd, then everyone else (blank), in
    * that order. Star Rating (highest first) only decides ordering
    * WITHIN the same Sort Status group; it never overrides Sort Status.
+   *
+   * ABOVE all of that, though: anyone currently unavailable/offline
+   * always sinks to the very bottom, no matter their Sort Status or
+   * rating — a "1st" driver who's offline right now is still less
+   * useful to show first than any available driver, so this is checked
+   * before Sort Status rather than after it.
    */
   function sortBySortStatusThenRating(list) {
     const rank = { "1st": 0, "2nd": 1, "3rd": 2 };
     return list.slice().sort((a, b) => {
+      const aActive = a.availability === "active" ? 0 : 1;
+      const bActive = b.availability === "active" ? 0 : 1;
+      if (aActive !== bActive) return aActive - bActive;
       const ra = rank[String(a.sortStatus || "").trim().toLowerCase()];
       const rb = rank[String(b.sortStatus || "").trim().toLowerCase()];
       const ranka = ra != null ? ra : 3;

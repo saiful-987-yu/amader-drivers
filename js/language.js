@@ -295,6 +295,16 @@
 
       "vehicle.icon.default": "Vehicle",
 
+      "marketOrder.button": "Sort markets",
+      "marketOrder.title": "Market Order",
+      "marketOrder.hint": "Use the arrows to set the order markets are shown in on this device.",
+      "marketOrder.moveUp": "Move up",
+      "marketOrder.moveDown": "Move down",
+      "marketOrder.save": "Save order",
+      "marketOrder.saved": "Order saved on this device",
+      "marketOrder.reset": "Reset to default",
+      "marketOrder.resetDone": "Reset to default order",
+
       "pwa.install.title": "Install Amader Drivers",
       "pwa.install.body": "Add it to your home screen for instant one-tap access, even offline.",
       "pwa.install.action": "Install",
@@ -583,6 +593,16 @@
       "a11y.speak": "শুনুন: {text}",
 
       "vehicle.icon.default": "যানবাহন",
+
+      "marketOrder.button": "বাজার সাজান",
+      "marketOrder.title": "বাজারের ক্রম",
+      "marketOrder.hint": "তীর চিহ্ন দিয়ে এই ডিভাইসে বাজারগুলো কোন ক্রমে দেখাবে তা ঠিক করুন।",
+      "marketOrder.moveUp": "উপরে তুলুন",
+      "marketOrder.moveDown": "নিচে নামান",
+      "marketOrder.save": "ক্রম সংরক্ষণ করুন",
+      "marketOrder.saved": "এই ডিভাইসে ক্রম সংরক্ষিত হয়েছে",
+      "marketOrder.reset": "ডিফল্টে ফিরিয়ে নিন",
+      "marketOrder.resetDone": "ডিফল্ট ক্রমে ফিরিয়ে নেওয়া হয়েছে",
 
       "pwa.install.title": "আমাদের ড্রাইভার ইনস্টল করুন",
       "pwa.install.body": "হোম স্ক্রিনে যোগ করুন — এক ট্যাপেই খুলবে, অফলাইনেও কাজ করবে।",

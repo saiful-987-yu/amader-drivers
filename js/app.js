@@ -366,9 +366,10 @@
         Utils.el("span", { class: "mobile-nav__avatar-fallback", html: Icons.user })
       ]);
       const url = Utils.resolveImageUrl(driver.imageUrl);
-      if (url) {
+      const localUrl = Utils.localFixtureUrl("profile", driver.driverId);
+      if (url || localUrl) {
         const img = Utils.el("img", { alt: "" });
-        Utils.wireImageFallback(img, driver.imageUrl, () => {}); // failure just leaves the user-icon fallback showing underneath
+        Utils.wireImageFallback(img, driver.imageUrl, () => {}, localUrl); // failure just leaves the user-icon fallback showing underneath
         avatar.appendChild(img);
       }
       link.appendChild(avatar);

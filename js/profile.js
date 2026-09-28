@@ -113,7 +113,6 @@
     function show(index) {
       current = (index + urls.length) % urls.length;
       Utils.wireImageFallback(mainImg, rawUrls[current], () => {});
-      mainImg.src = urls[current];
       thumbButtons.forEach((btn, i) => btn.classList.toggle("is-active", i === current));
     }
 
@@ -137,7 +136,6 @@
       const thumbs = urls.map((url, i) => {
         const thumbImg = Utils.el("img", { alt: "", loading: "lazy" });
         Utils.wireImageFallback(thumbImg, rawUrls[i], () => {});
-        thumbImg.src = url;
         const btn = Utils.el("button", {
           type: "button", class: "gallery__thumb", "aria-label": (i + 1) + " / " + urls.length,
           onClick: () => show(i)
@@ -294,10 +292,10 @@
     // ---------- Header hero ----------
     const photoWrap = Utils.el("div", { class: "profile-photo" });
     const photoUrl = Utils.resolveImageUrl(driver.imageUrl);
-    if (photoUrl) {
+    const photoLocalUrl = Utils.localFixtureUrl("profile", driver.driverId);
+    if (photoUrl || photoLocalUrl) {
       const img = Utils.el("img", { alt: Utils.driverDisplayName(driver) });
-      Utils.wireImageFallback(img, driver.imageUrl, () => { photoWrap.innerHTML = Icons.userLarge; });
-      img.src = photoUrl;
+      Utils.wireImageFallback(img, driver.imageUrl, () => { photoWrap.innerHTML = Icons.userLarge; }, photoLocalUrl);
       photoWrap.appendChild(img);
     } else {
       photoWrap.innerHTML = Icons.userLarge;
@@ -396,7 +394,6 @@
     if (vehiclePhotoUrls.length) {
       const img = Utils.el("img", { alt: "", loading: "lazy" });
       Utils.wireImageFallback(img, vehiclePhotoUrlsRaw[0], () => { thumb.innerHTML = Icons.vehicle(primarySlug || "other"); });
-      img.src = vehiclePhotoUrls[0];
       thumb.appendChild(img);
     } else {
       thumb.innerHTML = Icons.vehicle(primarySlug || "other");
@@ -416,7 +413,6 @@
         const isLast = i === sideUrls.length - 1;
         const img = Utils.el("img", { alt: "", loading: "lazy" });
         Utils.wireImageFallback(img, sideUrlsRaw[i], () => { img.remove(); });
-        img.src = url;
         const children = [img];
         if (isLast && extraCount > 0) children.push(Utils.el("span", { class: "vehicle-side-thumb__badge", text: "+" + extraCount }));
         return Utils.el("button", { type: "button", class: "vehicle-side-thumb", onClick: () => openVehiclePhotosModal(driver) }, children);

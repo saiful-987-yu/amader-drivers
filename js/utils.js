@@ -241,28 +241,56 @@
    * once a "load" event actually fires — so every failed attempt stays
    * silent (just the card's own background box) and the photo simply
    * appears, once, the moment it's really ready.
+   *
+   * LOCAL FIXTURE (optional 4th argument, localUrl): for the bounded,
+   * developer-curated set of images — Market photo, Market background,
+   * Vehicle-category photo — a same-origin file bundled straight into
+   * the GitHub repo (see Utils.localFixtureUrl below) is tried FIRST,
+   * before anything else. A same-origin file needs none of the Drive
+   * chain's retries — either it exists (near-instant) or it 404s
+   * (equally instant) — and once it has been fetched successfully even
+   * once, sw.js's own generic same-origin caching rule keeps it
+   * available offline forever after, with no CORS dependency and no
+   * per-photo IndexedDB bookkeeping at all. Only if there is no local
+   * fixture (or it 404s) does this fall through to the Drive link (with
+   * its full retry+IndexedDB chain, unchanged) and finally to
+   * onFallback. Driver/Doctor personal photos never pass a localUrl —
+   * there are far too many of those for a hand-curated file per photo.
+   * An optional final onLoad callback fires every time the image
+   * successfully shows something (from any tier) — used by callers
+   * that need the resulting img.src for something other than showing
+   * the <img> itself (e.g. applying it as a CSS background — see
+   * applyMarketCardBackground in drivers.js).
    */
-  Utils.wireImageFallback = function (img, originalUrl, onFallback) {
-    const candidates = Utils.driveImageCandidates(originalUrl);
-    const urls = candidates.length ? candidates : [originalUrl];
+  Utils.wireImageFallback = function (img, originalUrl, onFallback, localUrl, onLoad) {
+    const candidates = originalUrl ? Utils.driveImageCandidates(originalUrl) : [];
+    const urls = candidates.length ? candidates : (originalUrl ? [originalUrl] : []);
     const laterDelaysMs = [2000, 5000, 10000, 20000, 30000];
     let attempt = 1; // urls[0] is the first one this function itself sets as img.src below
     let servedFromCache = false;
+    let servedFromLocalFixture = false;
 
     img.style.opacity = "0";
     img.style.transition = "opacity 0.25s ease";
     img.onload = function () {
       img.style.opacity = "1";
-      if (servedFromCache) return; // already-cached bytes — nothing new to save
-      const loadedUrl = img.src;
-      if (Utils.storage.get(CORS_BACKFILL_BLOCKED_KEY, false)) return;
-      fetch(loadedUrl, { mode: "cors" })
-        .then((res) => (res && res.ok ? res.blob() : null))
-        .then((blob) => { if (blob) Utils.photoCache.put(originalUrl, blob); })
-        .catch(() => { Utils.storage.set(CORS_BACKFILL_BLOCKED_KEY, true); });
+      // Already-cached bytes, or a same-origin fixture (sw.js's own
+      // generic caching already covers that permanently) — nothing to
+      // back up into the Drive photo cache.
+      if (!servedFromCache && !servedFromLocalFixture) {
+        const loadedUrl = img.src;
+        if (!Utils.storage.get(CORS_BACKFILL_BLOCKED_KEY, false)) {
+          fetch(loadedUrl, { mode: "cors" })
+            .then((res) => (res && res.ok ? res.blob() : null))
+            .then((blob) => { if (blob) Utils.photoCache.put(originalUrl, blob); })
+            .catch(() => { Utils.storage.set(CORS_BACKFILL_BLOCKED_KEY, true); });
+        }
+      }
+      if (onLoad) onLoad();
     };
 
     function startNetworkRetryChain() {
+      if (!urls.length) { onFallback(); return; } // no local fixture AND no Drive link at all
       img.onerror = retry;
       img.src = urls[0];
     }
@@ -282,16 +310,60 @@
       }
     }
 
-    Utils.photoCache.get(originalUrl).then((blob) => {
-      if (!img.isConnected) return; // card already gone by the time IndexedDB answered
-      if (blob) {
-        servedFromCache = true;
-        img.onerror = startNetworkRetryChain; // extremely unlikely (corrupted entry) — fall back to the normal network path
-        img.src = URL.createObjectURL(blob);
-      } else {
-        startNetworkRetryChain();
-      }
-    });
+    function startDriveChain() {
+      if (!urls.length) { onFallback(); return; }
+      Utils.photoCache.get(originalUrl).then((blob) => {
+        if (!img.isConnected) return; // card already gone by the time IndexedDB answered
+        if (blob) {
+          servedFromCache = true;
+          img.onerror = startNetworkRetryChain; // extremely unlikely (corrupted entry) — fall back to the normal network path
+          img.src = URL.createObjectURL(blob);
+        } else {
+          startNetworkRetryChain();
+        }
+      });
+    }
+
+    if (localUrl) {
+      img.onerror = () => {
+        if (!img.isConnected) return;
+        img.onerror = null;
+        servedFromLocalFixture = false; // that attempt failed — a later Drive success should still be backed up normally
+        startDriveChain();
+      };
+      img.src = localUrl;
+      // Only actually "from the local fixture" once it loads — the
+      // onerror handler above resets this back to false if this
+      // particular attempt 404s and falls through to the Drive chain.
+      servedFromLocalFixture = true;
+    } else {
+      startDriveChain();
+    }
+  };
+
+  /**
+   * Builds the same-origin local-fixture path for a Market photo,
+   * Market background, Vehicle-category photo, or a Driver/Doctor
+   * profile photo (kind "profile", keyed by the person's ID) — see
+   * Utils.wireImageFallback's own comment above for what this is and
+   * why. `slug` is the SAME slug already used in the URL (e.g. the
+   * driver-facing link ".../markets/abdur-rab-bazar/easy-bike" uses the
+   * exact strings "abdur-rab-bazar" and "easy-bike"), so a filename
+   * always matches automatically — no separate naming step. Returns a
+   * path whether or not the file actually exists yet; a missing file
+   * just 404s and wireImageFallback quietly falls through to the Drive
+   * link, exactly as if this had never been called.
+   */
+  Utils.localFixtureUrl = function (kind, slug) {
+    if (!slug) return null;
+    if (kind === "market") return "assets/local-photos/markets/" + slug + ".jpg";
+    if (kind === "marketBg") return "assets/local-photos/markets/" + slug + "-bg.jpg";
+    if (kind === "vehicle") return "assets/local-photos/vehicles/" + slug + ".jpg";
+    // Driver / Doctor personal photo: one shared folder, filename = the
+    // person's own ID exactly as it appears in the Sheet (e.g. D1111.jpg
+    // — case matters, GitHub Pages file names are case-sensitive).
+    if (kind === "profile") return "assets/local-photos/profilePhoto/" + encodeURIComponent(String(slug).trim()) + ".jpg";
+    return null;
   };
 
   /** Simple UID for client-side temporary keys. */
