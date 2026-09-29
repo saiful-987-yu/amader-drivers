@@ -73,6 +73,12 @@
   --color-danger-soft: #F7E4DE;
   --color-success: #1F6E4A;
 
+  /* Subtle input-background tints (registration form field grouping only) */
+  --color-tint-a: #E4F0E7; /* pale green  - reuses primary-soft's hue */
+  --color-tint-b: #FBF1E0; /* pale amber */
+  --color-tint-c: #E6EDF6; /* pale blue */
+  --color-tint-d: #EDEAF3; /* pale lavender/neutral */
+
   --color-focus-ring: #1667C7;
   --color-overlay: rgba(15, 27, 20, 0.55);
 }
@@ -101,6 +107,12 @@
   --color-danger: #E07354;
   --color-danger-soft: #33231D;
   --color-success: #4FAE7C;
+
+  /* Subtle input-background tints (registration form field grouping only) */
+  --color-tint-a: #1D3626;
+  --color-tint-b: #362E1B;
+  --color-tint-c: #1B2A38;
+  --color-tint-d: #2A2536;
 
   --color-focus-ring: #6FB2F2;
   --color-overlay: rgba(4, 8, 5, 0.7);

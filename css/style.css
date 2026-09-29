@@ -1041,9 +1041,32 @@ a:hover { text-decoration: underline; }
   font-family: inherit;
 }
 .field textarea { min-height: 88px; resize: vertical; }
+.field input::placeholder,
+.field select::placeholder,
+.field textarea::placeholder {
+  font-size: 0.85em;
+  color: var(--color-ink-soft);
+  opacity: 0.7;
+}
 .field textarea.is-readonly { background: var(--color-line); cursor: default; }
 .field input:focus, .field select:focus, .field textarea:focus {
   border-color: var(--color-primary);
+}
+
+/* Subtle background tints grouping related registration fields —
+   purely visual, no effect on validation/required behavior. */
+.field--tint-a input, .field--tint-a select, .field--tint-a textarea { background: var(--color-tint-a); }
+.field--tint-b input, .field--tint-b select, .field--tint-b textarea { background: var(--color-tint-b); }
+.field--tint-c input, .field--tint-c select, .field--tint-c textarea { background: var(--color-tint-c); }
+.field--tint-d input, .field--tint-d select, .field--tint-d textarea { background: var(--color-tint-d); }
+.field--tint-d .experience-row input, .field--tint-d .experience-row select { background: var(--color-tint-d); }
+
+/* Father's/Husband's Name (and any similarly-marked) label must never
+   wrap to a second line — shrink instead, down to a sensible floor. */
+.field--label-noshrink-guard label {
+  white-space: nowrap;
+  overflow: hidden;
+  font-size: clamp(0.72rem, 3.6vw, var(--font-size-sm));
 }
 
 .password-field { position: relative; }
@@ -1684,6 +1707,111 @@ a:hover { text-decoration: underline; }
 .review-item__comment { margin: var(--space-1) 0 0; font-size: var(--font-size-sm); color: var(--color-ink); }
 .review-item__date { margin-top: 2px; font-size: var(--font-size-xs); color: var(--color-ink-soft); }
 .reviews-view-all-btn { margin-bottom: var(--space-4); }
+
+/* Row holding View All / Close Reviews + the non-clickable "Review the
+   driver/doctor" speech bubble. The bubble's tail points down at the
+   stars below. With no View All button showing, the bubble centers. */
+.reviews-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: 1.125rem;
+}
+.reviews-action-row .reviews-view-all-btn { margin-bottom: 0; }
+.review-bubble {
+  --bubble-bg: var(--color-primary-soft);
+  --bubble-line: var(--color-primary);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: var(--space-2) var(--space-4);
+  border: 1.5px solid var(--bubble-line);
+  border-radius: var(--radius-md);
+  background: var(--bubble-bg);
+  color: var(--color-ink);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  user-select: none;
+  pointer-events: none;
+}
+/* Speech-bubble tail: an outline triangle (::before) with a fill
+   triangle (::after) on top so the border reads as one shape. */
+.review-bubble::before,
+.review-bubble::after {
+  content: "";
+  position: absolute;
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+.review-bubble::before {
+  width: 16px;
+  height: 14px;
+  left: 18px;
+  bottom: -12.5px;
+  background: var(--bubble-line);
+}
+.review-bubble::after {
+  width: 12px;
+  height: 11px;
+  left: 20px;
+  bottom: -9.5px;
+  background: var(--bubble-bg);
+}
+.reviews-action-row.is-solo { justify-content: center; }
+.reviews-action-row.is-solo .review-bubble::before { left: calc(50% - 8px); }
+.reviews-action-row.is-solo .review-bubble::after { left: calc(50% - 6px); }
+
+/* Star-submit button: centered, with a slightly tighter gap under the
+   comment box. */
+.rate-submit-row {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-4);
+}
+
+/* ------------------------------------------------------------
+   SOCIAL LINKS ROW (Driver/Doctor Details) — three small round
+   icon buttons, no header, deliberately low height. GitHub-style
+   neutral palette; brand-colored icons.
+   ------------------------------------------------------------ */
+.social-links-section {
+  --sl-bg: #f6f8fa;
+  --sl-bg-hover: #eaeef2;
+  --sl-border: #d0d7de;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding: var(--space-1) 0;
+}
+[data-theme="dark"] .social-links-section {
+  --sl-bg: #21262d;
+  --sl-bg-hover: #30363d;
+  --sl-border: #30363d;
+}
+.social-links__btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--sl-border);
+  background: var(--sl-bg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease), transform var(--duration-fast) var(--ease);
+}
+.social-links__btn:hover { background: var(--sl-bg-hover); }
+.social-links__btn:active { transform: scale(0.94); }
+.social-links__btn svg { width: 16px; height: 16px; }
+.social-links__btn--maps { color: #ea4335; }
+.social-links__btn--facebook { color: #1877f2; }
+.social-links__btn--youtube { color: #ff0000; }
 
 /* ------------------------------------------------------------
    PERSONAL DETAILS — Sheet-authored plain text or basic HTML,
