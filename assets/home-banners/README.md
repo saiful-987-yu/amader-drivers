@@ -10,6 +10,7 @@ website picks them up automatically, no code changes needed:
 | `home-banner-03.jpg` | Homepage banner, slide 3 |
 | `home-registration-banner.jpg` | Background image of the "Register as a Driver" section |
 | `home-doctor-banner.jpg` | Background image of the "Find a Doctor" section |
+| `register-photo-upload-bg.jpg` | Background of the top "Upload your profile photo" button on Registration Step 3 (a soft-green overlay sits on top so the text stays readable; if missing, the plain soft-green color is shown) |
 
 Notes:
 
