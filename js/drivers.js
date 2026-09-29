@@ -397,6 +397,17 @@
     closeReviewsBtn.style.display = "none";
     if ((driver.publicRatingCount || 0) <= 2) viewAllBtn.style.display = "none";
 
+    // Non-clickable "Review the driver" speech bubble, sitting to the right of
+    // the View All / Close button with its tail pointing down at the stars.
+    // With no View All button showing, it centers itself instead.
+    const reviewBubble = Utils.el("span", { class: "review-bubble", text: Lang.t("driver.reviewBubble") });
+    const reviewActionRow = Utils.el("div", { class: "reviews-action-row" }, [viewAllBtn, closeReviewsBtn, reviewBubble]);
+    function syncReviewActionRow() {
+      const anyBtn = viewAllBtn.style.display !== "none" || closeReviewsBtn.style.display !== "none";
+      reviewActionRow.classList.toggle("is-solo", !anyBtn);
+    }
+    syncReviewActionRow();
+
     Api.getPublicRatings("driver", driver.driverId, false)
       .then((list) => renderReviewList(listContainer, list))
       .catch(() => renderReviewList(listContainer, []));
@@ -410,6 +421,7 @@
         expandedContainer.style.display = "";
         viewAllBtn.style.display = "none";
         closeReviewsBtn.style.display = "";
+        syncReviewActionRow();
       } catch (err) {
         Toast.show(Lang.t("error.network"), "error");
       } finally {
@@ -425,6 +437,7 @@
       listContainer.style.display = "";
       closeReviewsBtn.style.display = "none";
       if ((driver.publicRatingCount || 0) > 2) viewAllBtn.style.display = "";
+      syncReviewActionRow();
     });
 
     const starButtons = [];
@@ -459,7 +472,7 @@
     });
 
     const submitBtn = Utils.el("button", {
-      class: "btn btn--primary btn--sm mt-5",
+      class: "btn btn--primary btn--sm",
       text: Lang.t("driver.ratingSubmit"),
       onClick: async () => {
         if (!selectedStars) { Toast.show(Lang.t("driver.ratingSelectStars")); return; }
@@ -482,11 +495,10 @@
       summaryRow,
       listContainer,
       expandedContainer,
-      viewAllBtn,
-      closeReviewsBtn,
+      reviewActionRow,
       starsRow,
       commentInput,
-      submitBtn
+      Utils.el("div", { class: "rate-submit-row" }, [submitBtn])
     ]);
   }
 
@@ -606,6 +618,7 @@
     }
 
     children.push(buildRatingSection(driver));
+    children.push(Utils.buildSocialLinksSection());
 
     const videoSection = Utils.buildVideoSection(driver.videoUrl, Lang.t("detail.video"));
     if (videoSection) { videoSection.classList.add("mt-5"); children.push(videoSection); }

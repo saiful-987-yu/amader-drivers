@@ -98,7 +98,8 @@
   }
 
   function passwordField(id, labelKey) {
-    const { wrap, control } = fieldRow({ id, labelKey, type: "password", required: true });
+    const { wrap, control } = fieldRow({ id, labelKey, type: "password" });
+    wrap.classList.add("field--tint-d");
     const inputWrap = Utils.el("div", { class: "password-field" });
     // Move the input into the password-field wrapper with a show/hide button.
     wrap.replaceChild(inputWrap, control);
@@ -129,8 +130,9 @@
    * phoneCheck in renderRegister) so Next never re-checks/re-loads an
    * unchanged value a second time.
    */
-  function availabilityField(app, { id, labelKey, type, wrapClass, checkFn, takenMessageKey, isValidFn, onStatus }) {
-    const { wrap, control } = fieldRow({ id, labelKey, type, required: true });
+  function availabilityField(app, { id, labelKey, type, wrapClass, checkFn, takenMessageKey, isValidFn, onStatus, tintClass }) {
+    const { wrap, control } = fieldRow({ id, labelKey, type });
+    if (tintClass) wrap.classList.add(tintClass);
     const inputWrap = Utils.el("div", { class: wrapClass });
     wrap.replaceChild(inputWrap, control);
     inputWrap.appendChild(control);
@@ -176,18 +178,22 @@
 
   /** Username field (Step 4) — never exposes the list of other accounts, just available/taken. */
   function usernameField(app, onStatus) {
-    return availabilityField(app, {
+    const field = availabilityField(app, {
       id: "username", labelKey: "field.username", wrapClass: "username-field",
-      checkFn: Api.checkUsername, takenMessageKey: "field.usernameTaken", onStatus
+      checkFn: Api.checkUsername, takenMessageKey: "field.usernameTaken", onStatus, tintClass: "field--tint-a"
     });
+    field.control.placeholder = Lang.current() === "bn" ? "ইউজারনেম লিখুন যেমন (saiful221)" : "enter username like (saiful221)";
+    return field;
   }
 
   /** Mobile Number field (Step 1) — same live-check UX as Username, gated on the existing phone-format validation. */
   function mobileField(app, onStatus) {
-    return availabilityField(app, {
+    const field = availabilityField(app, {
       id: "mobile", labelKey: "field.mobile", type: "tel", wrapClass: "phone-field",
-      checkFn: Api.checkPhone, takenMessageKey: "field.phoneTaken", isValidFn: Utils.isValidBdPhone, onStatus
+      checkFn: Api.checkPhone, takenMessageKey: "field.phoneTaken", isValidFn: Utils.isValidBdPhone, onStatus, tintClass: "field--tint-b"
     });
+    field.control.placeholder = Lang.current() === "bn" ? "নাম্বার লিখুন যেমন (01610-253221)" : "Enter number like (01610-253221)";
+    return field;
   }
 
   /**
@@ -522,25 +528,79 @@
       fullAddressField.control.classList.add("is-readonly");
 
       const addressParts = [villageField, postOfficeField, unionField, upazilaField, districtField];
-      syncFullAddress = () => {
-        fullAddressField.control.value = addressParts
+      /**
+       * Guesses whether the driver is typing this address in English or
+       * Bangla by the share of English (Latin-script) words across all
+       * five boxes combined — this is a heuristic, not a language
+       * setting, since the page's own display language and the address
+       * script don't have to match (e.g. a Bangla page with an English
+       * address). >60% English words -> treat the whole address as
+       * English for the গ্রাম/Village + ডাকঘর/Post Office prefixes and
+       * the trailing punctuation; otherwise Bangla.
+       */
+      function addressIsEnglish() {
+        const words = addressParts
           .map((f) => Utils.clean(f.control.value))
           .filter(Boolean)
-          .join(", ");
+          .join(" ")
+          .split(/\s+/)
+          .filter(Boolean);
+        if (!words.length) return Lang.current() !== "bn";
+        const englishWords = words.filter((w) => /^[A-Za-z0-9.,'\-]+$/.test(w)).length;
+        return englishWords / words.length > 0.6;
+      }
+      syncFullAddress = () => {
+        const isEn = addressIsEnglish();
+        const village = Utils.clean(villageField.control.value);
+        const postOffice = Utils.clean(postOfficeField.control.value);
+        const rest = [unionField, upazilaField, districtField]
+          .map((f) => Utils.clean(f.control.value))
+          .filter(Boolean);
+        const parts = [];
+        if (village) parts.push((isEn ? "Village: " : "গ্রামঃ ") + village);
+        if (postOffice) parts.push((isEn ? "Post Office: " : "ডাকঘর: ") + postOffice);
+        parts.push(...rest);
+        fullAddressField.control.value = parts.length ? parts.join(", ") + (isEn ? "." : "।") : "";
       };
       addressParts.forEach((f) => f.control.addEventListener("input", syncFullAddress));
 
+      const isBn = Lang.current() === "bn";
+
+      const fullNameField = fieldRow({ id: "fullName", labelKey: "field.fullName" });
+      fullNameField.wrap.classList.add("field--tint-a");
+      // English-name box: the example name always stays in Latin script,
+      // wrapped in the same bracket style used for the number examples below.
+      fullNameField.control.placeholder = isBn ? "আপনার নাম লিখুন যেমন (Saiful Islam)" : "Enter your name like (Saiful Islam)";
+
+      const fullNameBnField = fieldRow({ id: "fullNameBn", labelKey: "field.fullNameBn" });
+      fullNameBnField.wrap.classList.add("field--tint-a");
+      fullNameBnField.control.placeholder = isBn ? "নাম লিখুন" : "Enter name";
+
+      const guardianField = fieldRow({ id: "guardianName", labelKey: "field.guardianName" });
+      guardianField.wrap.classList.add("field--tint-a", "field--label-noshrink-guard");
+      // Same placeholder as the Bangla-name box above — no example name here.
+      guardianField.control.placeholder = isBn ? "নাম লিখুন" : "Enter name";
+
+      const altMobileField = fieldRow({ id: "altMobile", labelKey: "field.altMobile", type: "tel" });
+      altMobileField.wrap.classList.add("field--tint-b");
+      altMobileField.control.placeholder = isBn ? "নাম্বার লিখুন" : "Enter number";
+
+      const whatsappField = fieldRow({ id: "whatsapp", labelKey: "field.whatsapp", type: "tel" });
+      whatsappField.wrap.classList.add("field--tint-b");
+      whatsappField.control.placeholder = isBn ? "নাম্বার লিখুন" : "Enter number";
+
+      [villageField, postOfficeField, unionField, upazilaField, districtField].forEach((f) => f.wrap.classList.add("field--tint-c"));
+      villageField.control.placeholder = isBn ? "গ্রামঃ পশ্চিম উরির চর, ৮ নং ওয়ার্ড" : "Village: West Urir Char, Ward No. 8";
+      postOfficeField.control.placeholder = isBn ? "যেমনঃ জনতা বাজার - ৩৮১৩" : "e.g. Jonota Bazar - 3813";
+      unionField.control.placeholder = isBn ? "যেমনঃ চরক্লার্ক" : "e.g. Char Clerk";
+      upazilaField.control.placeholder = isBn ? "যেমনঃ সুবর্ণচর" : "e.g. Subarnachar";
+      districtField.control.placeholder = isBn ? "যেমনঃ নোয়াখালী" : "e.g. Noakhali";
+
       return [
-        fieldRow({ id: "fullName", labelKey: "field.fullName", required: true }),
-        twoColFieldRow(
-          fieldRow({ id: "fullNameBn", labelKey: "field.fullNameBn", required: true }),
-          fieldRow({ id: "guardianName", labelKey: "field.guardianName" })
-        ),
+        fullNameField,
+        twoColFieldRow(fullNameBnField, guardianField),
         mobileField(app, (value, available) => { phoneCheck = { value, available }; }),
-        twoColFieldRow(
-          fieldRow({ id: "altMobile", labelKey: "field.altMobile", type: "tel" }),
-          fieldRow({ id: "whatsapp", labelKey: "field.whatsapp", type: "tel" })
-        ),
+        twoColFieldRow(altMobileField, whatsappField),
         villageField,
         twoColFieldRow(postOfficeField, unionField),
         twoColFieldRow(upazilaField, districtField),
@@ -549,18 +609,31 @@
     }
 
     function buildStep2() {
+      const vehicleNumberField = fieldRow({ id: "vehicleNumber", labelKey: "field.vehicleNumber" });
+      vehicleNumberField.wrap.classList.add("field--tint-b");
+      vehicleNumberField.control.placeholder = Lang.current() === "bn"
+        ? "যেমন: ঢাকা মেট্রো-থ ৪৯-১২৩৪, No License, No Need"
+        : "e.g. Dhaka Metro-GA 11-1234, No License, No Need";
+
+      const serviceAreaField = fieldRow({ id: "serviceArea", labelKey: "field.serviceArea" });
+      serviceAreaField.wrap.classList.add("field--tint-b");
+      serviceAreaField.control.placeholder = "Nobi Bazar + 50 km Coverage Radius";
+
+      const experienceRow = experienceField();
+      experienceRow.wrap.classList.add("field--tint-d");
+
       return [
         multiSelectField({
-          id: "vehicleType", labelKey: "field.vehicleType", required: true,
+          id: "vehicleType", labelKey: "field.vehicleType",
           options: vehicles.map((v) => ({ value: v.slug, label: Lang.current() === "bn" ? v.nameBn : v.nameEn }))
         }),
-        fieldRow({ id: "vehicleNumber", labelKey: "field.vehicleNumber", required: true }),
+        vehicleNumberField,
         multiSelectField({
-          id: "marketSlug", labelKey: "field.preferredMarket", required: true,
+          id: "marketSlug", labelKey: "field.preferredMarket",
           options: markets.map((m) => ({ value: m.slug, label: Lang.current() === "bn" ? m.nameBn : m.nameEn }))
         }),
-        fieldRow({ id: "serviceArea", labelKey: "field.serviceArea", required: true }),
-        experienceField()
+        serviceAreaField,
+        experienceRow
       ];
     }
 

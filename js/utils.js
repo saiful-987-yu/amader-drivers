@@ -574,6 +574,27 @@
   };
 
   /**
+   * Social/account links row shown under the review form on Driver and
+   * Doctor Details. Layout only for now: three small round icon buttons
+   * (Google Maps, Facebook, YouTube), no header, and no click action yet.
+   */
+  Utils.buildSocialLinksSection = function () {
+    const items = [
+      { key: "maps", label: "Google Maps", icon: Icons.mapPin },
+      { key: "facebook", label: "Facebook", icon: Icons.facebook },
+      { key: "youtube", label: "YouTube", icon: Icons.youtube }
+    ];
+    return Utils.el("div", { class: "social-links-section" }, items.map((it) =>
+      Utils.el("button", {
+        type: "button",
+        class: "social-links__btn social-links__btn--" + it.key,
+        "aria-label": it.label,
+        html: it.icon
+      })
+    ));
+  };
+
+  /**
    * Click-to-speak, using only the browser's own built-in Speech
    * Synthesis — no external API, no recording/storage of anything.
    * Never auto-plays; only ever called from an explicit click handler.
