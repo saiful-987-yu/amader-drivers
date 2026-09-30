@@ -111,8 +111,10 @@ tab; a driver's own row is the only source of truth for their login):
 - `Vehicle Categories Image URL` — a category artwork image shown next to the existing small icon on the vehicle-type selection screen (roughly 2:1, wider than tall). This is completely separate from a driver's own `Vehicle Image URL` in the Drivers tab — leave it empty and the category card just shows its icon as before, no broken image.
 
 **Drivers**
-`Driver ID | Name | Bengali Name | Father/Husband Name | Phone | Alternative Phone | Village | Post Office | Union | Upazila | District | Full Address | Vehicle Type | Vehicle Number | Bazar | Service Area | Driving Experience | Driver Image URL | Vehicle Image URL | Username | Password | Status | Availability | Created Date | Updated Date | Star Rating | WhatsApp | Emergency Contact | Sort Status | Personal Details | Video URL | Manual Rating | Public Rating Cache | Public Rating Count`
+`Driver ID | Name | Bengali Name | Father/Husband Name | Phone | Alternative Phone | Village | Post Office | Union | Upazila | District | Full Address | Vehicle Type | Vehicle Number | Bazar | Service Area | Driving Experience | Driver Image URL | Vehicle Image URL | Social Media URL | Username | Password | Status | Availability | Created Date | Updated Date | Star Rating | WhatsApp | Emergency Contact | Sort Status | Personal Details | Video URL | Manual Rating | Public Rating Cache | Public Rating Count | Admin Status`
 
+- `Social Media URL` — optional. One or more links (Facebook, YouTube, TikTok, Google Maps, a website, etc.) separated by a new line or `, `; shown as icon buttons on the driver/doctor detail page. Leave it empty and nothing is shown.
+- `Admin Status` — `TRUE` gives that driver access to Admin Mode (after logging in and re-entering their password). It can only be set here, directly in the sheet — it can never be changed from the website. Leave it empty or `FALSE` for every normal driver.
 - `Username` / `Password` — **a driver logs in directly against their own row here.** There is no separate Users sheet at all. `Password` is a SHA-256 hash, never plain text — see "Pending Drivers" below for how a value gets here in the first place.
 - `Sort Status` — one of `1st`, `2nd`, `3rd`, or blank. On a bazar+vehicle-type driver list, this is **always the first sort priority**: every `1st` driver appears before every `2nd`, before every `3rd`, before everyone left blank. Drivers sharing the same Sort Status are then ordered by `Star Rating` (highest first).
 - `Bengali Name` — shown instead of `Name` whenever the site is in বাংলা mode. Leave it blank and the English `Name` is used as a fallback automatically — a driver never shows with a blank name.
@@ -162,8 +164,8 @@ change is always located by the Driver ID tied to the caller's own
 session token, never a value the client sends directly.
 
 **Pending Drivers**
-Same idea as Drivers, plus `Application ID`, `Application Status`,
-`Submitted Date`. `Username`/`Password` are already collected at
+Same idea as Drivers (including `Social Media URL`), plus `Application ID`,
+`Application Status`, `Submitted Date`. `Username`/`Password` are already collected at
 registration (password stored hashed, same as on the Drivers tab) —
 there is **no admin panel**; you review this tab yourself and, once
 happy, copy the whole row's information straight into the `Drivers`
@@ -188,6 +190,16 @@ usernames/numbers or any password data). The result for whichever
 value was last checked is remembered, so pressing Next doesn't
 re-check/re-load the same, unchanged value a second time — only
 editing the field invalidates that remembered result.
+
+**Admin Editor History**
+`Date Time | Admin Driver ID | Admin Name | Target Type | Target ID | Target Name | Old 1 | New 1 | Old 2 | New 2 | ...`
+
+Created automatically the first time an admin saves a change in Admin Mode
+— you don't need to create it yourself. One row per real change (plus one
+row per approved pending application): who changed it, when (Bangladesh
+time), which Driver/Doctor/Pending record, and each changed field as an
+`Old n` / `New n` pair. The `Old`/`New` columns are added automatically as
+needed. Passwords are never written here — only "hidden" → "changed".
 
 The backend also auto-creates a `Sessions` tab the first time someone logs
 in — you don't need to create it yourself, and you never need to look at
@@ -236,7 +248,7 @@ that tab:
 Everything else — `Name`, `Bengali Name`, `Phone`, `Alternative Phone`,
 `WhatsApp`, `Service Area`, `Driving Experience`, `Star Rating`,
 `Driver Image URL` (profile photo), `Vehicle Image URL` (sample/work
-photos, comma-separated for a gallery), `Status`, `Availability`,
+photos, comma-separated for a gallery), `Social Media URL`, `Status`, `Availability`,
 `Personal Details`, `Video URL`, `Manual Rating`, `Public Rating Cache`,
 `Public Rating Count` — works exactly like the Drivers tab, including
 multi-value support and the Bengali Name fallback. Doctors are **not**
