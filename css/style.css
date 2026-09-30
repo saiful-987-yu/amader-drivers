@@ -1782,6 +1782,7 @@ a:hover { text-decoration: underline; }
   --sl-bg-hover: #eaeef2;
   --sl-border: #d0d7de;
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   align-items: center;
   gap: var(--space-3);
@@ -1806,12 +1807,27 @@ a:hover { text-decoration: underline; }
   cursor: pointer;
   transition: background var(--duration-fast) var(--ease), transform var(--duration-fast) var(--ease);
 }
-.social-links__btn:hover { background: var(--sl-bg-hover); }
+.social-links__btn:hover { background: var(--sl-bg-hover); text-decoration: none; }
 .social-links__btn:active { transform: scale(0.94); }
 .social-links__btn svg { width: 16px; height: 16px; }
 .social-links__btn--maps { color: #ea4335; }
 .social-links__btn--facebook { color: #1877f2; }
 .social-links__btn--youtube { color: #ff0000; }
+.social-links__btn--whatsapp { color: #25d366; }
+.social-links__btn--tiktok { color: #111111; }
+.social-links__btn--linkedin { color: #0a66c2; }
+.social-links__btn--instagram { color: #e4405f; }
+.social-links__btn--x { color: #111111; }
+.social-links__btn--telegram { color: #26a5e4; }
+.social-links__btn--messenger { color: #0084ff; }
+.social-links__btn--snapchat { color: #e6b800; }
+.social-links__btn--pinterest { color: #e60023; }
+.social-links__btn--threads { color: #111111; }
+.social-links__btn--website { color: #57606a; }
+[data-theme="dark"] .social-links__btn--tiktok,
+[data-theme="dark"] .social-links__btn--x,
+[data-theme="dark"] .social-links__btn--threads { color: #f0f6fc; }
+[data-theme="dark"] .social-links__btn--website { color: #9da7b3; }
 
 /* ------------------------------------------------------------
    PERSONAL DETAILS — Sheet-authored plain text or basic HTML,
@@ -2163,3 +2179,91 @@ a:hover { text-decoration: underline; }
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+
+/* ------------------------------------------------------------
+   ADMIN PANEL (Profile > Admin Dashboard, edit pens, editor,
+   Pending Drivers window). Everything here only appears for
+   admins with Admin Mode on.
+   ------------------------------------------------------------ */
+.admin-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.admin-toggle-row__label { font-size: var(--font-size-md); color: var(--color-ink); }
+.admin-switch {
+  position: relative; flex-shrink: 0; width: 52px; height: 30px; padding: 0;
+  border-radius: var(--radius-pill); border: 0; cursor: pointer;
+  background: var(--color-line-strong); transition: background var(--duration-fast) var(--ease);
+}
+.admin-switch.is-on { background: var(--color-primary); }
+.admin-switch__knob {
+  position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); transition: transform var(--duration-fast) var(--ease);
+}
+.admin-switch.is-on .admin-switch__knob { transform: translateX(22px); }
+
+.admin-timer-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: var(--space-3); }
+.admin-timer-group { display: flex; gap: 4px; }
+.admin-chip {
+  padding: 6px 7px; border-radius: var(--radius-sm); border: 1px solid var(--color-line);
+  background: var(--color-bg); color: var(--color-ink); font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.admin-chip:disabled { opacity: 0.55; cursor: default; }
+.admin-time { font-size: var(--font-size-md); font-weight: 700; color: var(--color-primary); font-variant-numeric: tabular-nums; }
+
+.admin-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); margin-top: var(--space-3); }
+.admin-action {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  min-width: 0; min-height: 62px; padding: var(--space-2); border-radius: var(--radius-md);
+  border: 1px solid var(--color-line); background: var(--color-bg); color: var(--color-ink); cursor: pointer;
+  font-weight: 600; font-size: 12px; line-height: 1.25; text-align: center;
+}
+.admin-action:hover { border-color: var(--color-primary); }
+.admin-action__icon svg { width: 20px; height: 20px; color: var(--color-primary); }
+
+.admin-pw-wrap { position: relative; }
+.admin-pw-wrap input {
+  width: 100%; padding: 12px 44px 12px 14px; border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-ink); font-size: 16px;
+}
+.admin-pw-eye { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border: 0; background: transparent; color: var(--color-ink-soft); cursor: pointer; }
+.admin-pw-eye svg { width: 20px; height: 20px; }
+.admin-verify__hint { color: var(--color-ink-soft); margin: 0 0 var(--space-3); }
+.admin-verify__error { color: var(--color-danger); font-size: var(--font-size-sm); min-height: 1.2em; margin: var(--space-2) 0; }
+.admin-verify .btn { margin-top: var(--space-2); }
+.admin-spinner {
+  display: inline-block; width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid currentColor; border-right-color: transparent; animation: admin-spin 0.7s linear infinite;
+}
+@keyframes admin-spin { to { transform: rotate(360deg); } }
+.admin-loading { display: flex; justify-content: center; padding: var(--space-6) 0; color: var(--color-primary); }
+
+/* Edit pen on driver/doctor cards: floats in the card's free top-right corner, so the card's own size never changes. */
+.driver-card { position: relative; }
+.admin-pen-btn {
+  display: none; position: absolute; top: 8px; right: 8px; z-index: 2;
+  width: 28px; height: 28px; padding: 0; align-items: center; justify-content: center;
+  border-radius: 50%; border: 1px solid var(--color-line-strong);
+  background: var(--color-surface); color: var(--color-primary); cursor: pointer;
+}
+.admin-pen-btn svg { width: 14px; height: 14px; }
+.admin-mode-on .admin-pen-btn { display: inline-flex; }
+.admin-mode-on .driver-card__name { padding-right: 32px; }
+
+.admin-edit-form .field textarea { min-height: 72px; }
+.admin-multi { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 6px 8px; padding-bottom: var(--space-1); -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+.admin-multi__item {
+  display: inline-flex; flex-shrink: 0; white-space: nowrap; align-items: center; gap: 6px; padding: 6px 10px; margin: 0;
+  border: 1px solid var(--color-line-strong); border-radius: var(--radius-pill); font-size: var(--font-size-sm); font-weight: 500; cursor: pointer;
+}
+.admin-multi__item input { margin: 0; }
+
+.admin-pending-list { display: flex; flex-direction: column; gap: var(--space-3); }
+.admin-empty { text-align: center; color: var(--color-ink-soft); padding: var(--space-5) 0; margin: 0; }
+.admin-pending-item {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+  padding: var(--space-3); border: 1px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-bg);
+}
+.admin-pending-item__info { min-width: 0; }
+.admin-pending-item__name { font-weight: 700; overflow-wrap: anywhere; }
+.admin-pending-item__meta { font-size: var(--font-size-xs); color: var(--color-ink-soft); overflow-wrap: anywhere; }
+.admin-pending-item__actions { display: flex; gap: 6px; flex-shrink: 0; }
+.admin-pending-item__actions .btn { min-width: 52px; }
