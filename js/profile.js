@@ -1,26 +1,7 @@
-/**
- * profile.js — driver-only screens: Login and My Profile.
- * My Profile covers: header (photo/name/vehicle type/rating/
- * experience, with a vehicle-type-driven background), Account
- * Overview, Service Areas, Vehicle Information (+ photo gallery),
- * Profile Fields with a single "Edit Profile" action, Change
- * Password, Vehicle Photos, a big Availability toggle, and Logout
- * with a confirmation dialog. Customers never need this file.
- */
 (function (window, document, Utils, Lang, Icons, Auth, Api, Router, ViewHelpers, Toast, Modal) {
   "use strict";
 
-  // ---------------------------------------------------------
-  // Small local helpers. A few of these are near-identical to ones
-  // in drivers.js/registration.js — kept as their own copies here
-  // so every Profile-section change stays isolated to this one
-  // file and never touches those other screens.
-  // ---------------------------------------------------------
-
   function marketLabel(slug) {
-    // Falls back to a title-cased slug if the Markets list hasn't
-    // loaded — good enough for a label since we already have the
-    // driver's raw slug either way.
     return slug ? slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "—";
   }
 
@@ -29,14 +10,12 @@
     return (isBn && item.nameBn) ? item.nameBn : item.nameEn;
   }
 
-  /** Every market slug on `raw` (comma-separated), resolved to a display name via `markets` when possible, else a title-cased slug. */
   function resolveMarketNames(raw, markets) {
     const map = {};
     (markets || []).forEach((m) => { map[m.slug] = m; });
     return Utils.splitMulti(raw).map((slug) => map[slug] ? localizedName(map[slug]) : marketLabel(slug));
   }
 
-  /** Every vehicle-type slug on `raw`, resolved to a display name via `categories` when possible, else the uppercased slug. */
   function resolveVehicleTypeNames(raw, categories) {
     const map = {};
     (categories || []).forEach((c) => { map[c.slug] = c; });
@@ -71,7 +50,6 @@
     ]);
   }
 
-  /** Small field-row builder for the Edit Profile / Change Password modal forms — same markup shape as registration.js's own fieldRow(), kept as a separate copy so Profile-section work never touches registration.js. */
   function formField({ id, labelText, type, value }) {
     const label = Utils.el("label", { for: id, text: labelText });
     const control = Utils.el("input", { id, name: id, type: type || "text", value: value || "" });
@@ -88,14 +66,6 @@
     if (err) err.textContent = message || "";
   }
 
-  /**
-   * Vehicle photos gallery — same look/behaviour (main image + prev/
-   * next arrows + a thumbnail strip when there's more than one
-   * photo) as the public Driver Detail gallery, but its own copy so
-   * this Profile-only screen never depends on drivers.js. Shows a
-   * clean "No photos available" state instead of an empty gallery
-   * when the driver has no vehicle images at all.
-   */
   function buildVehicleGallery(driver) {
     const rawUrls = Utils.splitMulti(driver.vehicleImageUrl).filter(Boolean);
     const urls = rawUrls.map(Utils.resolveImageUrl);
@@ -151,9 +121,6 @@
     return Utils.el("div", { class: "gallery" }, children);
   }
 
-  // ---------------------------------------------------------
-  // LOGIN VIEW (unchanged — outside the Profile section's scope)
-  // ---------------------------------------------------------
   function renderLogin(app) {
     app.innerHTML = "";
     if (Auth.isLoggedIn()) { Router.navigate("/profile"); return; }
@@ -197,11 +164,6 @@
         await Auth.login(idInput.value, pwInput.value);
         Router.navigate("/profile");
       } catch (err) {
-        // Only an explicit "wrong username/password" from the backend
-        // should say so — a timeout, network hiccup, or a server-side
-        // misconfiguration (e.g. a missing/misnamed sheet) must NEVER
-        // be shown as "invalid credentials", or a driver with a
-        // perfectly correct password would wrongly think it's wrong.
         let key = "login.error.generic";
         if (err.code === "PENDING_APPROVAL") key = "login.error.pending";
         else if (err.code === "INVALID_CREDENTIALS") key = "login.error";
@@ -222,9 +184,6 @@
     ]));
   }
 
-  // ---------------------------------------------------------
-  // PROFILE VIEW
-  // ---------------------------------------------------------
   async function renderProfile(app) {
     app.innerHTML = "";
     if (!Auth.isLoggedIn()) {
@@ -237,13 +196,6 @@
       return;
     }
 
-    // Same cache-then-refresh pattern used for Markets/Vehicle
-    // Categories/Driver+Doctor directories elsewhere in the app: a
-    // synchronous peek paints instantly from the last-known data (if
-    // any) — no loading spinner, no network wait — while Auth.getProfile()
-    // still runs underneath to silently confirm/refresh it. This also
-    // means a plain language toggle (which re-renders the current
-    // route from scratch) never re-triggers a full network load here.
     const cachedDriver = Auth.peekProfile();
     const cachedMarkets = Api.peekMarkets();
     const cachedVehicleCategories = Api.peekVehicleCategories();
@@ -264,7 +216,7 @@
         Api.getMarkets().catch(() => cachedMarkets || []),
         Api.getVehicleCategories().catch(() => cachedVehicleCategories || [])
       ]);
-      if (!app.contains(section)) return; // navigated away before this settled
+      if (!app.contains(section)) return;
       const driver = results[0];
       const markets = results[1] || [];
       const vehicleCategories = results[2] || [];
@@ -277,9 +229,6 @@
         Router.navigate("/login");
         return;
       }
-      // A cached profile is already on screen — a failed silent
-      // refresh (e.g. offline/slow network) shouldn't replace it with
-      // an error; just keep showing what we already have.
       if (cachedDriver) return;
       section.innerHTML = "";
       section.appendChild(ViewHelpers.errorBlock(Lang.t("error.network"), () => renderProfile(app)));
@@ -289,7 +238,6 @@
   function paintProfile(app, section, driver, markets, vehicleCategories) {
     section.innerHTML = "";
 
-    // ---------- Header hero ----------
     const photoWrap = Utils.el("div", { class: "profile-photo" });
     const photoUrl = Utils.resolveImageUrl(driver.imageUrl);
     const photoLocalUrl = Utils.localFixtureUrl("profile", driver.driverId);
@@ -303,8 +251,6 @@
 
     const vehicleSlugs = Utils.splitMulti(driver.vehicleType);
     const primarySlug = vehicleSlugs[0] || "";
-    // Only these get their own tinted background — everything else
-    // (including an unrecognised/blank slug) keeps the neutral default.
     const heroModifier = ["cng", "auto", "van", "motorcycle", "easy-bike"].indexOf(primarySlug) !== -1 ? primarySlug : "";
 
     const accountStatus = driver.accountStatus || "active";
@@ -336,7 +282,6 @@
       ])
     ]);
 
-    // ---------- Account Overview ----------
     const whatsappNumber = Utils.resolveWhatsApp(driver);
     const availabilityPill = statusPill(
       driver.availability === "active" ? Lang.t("profile.setActive") : Lang.t("profile.setInactive"),
@@ -357,7 +302,7 @@
           accountStatus === "active" ? "success" : (accountStatus === "pending" ? "warning" : "danger")
         )),
         overviewItem(Icons.checkCircle, Lang.t("profile.availability"), availabilityPill),
-        overviewItem(Icons.shield, Lang.t("profile.adminStatus"), statusPill("False", "neutral"))
+        overviewItem(Icons.shield, Lang.t("profile.adminStatus"), driver.isAdmin ? statusPill(Lang.t("profile.setActive"), "success") : statusPill("False", "neutral"))
       ])
     ]);
 
@@ -368,7 +313,6 @@
       overviewGrid
     ]);
 
-    // ---------- Service Areas ----------
     const marketNames = resolveMarketNames(driver.marketSlug, markets);
     const serviceAreasCard = Utils.el("div", { class: "profile-card" }, [
       Utils.el("div", { class: "profile-card__head" }, [
@@ -387,7 +331,6 @@
       ])
     ].filter(Boolean));
 
-    // ---------- Vehicle Information ----------
     const vehiclePhotoUrlsRaw = Utils.splitMulti(driver.vehicleImageUrl).filter(Boolean);
     const vehiclePhotoUrls = vehiclePhotoUrlsRaw.map(Utils.resolveImageUrl);
     const thumb = Utils.el("button", { type: "button", class: "vehicle-thumb", onClick: () => openVehiclePhotosModal(driver) });
@@ -399,11 +342,6 @@
       thumb.innerHTML = Icons.vehicle(primarySlug || "other");
     }
 
-    // Up to 3 more photos shown as a small stacked column next to the
-    // main photo — the same existing vehicleImageUrl list, just laid
-    // out differently. A "+N" badge on the last small tile covers any
-    // photos beyond these 4 (still all reachable in the same gallery
-    // modal, unchanged).
     const sideUrls = vehiclePhotoUrls.slice(1, 4);
     const sideUrlsRaw = vehiclePhotoUrlsRaw.slice(1, 4);
     let sideColumn = null;
@@ -441,7 +379,6 @@
       ])
     ]);
 
-    // ---------- Profile Fields ----------
     const profileFieldsCard = Utils.el("div", { class: "profile-card" }, [
       Utils.el("div", { class: "profile-card__head" }, [
         Utils.el("h2", { html: Icons.userLarge + "<span>" + Lang.t("profile.profileFields") + "</span>" }),
@@ -462,7 +399,6 @@
       });
     }
 
-    // ---------- Change Password / Vehicle Photos link rows ----------
     const changePasswordRow = Utils.el("button", { type: "button", class: "profile-link-row", onClick: () => openChangePasswordModal() }, [
       Utils.el("div", { class: "profile-link-row__icon", html: Icons.lock }),
       Utils.el("div", { class: "profile-link-row__body" }, [
@@ -481,7 +417,6 @@
       Utils.el("span", { class: "profile-link-row__chevron", html: Icons.chevronRight })
     ]);
 
-    // ---------- Availability — big, clear toggle ----------
     const activeOption = Utils.el("button", { type: "button", class: "availability-toggle__option" }, [
       Utils.el("span", { html: Icons.checkCircle }),
       Utils.el("span", {}, [
@@ -515,7 +450,6 @@
         await Auth.updateAvailability(target);
         driver.availability = target;
         paintAvailability();
-        // Also reflect the change in the plain badge up in Account Overview.
         availabilityPill.textContent = target === "active" ? Lang.t("profile.setActive") : Lang.t("profile.setInactive");
         availabilityPill.className = "status-pill status-pill--" + (target === "active" ? "success" : "neutral");
         Toast.show(Lang.t(target === "active" ? "profile.statusUpdated.active" : "profile.statusUpdated.inactive"), "success");
@@ -526,7 +460,6 @@
     activeOption.addEventListener("click", () => switchAvailability("active"));
     inactiveOption.addEventListener("click", () => switchAvailability("inactive"));
 
-    // ---------- Logout ----------
     const logoutBtn = Utils.el("button", {
       class: "btn btn--outline-danger btn--block", html: Icons.logout + "<span>" + Lang.t("nav.logout") + "</span>",
       onClick: async () => {
@@ -536,6 +469,7 @@
     });
 
     section.appendChild(hero);
+    if (driver.isAdmin && window.Admin) section.appendChild(window.Admin.buildDashboardCard());
     section.appendChild(accountOverviewCard);
     section.appendChild(serviceAreasCard);
     section.appendChild(vehicleInfoCard);
@@ -546,14 +480,6 @@
     section.appendChild(logoutBtn);
   }
 
-  // ---------------------------------------------------------
-  // EDIT PROFILE modal — the single, shared editor for every
-  // driver-editable field (opened from any of the section "Edit"
-  // buttons above). Only sends the fixed set of fields
-  // Auth.updateProfile()/Code.gs's updateProfile() accept — Name,
-  // Vehicle Type, Bazar, Driving Experience, photos, Username,
-  // Phone, and Account Status all stay read-only by design.
-  // ---------------------------------------------------------
   function openEditProfileModal(driver, onSaved) {
     const nameBnField = formField({ id: "editNameBn", labelText: Lang.t("profile.bengaliName"), value: driver.nameBn });
     const guardianField = formField({ id: "editGuardian", labelText: Lang.t("profile.guardianName"), value: driver.guardianName });
@@ -619,9 +545,6 @@
     Modal.open(content);
   }
 
-  // ---------------------------------------------------------
-  // CHANGE PASSWORD modal
-  // ---------------------------------------------------------
   function openChangePasswordModal() {
     const oldField = formField({ id: "oldPassword", labelText: Lang.t("profile.oldPassword"), type: "password" });
     const newField = formField({ id: "newPassword", labelText: Lang.t("profile.newPassword"), type: "password" });
@@ -679,10 +602,6 @@
     Modal.open(root);
   }
 
-  // ---------------------------------------------------------
-  // VEHICLE PHOTOS modal — read-only gallery from the Sheet's
-  // existing Vehicle Image URL column; no upload/edit here.
-  // ---------------------------------------------------------
   function openVehiclePhotosModal(driver) {
     const content = Utils.el("div", {}, [
       Utils.el("div", { class: "modal-head" }, [

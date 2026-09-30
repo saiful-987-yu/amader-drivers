@@ -1,61 +1,16 @@
-/**
- * api.js — the ONLY module that knows how driver/market/vehicle
- * data is fetched or submitted. Everything else calls Api.*
- * and does not care whether data came from Google Sheets (via
- * the Apps Script backend) or from local demo data.
- *
- * Two modes:
- *   - REAL MODE: window.NOBI_CONFIG.API_BASE_URL is set to a
- *     deployed Google Apps Script Web App URL. Every call is
- *     a real network request (see google-apps-script/Code.gs
- *     for the matching backend operations).
- *   - DEMO MODE: API_BASE_URL is null. The app runs entirely
- *     against sample data kept in localStorage, so the full
- *     experience (search, registration, login, availability)
- *     can be tested with no Google Sheet connected.
- *
- * No Google credentials of any kind exist in this file or
- * anywhere else in the frontend.
- *
- * CACHING / PRELOADING
- * ---------------------
- * Markets, Vehicle Categories, and the full Driver directory
- * are each fetched at most once per cache window and reused
- * everywhere. cachedCall() caches the in-flight PROMISE (not
- * just the resolved value), so two near-simultaneous callers
- * (e.g. Api.preload() and a view rendering at the same time)
- * always share one network request instead of firing two.
- * Api.peek*() lets a view check "is this already loaded?"
- * synchronously, so navigating Market -> Vehicle -> Driver List
- * can render instantly with no loading flash once the initial
- * preload has settled.
- */
 (function (window, Utils) {
   "use strict";
 
   const CONFIG = window.NOBI_CONFIG || {};
   const IS_DEMO = !CONFIG.API_BASE_URL;
   const TIMEOUT_MS = CONFIG.REQUEST_TIMEOUT_MS || 12000;
-  // Photo upload sends up to 3 MB and Apps Script then saves it to Drive, which
-  // can legitimately take longer than a normal 12 s request. Timing out early made
-  // the site show "upload failed" even though the file had already reached Drive.
   const UPLOAD_TIMEOUT_MS = Math.max(TIMEOUT_MS, 60000);
   const CACHE_TTL = CONFIG.CACHE_TTL_MS || 5 * 60 * 1000;
   const STATUS_CACHE_TTL = CONFIG.STATUS_CACHE_TTL_MS || 60 * 1000;
 
-  // key -> { time, promise, settled, value }
   const cache = new Map();
   const PERSIST_PREFIX = "nobi.cache.v1.";
 
-  /**
-   * Persistent (localStorage) cache — survives page reloads and browser
-   * reopens. Used so Markets/Vehicle Categories/Driver+Doctor directories
-   * can be shown INSTANTLY on a cold start from whatever was last
-   * successfully fetched, while a fresh copy loads quietly in the
-   * background (Part 11-15 of the project spec: no blank/loading screen
-   * for data we've already shown the user before, and old data is never
-   * cleared until a complete, valid replacement has arrived).
-   */
   function persistGet(key) {
     try {
       const raw = window.localStorage.getItem(PERSIST_PREFIX + key);
@@ -68,7 +23,6 @@
     try {
       window.localStorage.setItem(PERSIST_PREFIX + key, JSON.stringify({ value, time: Date.now() }));
     } catch (e) {
-      /* storage may be full/unavailable — caching is an optimization, not critical */
     }
   }
 
@@ -85,7 +39,6 @@
     const timeoutMs = operation === "uploadDriverPhoto" ? UPLOAD_TIMEOUT_MS : TIMEOUT_MS;
     const response = await withTimeout(fetch(url, {
       method: "POST",
-      // text/plain avoids a CORS preflight against Apps Script Web Apps.
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(payload || {})
     }), timeoutMs);
@@ -103,18 +56,6 @@
     return op + ":" + JSON.stringify(payload || {});
   }
 
-  /**
-   * Cache the in-flight promise (not just the eventual value) so
-   * concurrent callers for the same op+payload always share one
-   * network request — this is what makes Api.preload() safe to
-   * fire alongside a view's own fetch without doubling requests.
-   *
-   * On a cold start (nothing in the in-memory cache yet), a persisted
-   * value from a previous visit is served immediately while a fresh
-   * request quietly updates both caches in the background — the old
-   * data is only ever replaced once a COMPLETE, valid response lands
-   * (a failed/partial refresh just keeps what was already shown).
-   */
   function cachedCall(op, payload, ttl) {
     const key = cacheKey(op, payload);
     const effectiveTtl = ttl != null ? ttl : CACHE_TTL;
@@ -123,9 +64,6 @@
       return hit.promise;
     }
 
-    // We may already have SOMETHING to show — either an expired-but-still
-    // valid in-memory value, or (on a cold start) a value persisted from
-    // an earlier visit. Either way, serve it instantly and refresh quietly.
     const persistedRecord = (hit && hit.settled) ? null : persistGet(key);
     const staleValue = (hit && hit.settled) ? hit.value : (persistedRecord ? persistedRecord.value : undefined);
     const hasStale = staleValue !== undefined;
@@ -135,8 +73,6 @@
       cache.set(key, { time: Date.now(), promise: Promise.resolve(value), settled: true, value });
       return value;
     }).catch((err) => {
-      // A failed/timed-out refresh must never wipe out a previously
-      // working value — just report failure and keep serving the old one.
       if (!hasStale) cache.delete(key);
       throw err;
     });
@@ -144,7 +80,7 @@
     if (hasStale) {
       const staleEntry = { time: Date.now(), promise: Promise.resolve(staleValue), settled: true, value: staleValue };
       cache.set(key, staleEntry);
-      freshPromise.catch(() => {}); // still runs in the background; failure already handled above
+      freshPromise.catch(() => {});
       return staleEntry.promise;
     }
 
@@ -153,35 +89,29 @@
     return freshPromise;
   }
 
-  /** Synchronous peek: returns a cached (even if slightly stale/persisted) value if we have one at all, else undefined. */
   function peek(op, payload, ttl) {
     const key = cacheKey(op, payload);
     const effectiveTtl = ttl != null ? ttl : CACHE_TTL;
     const hit = cache.get(key);
     if (hit && hit.settled && Date.now() - hit.time < effectiveTtl) return hit.value;
-    // Nothing fresh in memory yet (e.g. the very first synchronous peek
-    // right after a page reload) — fall back to whatever was persisted
-    // from a previous visit so the first paint is never blank.
     const persisted = persistGet(key);
     return persisted ? persisted.value : undefined;
+  }
+
+  function clearPersisted(prefix) {
+    try {
+      Object.keys(window.localStorage).forEach((k) => {
+        if (k.indexOf(PERSIST_PREFIX + prefix) === 0) window.localStorage.removeItem(k);
+      });
+    } catch (e) { }
   }
 
   function invalidateCache(prefix) {
     Array.from(cache.keys()).forEach((key) => {
       if (!prefix || key.startsWith(prefix)) cache.delete(key);
     });
-    // Persisted data is intentionally NOT cleared here — a driver
-    // registering or toggling availability shouldn't erase what's on
-    // disk for other tabs/sessions; the next successful fetch overwrites
-    // it atomically as usual.
   }
 
-  // ---------------------------------------------------------
-  // DEMO MODE BACKEND — mirrors the shape of the real API so
-  // switching to a real Google Sheet later requires no UI code
-  // changes. See google-apps-script/Code.gs for the real
-  // implementation of every operation used here.
-  // ---------------------------------------------------------
   const DemoStore = (function () {
     const KEYS = {
       markets: "nobi.demo.markets",
@@ -238,9 +168,6 @@
         ]);
       }
       if (!Utils.storage.get(KEYS.ratings)) {
-        // A mix of verified/unverified reviews, purely to demonstrate the
-        // review system in demo mode — a real deployment starts with an
-        // empty "Public Ratings" tab and fills up from real submissions.
         Utils.storage.set(KEYS.ratings, [
           { id: "R001", targetType: "driver", targetId: "D001", stars: 5, comment: "Very punctual and polite. Highly recommended!", dateTime: "2026-01-04T10:00:00.000Z", verified: true },
           { id: "R002", targetType: "driver", targetId: "D001", stars: 4, comment: "Good service, fair price.", dateTime: "2026-01-10T08:30:00.000Z", verified: true },
@@ -266,7 +193,6 @@
     };
   })();
 
-  /** True if a driver record matches a free-text query on name or phone. */
   function matchesQuery(driver, query) {
     if (!query) return true;
     const q = String(query).trim().toLowerCase();
@@ -277,7 +203,6 @@
   }
 
   async function demoCall(operation, payload) {
-    // Small artificial delay so loading states are visible even in demo mode.
     await new Promise((resolve) => setTimeout(resolve, 260));
     switch (operation) {
       case "getMarkets":
@@ -287,9 +212,6 @@
         return DemoStore.vehicles().filter((v) => v.status === "active").sort((a, b) => a.sortOrder - b.sortOrder);
 
       case "getDrivers": {
-        // Always returns the full active-driver directory (unfiltered).
-        // Market/vehicle/search filtering happens client-side against
-        // this single cached list — see Api.getDrivers below.
         const { marketSlug, vehicleSlug, query } = payload || {};
         let list = DemoStore.drivers().filter((d) => d.status === "active");
         if (marketSlug) list = list.filter((d) => Utils.splitMulti(d.marketSlug).includes(marketSlug));
@@ -346,9 +268,6 @@
       }
 
       case "uploadDriverPhoto": {
-        // No real Drive access in demo mode — the data: URI itself
-        // works as an <img src>, so it's used directly as the "url",
-        // same size rule enforced as the real backend.
         const base64Data = String(payload.imageBase64 || "");
         const mimeType = String(payload.mimeType || "");
         if (!base64Data || ["image/jpeg", "image/png", "image/webp"].indexOf(mimeType) === -1) {
@@ -362,8 +281,6 @@
       }
 
       case "login": {
-        // The Drivers list is the ONLY source of truth for login — same
-        // as the real backend, there is no separate Users store.
         const drivers = DemoStore.drivers();
         const pending = DemoStore.pending();
         const idInput = (payload.identifier || "").trim().toLowerCase();
@@ -413,7 +330,6 @@
         const drivers = DemoStore.drivers();
         const idx = drivers.findIndex((d) => d.driverId === session.driverId);
         if (idx === -1) throw sessionError();
-        // Same fixed, driver-editable field list as updateProfile() in Code.gs.
         const d = drivers[idx];
         const fieldMap = { nameBn: "nameBn", guardianName: "guardianName", altPhone: "altPhone", whatsapp: "whatsapp", serviceArea: "serviceArea", vehicleNumber: "vehicleNumber" };
         let changed = false;
@@ -467,8 +383,6 @@
           const err = new Error("VALIDATION_FAILED"); err.code = "VALIDATION_FAILED"; throw err;
         }
         const ratings = DemoStore.ratings();
-        // New reviews always start unverified — see Public Ratings in
-        // Code.gs for why (the sheet owner approves them manually).
         ratings.push({
           id: Utils.uid(), targetType, targetId, stars,
           comment: String(payload.comment || "").trim().slice(0, 1000),
@@ -496,13 +410,6 @@
     return err;
   }
 
-  /**
-   * Demo-mode equivalent of Code.gs's cached "Public Rating Cache"/
-   * "Public Rating Count" columns — computed live from DemoStore's
-   * ratings array (a tiny local list, so there's no real performance
-   * concern here the way there would be re-scanning a live Sheet).
-   * Only ever counts verified: true rows, same rule as the real backend.
-   */
   function verifiedRatingSummary(targetType, targetId) {
     const verified = DemoStore.ratings().filter((r) => r.targetType === targetType && r.targetId === targetId && r.verified === true);
     const count = verified.length;
@@ -510,7 +417,6 @@
     return { avg: Math.round(avg * 10) / 10, count };
   }
 
-  /** Fields that are safe to expose on the public driver directory. */
   function publicDriverFields(d) {
     const summary = verifiedRatingSummary("driver", d.driverId);
     const manualRating = Number(d.manualRating) || 0;
@@ -534,17 +440,13 @@
       sortStatus: d.sortStatus || "",
       personalDetails: d.personalDetails || "",
       videoUrl: d.videoUrl || "",
+      socialUrl: d.socialUrl || "",
       publicRating: summary.avg,
       publicRatingCount: summary.count,
       finalRating: Math.min(summary.avg + manualRating, 5)
     };
   }
 
-  /**
-   * Doctor fields exposed publicly — same shape/spirit as a driver
-   * record, but "Vehicle Type"/"Vehicle Number" become "Degree"/
-   * "Registration Number", and there's no bazar/vehicle filtering.
-   */
   function publicDoctorFields(d) {
     const summary = verifiedRatingSummary("doctor", d.doctorId);
     const manualRating = Number(d.manualRating) || 0;
@@ -565,13 +467,13 @@
       availability: d.availability,
       personalDetails: d.personalDetails || "",
       videoUrl: d.videoUrl || "",
+      socialUrl: d.socialUrl || "",
       publicRating: summary.avg,
       publicRatingCount: summary.count,
       finalRating: Math.min(summary.avg + manualRating, 5)
     };
   }
 
-  /** Fields visible on the logged-in driver's own profile (still no password). Father/Husband Name is only ever returned here — never in publicDriverFields (the public directory) above. */
   function driverProfileFields(d) {
     if (!d) return null;
     return Object.assign(publicDriverFields(d), {
@@ -585,7 +487,6 @@
     return IS_DEMO ? demoCall(operation, payload) : realCall(operation, payload);
   }
 
-  /** Active-first, then a stable alphabetical order — used for both drivers and doctors. */
   function sortDrivers(list) {
     return list.slice().sort((a, b) => {
       const aActive = a.availability === "active" ? 0 : 1;
@@ -595,19 +496,6 @@
     });
   }
 
-  /**
-   * A driver's "Sort Status" (1st/2nd/3rd/blank, from the Sheet) is
-   * ALWAYS the primary ordering key for a bazar+vehicle-type driver
-   * list — 1st, then 2nd, then 3rd, then everyone else (blank), in
-   * that order. Star Rating (highest first) only decides ordering
-   * WITHIN the same Sort Status group; it never overrides Sort Status.
-   *
-   * ABOVE all of that, though: anyone currently unavailable/offline
-   * always sinks to the very bottom, no matter their Sort Status or
-   * rating — a "1st" driver who's offline right now is still less
-   * useful to show first than any available driver, so this is checked
-   * before Sort Status rather than after it.
-   */
   function sortBySortStatusThenRating(list) {
     const rank = { "1st": 0, "2nd": 1, "3rd": 2 };
     return list.slice().sort((a, b) => {
@@ -625,71 +513,33 @@
     });
   }
 
-  // ---------------------------------------------------------
-  // PUBLIC API
-  // ---------------------------------------------------------
   const Api = { isDemo: IS_DEMO };
 
   Api.getMarkets = () => cachedCall("getMarkets", {});
   Api.getVehicleCategories = () => cachedCall("getVehicleCategories", {});
 
-  /**
-   * The full active-driver directory, fetched (and cached) as ONE
-   * request regardless of market/vehicle/search — every other
-   * driver-list view below filters this single cached list
-   * client-side instead of making a new network request per click.
-   */
   Api.getDriverDirectory = () => cachedCall("getDrivers", {}, STATUS_CACHE_TTL);
 
   Api.getDrivers = async (marketSlug, vehicleSlug, query) => {
     let list = await Api.getDriverDirectory();
-    // marketSlug/vehicleType may each hold a comma-separated list of values
-    // when a driver serves multiple bazars or drives multiple vehicle
-    // types — match if the requested slug is ANY of them.
     if (marketSlug) list = list.filter((d) => Utils.splitMulti(d.marketSlug).includes(marketSlug));
     if (vehicleSlug) list = list.filter((d) => Utils.splitMulti(d.vehicleType).includes(vehicleSlug));
     if (query) list = list.filter((d) => matchesQuery(d, query));
     return sortBySortStatusThenRating(list);
   };
 
-  /**
-   * Drivers marked Emergency Contact = TRUE, regardless of bazar or
-   * vehicle type. Reuses the same cached directory as everything else —
-   * no extra network request, and no duplicate driver records. Ordered
-   * by the SAME Sort Status → Rating rule as a bazar+vehicle-type
-   * driver list (sortBySortStatusThenRating above) — not a separate
-   * emergency-only ordering rule.
-   */
   Api.getEmergencyDrivers = async () => {
     const list = await Api.getDriverDirectory();
     return sortBySortStatusThenRating(list.filter((d) => d.emergency === true));
   };
 
-  /**
-   * Doctors live in their own Google Sheet tab, fetched/cached exactly
-   * like the driver directory (one request, cached + persisted, reused
-   * everywhere) — see getDoctors() in Code.gs / demoCall below. Ordered
-   * by the SAME Sort Status → Rating rule as a driver list
-   * (sortBySortStatusThenRating above) — not a separate doctor-only
-   * ordering rule.
-   */
   Api.getDoctorDirectory = () => cachedCall("getDoctors", {}, STATUS_CACHE_TTL).then(sortBySortStatusThenRating);
   Api.peekDoctorDirectory = () => peek("getDoctors", {}, STATUS_CACHE_TTL);
 
-  // Synchronous cache peeks — used by views to skip the loading
-  // skeleton entirely when data has already been preloaded.
   Api.peekMarkets = () => peek("getMarkets", {});
   Api.peekVehicleCategories = () => peek("getVehicleCategories", {});
   Api.peekDriverDirectory = () => peek("getDrivers", {}, STATUS_CACHE_TTL);
 
-  /**
-   * Kick off the initial load + background preload chain:
-   * Markets first (needed immediately for the homepage), then,
-   * as soon as that succeeds, Vehicle Categories and the Driver
-   * directory start loading in the background without blocking
-   * anything. Safe to call once at startup — later calls just
-   * reuse the same cached promises.
-   */
   Api.preload = function () {
     return Api.getMarkets().then((markets) => {
       Api.getVehicleCategories().catch(() => {});
@@ -699,7 +549,6 @@
     });
   };
 
-  /** Registration Step 3's "Upload Photo" — plain base64 image data, returns { url } once saved to Drive (real backend) or a data: URI (demo mode). No token/session needed — same as registerDriver, this runs before the driver has an account. */
   Api.uploadDriverPhoto = (imageBase64, mimeType) => call("uploadDriverPhoto", { imageBase64, mimeType });
 
   Api.registerDriver = (formData) => call("registerDriver", formData)
@@ -708,57 +557,63 @@
       return res;
     });
 
-  /** Lightweight live check for the registration form — never exposes the list of existing usernames or any password data to the browser. */
   Api.checkUsername = (username) => call("checkUsername", { username });
 
-  /** Same idea as Api.checkUsername, for the Step 1 mobile number field. */
   Api.checkPhone = (phone) => call("checkPhone", { phone });
 
   Api.login = (identifier, password) => call("login", { identifier, password });
-  /**
-   * Cached exactly like Markets/Vehicle Categories/Driver+Doctor
-   * directories elsewhere (see cachedCall above): a fresh visit within
-   * the cache window, or an offline/slow-network visit with a
-   * previously-persisted profile, is served instantly — with a silent
-   * background refresh checking for anything new — instead of the
-   * Profile page depending on the network every single time it's
-   * opened (including on a plain language toggle, which re-renders
-   * the current route from scratch).
-   */
   Api.getProfile = (token) => cachedCall("getProfile", { token }, STATUS_CACHE_TTL);
   Api.peekProfile = (token) => peek("getProfile", { token }, STATUS_CACHE_TTL);
 
   Api.updateAvailability = (token, availability) =>
     call("updateAvailability", { token, availability }).then((res) => {
       invalidateCache("getDrivers");
-      invalidateCache("getProfile"); // otherwise a revisit within the cache window would show the pre-change value
+      invalidateCache("getProfile");
       return res;
     });
 
-  /** `fields` is a plain {key: value} object — only the driver-editable keys the Profile section actually sends (see updateProfile() in Code.gs for the fixed list); anything else is ignored server-side. */
   Api.updateProfile = (token, fields) =>
     call("updateProfile", Object.assign({ token }, fields)).then((res) => {
-      invalidateCache("getDrivers"); // altPhone/WhatsApp/Service Area/Vehicle Number can all show up in the public directory
-      invalidateCache("getProfile"); // otherwise a revisit within the cache window would show the pre-edit value
+      invalidateCache("getDrivers");
+      invalidateCache("getProfile");
       return res;
     });
 
   Api.changePassword = (token, oldPassword, newPassword) =>
     call("changePassword", { token, oldPassword, newPassword });
 
-  /**
-   * Verified reviews for one Driver/Doctor. `all: true` fetches every
-   * verified review (for "View All Reviews"); otherwise only the first
-   * 2, for the Details page's fast initial preview. Never cached —
-   * this only ever runs when a Details page is actually opened or
-   * "View All Reviews" is tapped, not on every driver/doctor list load.
-   */
   Api.getPublicRatings = (targetType, targetId, all) =>
     call("getPublicRatings", { targetType, targetId, all: !!all });
 
-  /** A visitor's new review — always starts unverified; see Public Ratings in Code.gs for the approval workflow. */
   Api.submitPublicRating = (targetType, targetId, stars, comment) =>
     call("submitPublicRating", { targetType, targetId, stars, comment });
+
+  Api.refreshDirectories = function () {
+    ["getDrivers", "getDoctors", "getProfile"].forEach((prefix) => {
+      invalidateCache(prefix);
+      clearPersisted(prefix);
+    });
+  };
+  Api.clearProfileCache = function () {
+    invalidateCache("getProfile");
+    clearPersisted("getProfile");
+  };
+  Api.adminEnableMode = (token, password) => call("adminEnableMode", { token, password });
+  Api.adminAdjustMode = (token, adminToken, deltaMinutes) => call("adminAdjustMode", { token, adminToken, deltaMinutes });
+  Api.adminModeStatus = (token, adminToken) => call("adminModeStatus", { token, adminToken });
+  Api.adminDisableMode = (token, adminToken) => call("adminDisableMode", { token, adminToken });
+  Api.adminListPending = (token, adminToken) => call("adminListPending", { token, adminToken });
+  Api.adminGetRecord = (token, adminToken, kind, id) => call("adminGetRecord", { token, adminToken, kind, id });
+  Api.adminSaveRecord = (token, adminToken, kind, id, fields) =>
+    call("adminSaveRecord", { token, adminToken, kind, id, fields }).then((res) => {
+      Api.refreshDirectories();
+      return res;
+    });
+  Api.adminApprovePending = (token, adminToken, id) =>
+    call("adminApprovePending", { token, adminToken, id }).then((res) => {
+      Api.refreshDirectories();
+      return res;
+    });
 
   window.Api = Api;
 })(window, window.Utils);

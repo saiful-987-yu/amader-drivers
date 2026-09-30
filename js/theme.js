@@ -1,7 +1,3 @@
-/**
- * theme.js — centralized light/dark theme switcher.
- * Applies data-theme on <html> and remembers the choice.
- */
 (function (window, Utils) {
   "use strict";
 
@@ -29,7 +25,6 @@
     Theme.set(current === "light" ? "dark" : "light");
   };
 
-  // Apply immediately (before paint) to avoid a flash of the wrong theme.
   document.documentElement.setAttribute("data-theme", current);
 
   window.Theme = Theme;

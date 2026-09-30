@@ -1,21 +1,6 @@
-/**
- * doctors.js — the Doctor list and Doctor Details modal. Doctors live in
- * their own "Doctors" Sheet tab (see Code.gs) and are NOT filtered by
- * bazar or vehicle type — this is a flat list, reached from the
- * homepage's "Find a Doctor" section.
- *
- * Deliberately mirrors js/drivers.js's card/detail structure closely and
- * reuses the SAME CSS classes (driver-card, detail-row, gallery,
- * action-row, etc.) so Doctor Cards/Details are visually identical to
- * Driver Cards/Details, per the project spec — without touching or
- * risking anything in the already-working driver flow.
- */
 (function (window, document, Utils, Lang, Icons, Api, Router, ViewHelpers, Modal, Toast) {
   "use strict";
 
-  // ---------------------------------------------------------
-  // CALL HANDLING (same approach as drivers.js)
-  // ---------------------------------------------------------
   function canPlaceCall() {
     return matchMedia("(pointer: coarse)").matches;
   }
@@ -39,40 +24,10 @@
     });
   }
 
-  // ---------------------------------------------------------
-  // DOCTOR DETAILS MODAL <-> BACK BUTTON INTEGRATION
-  // (independent copy of the same pattern used for drivers)
-  // ---------------------------------------------------------
-  let doctorModalHistoryPushed = false;
-  let doctorModalClosingFromPopstate = false;
-
   function openDoctorModalWithHistory(contentNode) {
-    function onPopState() {
-      doctorModalClosingFromPopstate = true;
-      window.removeEventListener("popstate", onPopState);
-      Modal.close();
-    }
-
-    Modal.open(contentNode, {
-      onClose: () => {
-        window.removeEventListener("popstate", onPopState);
-        const wasFromPopstate = doctorModalClosingFromPopstate;
-        doctorModalClosingFromPopstate = false;
-        if (doctorModalHistoryPushed) {
-          doctorModalHistoryPushed = false;
-          if (!wasFromPopstate) history.back();
-        }
-      }
-    });
-
-    history.pushState({ doctorModal: true }, "", window.location.hash || "#/");
-    doctorModalHistoryPushed = true;
-    window.addEventListener("popstate", onPopState);
+    Modal.open(contentNode);
   }
 
-  // ---------------------------------------------------------
-  // CARD + DETAIL BUILDING BLOCKS
-  // ---------------------------------------------------------
   function doctorPhotoNode(doctor, size) {
     const wrap = Utils.el("div", { class: size === "large" ? "detail-photo" : "driver-card__photo" });
     const url = Utils.resolveImageUrl(doctor.imageUrl);
@@ -150,7 +105,8 @@
         experienceRatingRow(doctor),
         statusNode(doctor),
         Utils.el("div", { class: "driver-card__actions" }, actions)
-      ])
+      ]),
+      window.Admin ? window.Admin.penButton("doctor", doctor.doctorId) : null
     ]);
   }
 
@@ -174,7 +130,6 @@
     ]);
   }
 
-  /** Same thumbnail + main-image gallery pattern as the driver's Vehicle Photos, sourced from "Doctor Sample Photos". */
   function buildGallery(doctor) {
     const rawUrls = Utils.splitMulti(doctor.sampleImageUrl).filter(Boolean);
     const urls = rawUrls.map(Utils.resolveImageUrl);
@@ -225,8 +180,6 @@
     return Utils.el("div", { class: "gallery" }, children);
   }
 
-  /** Same UI-only "Rate This ___" demo widget as the driver details — nothing is ever saved. */
-  /** Human-readable date for a review's ISO "Date Time" — falls back to nothing rather than throwing on a bad/missing value. */
   function formatReviewDate(iso) {
     if (!iso) return "";
     try {
@@ -249,16 +202,6 @@
     });
   }
 
-  /**
-   * The full public Rating/Review widget — same shape/spirit as the
-   * Driver Details one (see drivers.js), just its own copy targeting
-   * "doctor" + doctorId. The doctor's blended rating (verified public
-   * reviews + the admin's own Manual Rating, capped at 5 — finalRating
-   * from the API) is shown up top, then a short preview of verified
-   * reviews with "View All Reviews", then the star + comment
-   * submission form. A new submission always starts unverified and is
-   * never shown here until the sheet owner approves it.
-   */
   function buildRatingSection(doctor) {
     const summaryRow = Utils.el("div", { class: "reviews-summary" }, [
       starsNode(doctor.finalRating),
@@ -266,12 +209,7 @@
       Utils.el("span", { class: "reviews-summary__count", text: Lang.t("driver.reviewCount", { n: doctor.publicRatingCount || 0 }) })
     ]);
 
-    // Preview (unchanged design/behavior) — up to 2 reviews, no scroll area.
     const listContainer = Utils.el("div", { class: "reviews-list" }, [ViewHelpers.loadingBlock()]);
-    // "View All Reviews" expands into its OWN capped-height, scrollable
-    // container instead — never the full list inline on the page — so
-    // 100/500/1000 reviews never make the Details page itself long;
-    // only this one area scrolls.
     const expandedContainer = Utils.el("div", { class: "reviews-list reviews-list--expanded" });
     expandedContainer.style.display = "none";
 
@@ -284,9 +222,6 @@
     closeReviewsBtn.style.display = "none";
     if ((doctor.publicRatingCount || 0) <= 2) viewAllBtn.style.display = "none";
 
-    // Non-clickable "Review the doctor" speech bubble, sitting to the right of
-    // the View All / Close button with its tail pointing down at the stars.
-    // With no View All button showing, it centers itself instead.
     const reviewBubble = Utils.el("span", { class: "review-bubble", text: Lang.t("doctor.reviewBubble") });
     const reviewActionRow = Utils.el("div", { class: "reviews-action-row" }, [viewAllBtn, closeReviewsBtn, reviewBubble]);
     function syncReviewActionRow() {
@@ -317,8 +252,6 @@
     });
 
     closeReviewsBtn.addEventListener("click", () => {
-      // The 2-review preview is still sitting in listContainer exactly
-      // as it was — no re-fetch needed to collapse back to it.
       expandedContainer.style.display = "none";
       expandedContainer.innerHTML = "";
       listContainer.style.display = "";
@@ -393,7 +326,11 @@
     const children = [];
     if (crumbTrail && crumbTrail.length) {
       const crumbNode = ViewHelpers.breadcrumb(crumbTrail.concat([{ label: Utils.driverDisplayName(doctor) }]));
-      Utils.qsa("a", crumbNode).forEach((a) => a.addEventListener("click", () => Modal.close()));
+      Utils.qsa("a", crumbNode).forEach((a) => a.addEventListener("click", (e) => {
+        e.preventDefault();
+        const target = a.getAttribute("href");
+        Modal.closeThen(() => { window.location.hash = target; });
+      }));
       children.push(crumbNode);
     }
 
@@ -479,19 +416,16 @@
       children.push(gallery);
     }
 
-    // Personal Details — plain text OR basic HTML from the Sheet,
-    // rendered as-is; the whole section (heading included) is left out
-    // entirely when the column is empty. Same section name/behavior as
-    // the Driver Details page.
     if (Utils.clean(doctor.personalDetails)) {
       children.push(Utils.el("div", { class: "personal-details-section mt-5" }, [
         Utils.el("h3", { class: "detail-section-title", text: Lang.t("detail.personalDetails") }),
-        Utils.el("div", { class: "personal-details", html: doctor.personalDetails })
+        Utils.el("div", { class: "personal-details", html: Utils.safeHtml(doctor.personalDetails) })
       ]));
     }
 
     children.push(buildRatingSection(doctor));
-    children.push(Utils.buildSocialLinksSection());
+    const socialSection = Utils.buildSocialLinksSection(doctor.socialUrl);
+    if (socialSection) children.push(socialSection);
 
     const videoSection = Utils.buildVideoSection(doctor.videoUrl, Lang.t("detail.video"));
     if (videoSection) { videoSection.classList.add("mt-5"); children.push(videoSection); }
@@ -501,9 +435,6 @@
     openDoctorModalWithHistory(Utils.el("div", {}, children));
   }
 
-  // ---------------------------------------------------------
-  // DOCTOR LIST VIEW (/doctors)
-  // ---------------------------------------------------------
   async function renderDoctorList(app) {
     app.innerHTML = "";
 

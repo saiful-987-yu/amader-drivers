@@ -1,15 +1,6 @@
-/**
- * app.js — application shell: hash router, toast notifications,
- * modal/confirm dialogs, and header/nav wiring. Individual
- * screens are registered into the `Router.routes` table by
- * drivers.js, registration.js and profile.js.
- */
 (function (window, document, Utils, Lang, Theme, Icons) {
   "use strict";
 
-  // ---------------------------------------------------------
-  // TOASTS
-  // ---------------------------------------------------------
   const Toast = {};
   Toast.show = function (message, type) {
     const region = Utils.qs("#toast-region");
@@ -27,13 +18,21 @@
   };
   window.Toast = Toast;
 
-  // ---------------------------------------------------------
-  // MODAL (used for driver details bottom sheet + confirmations)
-  // ---------------------------------------------------------
   const Modal = {};
   let activeOverlay = null;
   let lastFocused = null;
   let activeOnClose = null;
+  let modalEntryPushed = false;
+  let modalEntryId = 0;
+  let currentEntryId = 0;
+  let pendingBackTimer = null;
+  let awaitingBack = 0;
+  let backToken = 0;
+  let afterBack = null;
+
+  function modalEntryIsCurrent() {
+    return !!(history.state && history.state.nobiModal === currentEntryId);
+  }
 
   Modal.open = function (contentNode, opts) {
     Modal.close();
@@ -47,6 +46,12 @@
     document.body.appendChild(overlay);
     activeOverlay = overlay;
     activeOnClose = (opts && opts.onClose) || null;
+    if (pendingBackTimer) { clearTimeout(pendingBackTimer); pendingBackTimer = null; }
+    if (!modalEntryPushed) {
+      currentEntryId = ++modalEntryId;
+      history.pushState({ nobiModal: currentEntryId }, "", window.location.hash || "#/");
+      modalEntryPushed = true;
+    }
     const focusable = sheet.querySelector("button, [href], input, select, textarea, [tabindex]");
     if (focusable) focusable.focus();
     document.addEventListener("keydown", onKeydown);
@@ -57,17 +62,68 @@
     if (e.key === "Escape") Modal.close();
   }
 
-  Modal.close = function () {
-    if (activeOverlay) {
-      activeOverlay.remove();
-      activeOverlay = null;
-      document.removeEventListener("keydown", onKeydown);
-      if (lastFocused && lastFocused.focus) lastFocused.focus();
-      const cb = activeOnClose;
-      activeOnClose = null;
-      if (cb) cb();
+  function closeInternal(fromPop, skipSchedule) {
+    if (!activeOverlay) return false;
+    activeOverlay.remove();
+    activeOverlay = null;
+    document.removeEventListener("keydown", onKeydown);
+    if (lastFocused && lastFocused.focus) lastFocused.focus();
+    const cb = activeOnClose;
+    activeOnClose = null;
+    if (fromPop) {
+      modalEntryPushed = false;
+    } else if (modalEntryPushed && !skipSchedule) {
+      const id = currentEntryId;
+      if (pendingBackTimer) clearTimeout(pendingBackTimer);
+      pendingBackTimer = setTimeout(() => {
+        pendingBackTimer = null;
+        if (!modalEntryPushed) return;
+        modalEntryPushed = false;
+        if (history.state && history.state.nobiModal === id) {
+          const t = ++backToken;
+          awaitingBack = t;
+          setTimeout(() => { if (awaitingBack === t) awaitingBack = 0; }, 800);
+          history.back();
+        }
+      }, 0);
     }
+    if (cb) cb();
+    return true;
+  }
+
+  Modal.close = function () { closeInternal(false, false); };
+
+  Modal.closeThen = function (fn) {
+    if (!activeOverlay) { fn(); return; }
+    if (pendingBackTimer) { clearTimeout(pendingBackTimer); pendingBackTimer = null; }
+    const needBack = modalEntryPushed && modalEntryIsCurrent();
+    closeInternal(false, true);
+    modalEntryPushed = false;
+    if (!needBack) { fn(); return; }
+    const t = ++backToken;
+    awaitingBack = t;
+    afterBack = fn;
+    setTimeout(() => {
+      if (awaitingBack === t) {
+        awaitingBack = 0;
+        const f = afterBack;
+        afterBack = null;
+        if (f) f();
+      }
+    }, 400);
+    history.back();
   };
+
+  window.addEventListener("popstate", () => {
+    if (awaitingBack) {
+      awaitingBack = 0;
+      const f = afterBack;
+      afterBack = null;
+      if (f) f();
+      return;
+    }
+    if (activeOverlay && !modalEntryIsCurrent()) closeInternal(true, false);
+  });
 
   Modal.confirm = function ({ title, body, confirmLabel, cancelLabel, danger }) {
     return new Promise((resolve) => {
@@ -97,9 +153,6 @@
   };
   window.Modal = Modal;
 
-  // ---------------------------------------------------------
-  // SHARED VIEW HELPERS (used by drivers.js, registration.js, profile.js)
-  // ---------------------------------------------------------
   const ViewHelpers = {};
 
   ViewHelpers.loadingBlock = function (message) {
@@ -133,11 +186,6 @@
     return Utils.el("div", { class: "state-block" }, children);
   };
 
-  /**
-   * Compact, clickable breadcrumb trail. `items` is an array of
-   * { label, path } — the last item renders as the non-clickable
-   * current page. Pass no path on an item to force it non-clickable.
-   */
   ViewHelpers.breadcrumb = function (items) {
     const ol = Utils.el("ol", { class: "breadcrumb__list" });
     items.forEach((item, idx) => {
@@ -159,17 +207,70 @@
 
   window.ViewHelpers = ViewHelpers;
 
-  // ---------------------------------------------------------
-  // ROUTER
-  // ---------------------------------------------------------
   const Router = { routes: [] };
   let isFirstRouteRender = true;
 
-  /** Register a route. pattern uses ":name" segments, e.g. "/markets/:market/:vehicle".
-   *  `ancestors` (optional) lists this route's logical parent paths, outermost first
-   *  (e.g. ["/", "/markets", "/markets/:market"]) — same ":name" segments, filled in
-   *  from the matched params. Used only once, on a page's very first render, to
-   *  synthesize a Back-button history chain for deep links (see below). */
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+
+  const SCROLL_STORE_KEY = "nobi.scrollMap";
+  let scrollMap = {};
+  try { scrollMap = JSON.parse(sessionStorage.getItem(SCROLL_STORE_KEY) || "{}") || {}; } catch (e) { scrollMap = {}; }
+  let activeScrollKey = null;
+  let lastPageKey = null;
+  let scrollSavePaused = false;
+  let restoreTimers = [];
+  let persistTimer = null;
+
+  function persistScrollMap() {
+    persistTimer = null;
+    try {
+      const keys = Object.keys(scrollMap);
+      if (keys.length > 80) keys.slice(0, keys.length - 80).forEach((k) => { delete scrollMap[k]; });
+      sessionStorage.setItem(SCROLL_STORE_KEY, JSON.stringify(scrollMap));
+    } catch (e) {}
+  }
+
+  function clearRestoreTimers() {
+    restoreTimers.forEach(clearTimeout);
+    restoreTimers = [];
+  }
+
+  function cancelScrollRestore() {
+    if (!restoreTimers.length && !scrollSavePaused) return;
+    clearRestoreTimers();
+    scrollSavePaused = false;
+  }
+
+  window.addEventListener("scroll", () => {
+    if (scrollSavePaused || !activeScrollKey) return;
+    delete scrollMap[activeScrollKey];
+    scrollMap[activeScrollKey] = window.scrollY;
+    if (!persistTimer) persistTimer = setTimeout(persistScrollMap, 300);
+  }, { passive: true });
+  ["wheel", "touchstart", "mousedown", "keydown"].forEach((ev) => window.addEventListener(ev, cancelScrollRestore, { passive: true }));
+  window.addEventListener("pagehide", persistScrollMap);
+
+  function ensureEntryKey() {
+    const st = history.state;
+    if (st && st.nobiModal && lastPageKey) return lastPageKey;
+    if (st && st.navKey) return st.navKey;
+    const key = "k" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    try { history.replaceState(Object.assign({}, st || {}, { navKey: key }), ""); } catch (e) {}
+    return key;
+  }
+
+  function applyScroll(y) {
+    window.scrollTo({ top: y, behavior: "auto" });
+    if (y <= 0) { scrollSavePaused = false; return; }
+    const delays = [80, 250, 600, 1200];
+    delays.forEach((ms, i) => {
+      restoreTimers.push(setTimeout(() => {
+        if (Math.abs(window.scrollY - y) > 2) window.scrollTo({ top: y, behavior: "auto" });
+        if (i === delays.length - 1) { restoreTimers = []; scrollSavePaused = false; }
+      }, ms));
+    });
+  }
+
   Router.register = function (pattern, renderFn, ancestors) {
     const paramNames = [];
     const regex = new RegExp("^" + pattern.replace(/:[^/]+/g, (m) => {
@@ -187,17 +288,6 @@
     return pattern.replace(/:([^/]+)/g, (m, name) => encodeURIComponent(params[name] != null ? params[name] : ""));
   }
 
-  /**
-   * A deep link (e.g. someone opens /markets/nobi-bazar/cng directly, with
-   * no prior in-app navigation) starts with NO history entries for Home,
-   * Markets, or the Market page underneath it — so the very first Back
-   * press would leave the site entirely instead of stepping up one level.
-   * We fix this once, right when such a page first loads, by rewriting
-   * the current history entry as the chain of ancestor pages leading up
-   * to this one (same final URL, so nothing visibly changes) — after
-   * that, Back naturally walks back up through Market -> Markets -> Home
-   * exactly like it would if the user had actually clicked through.
-   */
   function synthesizeAncestorHistory(route, params, finalHash) {
     if (!route.ancestors.length) return;
     const chain = route.ancestors.map((p) => "#" + fillPattern(p, params));
@@ -236,6 +326,12 @@
           synthesizeAncestorHistory(route, params, window.location.hash || "#/");
         }
         isFirstRouteRender = false;
+        scrollSavePaused = true;
+        clearRestoreTimers();
+        const entryKey = ensureEntryKey();
+        const savedY = Object.prototype.hasOwnProperty.call(scrollMap, entryKey) ? scrollMap[entryKey] : 0;
+        activeScrollKey = entryKey;
+        lastPageKey = entryKey;
         app.setAttribute("aria-busy", "true");
         try {
           await route.renderFn(app, params, query);
@@ -245,14 +341,13 @@
           app.appendChild(ViewHelpers.errorBlock(Lang.t("error.generic"), () => renderRoute()));
         }
         app.setAttribute("aria-busy", "false");
-        window.scrollTo({ top: 0, behavior: "auto" });
+        applyScroll(savedY);
         highlightNav(rawPath);
         closeMobileMenu();
         return;
       }
     }
     isFirstRouteRender = false;
-    // No match — fall back to home.
     Router.navigate("/");
   }
 
@@ -267,9 +362,6 @@
   window.addEventListener("hashchange", renderRoute);
   window.Router = Router;
 
-  // ---------------------------------------------------------
-  // HEADER / NAV WIRING
-  // ---------------------------------------------------------
   let mobileNavScrollGuardActive = false;
 
   function closeMobileMenu() {
@@ -295,14 +387,8 @@
       toggle.setAttribute("aria-expanded", "true");
       toggle.innerHTML = Icons.close;
     }
-    // Passive + only bound while open: closes the menu the instant the
-    // page scrolls (any direction, any amount) instead of leaving it
-    // floating over content the user has scrolled away from.
     window.addEventListener("scroll", closeMobileMenu, { passive: true });
     mobileNavScrollGuardActive = true;
-    // Registered on the NEXT tick so the very click that opened the menu
-    // (a mousedown on the hamburger button itself) doesn't immediately
-    // count as an "outside" click and instantly close it again.
     setTimeout(() => document.addEventListener("mousedown", onOutsideMenuClick), 0);
   }
 
@@ -346,15 +432,6 @@
     paintMobileNavProfile(loggedIn);
   }
 
-  /**
-   * Logged-out: the Profile menu item is hidden anyway (Login shows
-   * instead), so it's left at its default icon+"Profile" text. Logged
-   * in: replaced with the driver's own round photo + name, so the menu
-   * item is instantly recognizable as "you" rather than a generic label
-   * — same cache-then-refresh pattern used elsewhere (Auth.peekProfile
-   * paints instantly from whatever was last seen, then the real
-   * Auth.getProfile() call quietly confirms/updates it).
-   */
   function paintMobileNavProfile(loggedIn) {
     const link = Utils.qs("#mobile-nav-profile");
     if (!link || !window.Auth) return;
@@ -369,7 +446,7 @@
       const localUrl = Utils.localFixtureUrl("profile", driver.driverId);
       if (url || localUrl) {
         const img = Utils.el("img", { alt: "" });
-        Utils.wireImageFallback(img, driver.imageUrl, () => {}, localUrl); // failure just leaves the user-icon fallback showing underneath
+        Utils.wireImageFallback(img, driver.imageUrl, () => {}, localUrl);
         avatar.appendChild(img);
       }
       link.appendChild(avatar);
@@ -379,25 +456,12 @@
     window.Auth.getProfile().then(paint).catch(() => {});
   }
 
-  // ---------------------------------------------------------
-  // INIT
-  // ---------------------------------------------------------
   document.addEventListener("DOMContentLoaded", () => {
     wireHeader();
     Lang.apply();
-    // Fire-and-forget: Markets load first, then Vehicle Categories
-    // and the Driver directory start preloading in the background
-    // (see Api.preload in api.js). renderRoute() below does NOT
-    // wait on this — the current view fetches/awaits normally and
-    // simply hits the same cached promise if preload got there first.
     if (window.Api && window.Api.preload) window.Api.preload().catch(() => {});
     renderRoute();
 
-    // sw.js caches this app's own HTML/CSS/JS (the "app shell") so the
-    // whole site keeps working with no internet after the first visit —
-    // it deliberately never touches Drive photos or the Apps Script
-    // backend (see sw.js's own header comment for why). js/pwa-install.js
-    // uses this same registration to show the "new version ready" toast.
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("sw.js").then((reg) => {
         window.dispatchEvent(new CustomEvent("nobi:swregistered", { detail: { registration: reg } }));
@@ -406,16 +470,9 @@
   });
 
   document.addEventListener("nobi:languagechange", async () => {
-    // Re-render current view so dynamic content (not just static
-    // [data-i18n] nodes) picks up the new language immediately. This
-    // rebuilds #app from scratch, which — being a fresh DOM — would
-    // otherwise silently reset the page to the very top. Capturing the
-    // scroll position first and restoring it right after keeps whoever
-    // was scrolled deep into a long list (Doctors, Drivers, Profile...)
-    // exactly where they were, in the same list, same spot.
     const scrollY = window.scrollY;
     await renderRoute();
     window.scrollTo(0, scrollY);
-    updateAuthNav(); // re-paints the mobile-nav profile name in the new language
+    updateAuthNav();
   });
 })(window, document, window.Utils, window.Lang, window.Theme, window.Icons);

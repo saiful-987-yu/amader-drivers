@@ -1,36 +1,11 @@
-/**
- * registration.js — the "Register as a Driver" multi-step form.
- * Submissions go to the Pending Drivers sheet (via Api.registerDriver)
- * and are never published automatically — see README for the
- * manual-approval flow.
- */
 (function (window, document, Utils, Lang, Icons, Api, Router, ViewHelpers, Toast) {
   "use strict";
 
   const STEP_COUNT = 5;
   const STEP_TITLE_KEYS = ["register.step1.title", "register.step2.title", "register.step3.title", "register.step4.title", "register.step5.title"];
 
-  /**
-   * Holds the in-progress registration form's step + data + live-check
-   * state across a language-switch re-render (app.js re-invokes
-   * renderRegister() from scratch on "nobi:languagechange"). null means
-   * no registration is in progress — a fresh renderRegister() call then
-   * starts a brand-new session at Step 1. Reset to null only after a
-   * successful submission (see the submit handler in renderRegister).
-   */
   let activeRegistrationSession = null;
 
-  /**
-   * Points at the currently-mounted registration form's collectStepValues()
-   * (set inside renderRegister below), so that whatever is on-screen but
-   * not yet committed via Next/Back can still be saved the instant
-   * something forces a full re-render out from under the user — most
-   * importantly a language switch ("nobi:languagechange" -> renderRoute()
-   * -> renderRegister() from scratch). Without this, only Next/Back ever
-   * wrote the DOM's live values into activeRegistrationSession.data, so
-   * switching language mid-typing silently discarded whatever hadn't
-   * been committed yet. Reset to null right after each use.
-   */
   let flushActiveSessionFields = null;
 
   function fieldRow({ id, labelKey, type, required, hint, options }) {
@@ -54,7 +29,6 @@
     return { wrap, control };
   }
 
-  /** A group of pill-style checkboxes sharing one field name — collectStepValues() joins the checked values with ", " into a single string, same format as a Sheet cell with multiple values. */
   function multiSelectField({ id, labelKey, options, required }) {
     const label = Utils.el("label", { text: Lang.t(labelKey) + (required ? " *" : "") });
     const group = Utils.el("div", { class: "checkbox-group" }, options.map((opt) =>
@@ -68,7 +42,6 @@
     return { wrap };
   }
 
-  /** Number + Years/Months select, combined into one "N Years"/"N Months" string for storage — same free-text format the Sheet already used. */
   function experienceField() {
     const numberInput = Utils.el("input", { id: "experienceValue", name: "experienceValue", type: "number", min: "0", inputmode: "numeric" });
     const unitSelect = Utils.el("select", { id: "experienceUnit", name: "experienceUnit" });
@@ -84,7 +57,6 @@
     return { wrap };
   }
 
-  /** Pairs two fieldRow() results (e.g. {wrap,control} results) side by side in one responsive 2-column row — used for the Post Office/Union and Upazila/District address fields in Step 1. */
   function twoColFieldRow(a, b) {
     return Utils.el("div", { class: "field-row-2col" }, [a.wrap, b.wrap]);
   }
@@ -101,7 +73,6 @@
     const { wrap, control } = fieldRow({ id, labelKey, type: "password" });
     wrap.classList.add("field--tint-d");
     const inputWrap = Utils.el("div", { class: "password-field" });
-    // Move the input into the password-field wrapper with a show/hide button.
     wrap.replaceChild(inputWrap, control);
     inputWrap.appendChild(control);
     const toggleBtn = Utils.el("button", {
@@ -117,19 +88,6 @@
     return { wrap, control };
   }
 
-  /**
-   * Shared "live availability check" field builder — the same debounced
-   * check/checking-indicator/available/taken UX used for both the
-   * Username field (Step 4) and, now, the Mobile Number field (Step 1).
-   * `isValidFn`, when given, gates the check so it only fires once the
-   * value already satisfies the field's OWN existing validation (e.g.
-   * the existing 11-digit BD phone format) — never on every partial
-   * keystroke. `onStatus(value, available)` — available is true/false
-   * once a check resolves, or null while unknown/pending — lets the
-   * caller remember the latest known result (see usernameCheck/
-   * phoneCheck in renderRegister) so Next never re-checks/re-loads an
-   * unchanged value a second time.
-   */
   function availabilityField(app, { id, labelKey, type, wrapClass, checkFn, takenMessageKey, isValidFn, onStatus, tintClass }) {
     const { wrap, control } = fieldRow({ id, labelKey, type });
     if (tintClass) wrap.classList.add(tintClass);
@@ -148,11 +106,11 @@
       setFieldError(app, id, "");
       if (onStatus) onStatus(value, null);
       if (!value) return;
-      if (isValidFn && !isValidFn(value)) return; // not yet in a checkable shape — wait for more input
-      statusIcon.innerHTML = Icons.more; // small "checking…" indicator
+      if (isValidFn && !isValidFn(value)) return;
+      statusIcon.innerHTML = Icons.more;
       statusIcon.classList.add("is-checking");
       checkFn(value).then((res) => {
-        if (myToken !== requestToken) return; // a newer keystroke has already superseded this check
+        if (myToken !== requestToken) return;
         statusIcon.classList.remove("is-checking");
         const available = !!(res && res.available);
         if (available) {
@@ -176,7 +134,6 @@
     return { wrap, control };
   }
 
-  /** Username field (Step 4) — never exposes the list of other accounts, just available/taken. */
   function usernameField(app, onStatus) {
     const field = availabilityField(app, {
       id: "username", labelKey: "field.username", wrapClass: "username-field",
@@ -186,7 +143,6 @@
     return field;
   }
 
-  /** Mobile Number field (Step 1) — same live-check UX as Username, gated on the existing phone-format validation. */
   function mobileField(app, onStatus) {
     const field = availabilityField(app, {
       id: "mobile", labelKey: "field.mobile", type: "tel", wrapClass: "phone-field",
@@ -196,13 +152,6 @@
     return field;
   }
 
-  /**
-   * Resolves availability for `value`, reusing `cached` when it's still
-   * for this SAME, unchanged value (never re-checks/reloads the same
-   * value twice) — otherwise awaits one fresh check and returns the new
-   * result to remember. Shared by Step 1 (mobile) and Step 4 (username)
-   * right before their Next button is allowed to proceed.
-   */
   async function ensureAvailability(cached, value, checkFn) {
     if (cached.value === value && cached.available !== null) return cached;
     try {
@@ -213,23 +162,12 @@
     }
   }
 
-  /**
-   * Today's date-based PIN (DDMMYY), checked entirely client-side
-   * against the visitor's own device clock — no network call.
-   */
   function todaysPhotoPin() {
     const d = new Date();
     const pad = (n) => String(n).padStart(2, "0");
     return pad(d.getDate()) + pad(d.getMonth() + 1) + String(d.getFullYear()).slice(-2);
   }
 
-  /**
-   * Confirms a Google Drive image link is actually publicly accessible
-   * by probing it off-DOM (same lightweight technique already used for
-   * market/banner background images elsewhere in this app — never a
-   * backend call). Reuses the cached result when `value` hasn't
-   * changed, exactly like ensureAvailability() above for Mobile/Username.
-   */
   async function ensureDriveAccessible(cached, value) {
     if (cached.value === value && cached.available !== null) return cached;
     return new Promise((resolve) => {
@@ -241,13 +179,6 @@
     });
   }
 
-  /**
-   * Step 3's Driver Photo field — Google Drive share link only. As the
-   * user types (debounced, same UX as Mobile/Username in
-   * availabilityField), it live-checks the link is a Drive URL, then
-   * probes whether it's actually publicly accessible. The definitive
-   * check right before "Next" happens in ensureDriveAccessible() above.
-   */
   function driveImageField(app, onStatus) {
     const { wrap, control } = fieldRow({ id: "imageUrl", labelKey: "field.driverPhoto", type: "url" });
     const inputWrap = Utils.el("div", { class: "drive-image-field" });
@@ -291,7 +222,6 @@
     return { wrap, control };
   }
 
-  /** Clickable WhatsApp help link shown under the Step 3 photo instructions — fixed support number, independent of any driver-entered value. */
   function photoWhatsappHelpLink() {
     return Utils.el("a", {
       href: Utils.waLink("01610253221"), target: "_blank", rel: "noopener",
@@ -300,13 +230,6 @@
     });
   }
 
-  /**
-   * Builds the pre-filled URL for the existing Google Form used by the
-   * Photo Upload option (see config.js's GOOGLE_FORM). Only the Mobile
-   * Number field can be pre-filled this way — the Profile Photo /
-   * Vehicle Photo upload questions themselves are filled in by the
-   * driver directly inside the Google Form.
-   */
   function buildPhotoFormUrl(mobile) {
     const cfg = (window.NOBI_CONFIG && window.NOBI_CONFIG.GOOGLE_FORM) || {};
     const base = cfg.URL || "https://docs.google.com/forms/d/e/1FAIpQLSfWSXqhzab6o0Yh6lFrRzXz_F-jxgnvvzoB29mvBg5yDiRnIA/viewform";
@@ -317,17 +240,6 @@
     return base + (base.indexOf("?") === -1 ? "?" : "&") + parts.join("&");
   }
 
-  /**
-   * Step 3's top "Profile Photo Upload" button. Clicking it opens the
-   * phone's gallery; the chosen photo is sent to the Apps Script
-   * backend (Api.uploadDriverPhoto), which saves it in the Drive
-   * folder and returns its link. Under the button it shows
-   * "Uploading…", the photo preview + a success message, or an error.
-   * State lives on `session.photoUpload` so it survives Back/Next and
-   * language switches; `valid` is only true after a successful upload.
-   * If SECTION_BACKGROUNDS.registerPhotoUpload isn't in the folder,
-   * the plain soft-green color stays.
-   */
   function photoUploadField(session) {
     const up = session.photoUpload;
     const fileInput = Utils.el("input", { type: "file", accept: "image/*", style: "display:none;" });
@@ -343,7 +255,6 @@
     const status = Utils.el("div", { class: "photo-upload-card__status" });
     const wrap = Utils.el("div", { class: "photo-upload-card" }, [drop, fileInput, status]);
 
-    // Draws the area under the button from session.photoUpload.
     function render() {
       status.innerHTML = "";
       drop.disabled = up.stage === "uploading";
@@ -358,8 +269,6 @@
         status.appendChild(Utils.el("span", { class: "photo-status photo-status--error", text: Lang.t(up.error) }));
       }
     }
-    // Records the result on the session; redraws only if this card is
-    // still on screen (the driver may have moved to another step).
     function finish(patch) {
       Object.assign(up, patch);
       if (wrap.isConnected) render();
@@ -371,8 +280,8 @@
     fileInput.addEventListener("change", () => {
       const file = fileInput.files && fileInput.files[0];
       if (!file) return;
-      fileInput.value = ""; // lets the same file be chosen again for a retry
-      if (up.stage === "uploading") return; // never send a second request for the same upload
+      fileInput.value = "";
+      if (up.stage === "uploading") return;
       if (!file.type || file.type.indexOf("image/") !== 0) { failed("field.photoTypeError"); return; }
       if (file.size < 50 * 1024 || file.size > 3 * 1024 * 1024) { failed("field.photoSizeError"); return; }
       finish({ valid: false, stage: "uploading", error: "", url: "", preview: "" });
@@ -383,7 +292,6 @@
         const dataUrl = String(reader.result || "");
         const base64 = dataUrl.split(",")[1] || "";
         try {
-          // ONE request only — no automatic retry. api.js gives uploads a longer timeout.
           const res = await Api.uploadDriverPhoto(base64, file.type);
           if (!res || !res.url) { failed("field.photoUploadError"); return; }
           finish({ valid: true, stage: "confirmed", error: "", url: res.url, preview: dataUrl });
@@ -398,13 +306,6 @@
     return { wrap };
   }
 
-  /**
-   * Vehicle Photo field (Step 3): the same optional URL input as before,
-   * but its header now reads "Enter the vehicle photo link or [Send via
-   * Google Form]" — the second part is a button that opens the same
-   * Google Form (pre-filled with the Mobile Number from Step 1) in a new
-   * tab. Coming back changes nothing on this page.
-   */
   function vehiclePhotoField(mobile) {
     const row = fieldRow({ id: "vehicleImageUrl", labelKey: "register.step3.vehicleLabelPrefix", type: "url", hint: "https://..." });
     const label = row.wrap.querySelector("label");
@@ -416,15 +317,17 @@
     return row;
   }
 
-  /**
-   * After a failed validateStep(), scroll to and focus the first field
-   * still marked .has-error (setFieldError toggles that class in the
-   * same order fields were validated), so the user can see immediately
-   * which required field to fill in. Works for every step — plain
-   * inputs/selects/textareas, the checkbox-group multi-selects, and the
-   * password/username wrappers alike — since it just looks for the
-   * first focusable control inside the errored field.
-   */
+  function socialLinksField(mobile) {
+    const row = fieldRow({ id: "socialUrl", labelKey: "register.step3.socialLabelPrefix", type: "textarea", hint: Lang.t("register.step3.socialHint") });
+    const label = row.wrap.querySelector("label");
+    label.textContent = Lang.t("register.step3.socialLabelPrefix") + " ";
+    label.appendChild(Utils.el("button", {
+      type: "button", class: "photo-form-link-btn", text: Lang.t("register.step3.vehicleLabelButton"),
+      onClick: () => window.open(buildPhotoFormUrl(mobile), "_blank", "noopener")
+    }));
+    return row;
+  }
+
   function focusFirstError(stepBody) {
     const field = stepBody.querySelector(".field.has-error");
     if (!field) return;
@@ -434,10 +337,6 @@
   }
 
   async function renderRegister(app) {
-    // If a registration form is already live on screen, this is a forced
-    // re-render (a language switch is the only case today) rather than a
-    // fresh visit — save whatever's currently typed, still on the OLD
-    // page, into the session before that page is torn down below.
     if (flushActiveSessionFields) {
       flushActiveSessionFields();
       flushActiveSessionFields = null;
@@ -454,39 +353,21 @@
       return;
     }
 
-    // Persisted across re-renders of THIS SAME route (e.g. a language
-    // switch, which re-invokes renderRegister() from scratch via
-    // app.js's "nobi:languagechange" -> renderRoute()) so the user's
-    // current step and already-entered data are never lost. Cleared
-    // only after a successful submission — see the submit handler below.
     if (!activeRegistrationSession) {
       activeRegistrationSession = {
         data: {}, currentStep: 1,
         phoneCheck: { value: null, available: null },
         usernameCheck: { value: null, available: null },
         driveCheck: { value: null, available: null },
-        // Step 3's Photo Upload option — see photoUploadField()'s
-        // comment. stage moves idle -> uploading -> confirmed (or
-        // error); valid only becomes true once the photo has been
-        // saved to Drive, and `url` then holds its Drive link.
         photoUpload: { valid: false, stage: "idle", url: "", preview: "", error: "" }
       };
     }
     const session = activeRegistrationSession;
     const data = session.data;
     let currentStep = session.currentStep;
-    // Latest known availability result for Mobile (Step 1) and Username
-    // (Step 4), each tracked by value so a stale/pending result never
-    // lets that step's Next button through, and an unchanged value is
-    // never re-checked/re-loaded a second time — see handleNext().
     let phoneCheck = session.phoneCheck;
     let usernameCheck = session.usernameCheck;
     let driveCheck = session.driveCheck;
-    // Set by buildStep1() each time Step 1 is (re)built; renderStep()
-    // calls it right after hydrateStepValues() so the read-only "সম্পূর্ণ
-    // ঠিকানা" box reflects data restored from `data` (e.g. after Back,
-    // or a language switch) exactly the same way typing does — never
-    // left showing a stale/old value.
     let syncFullAddress = null;
 
     const heading = Utils.el("h2", { text: Lang.t("register.heading") });
@@ -516,28 +397,11 @@
       const unionField = fieldRow({ id: "union", labelKey: "field.union" });
       const upazilaField = fieldRow({ id: "upazila", labelKey: "field.upazila" });
       const districtField = fieldRow({ id: "district", labelKey: "field.district" });
-      // "সম্পূর্ণ ঠিকানা" — read-only, auto-built from the five fields
-      // above in order (গ্রাম → ডাকঘর → ইউনিয়ন → উপজেলা → জেলা), only
-      // the non-empty ones, comma-separated. This is a frontend-only
-      // convenience: the five individual fields still go to the Sheet
-      // exactly as before (see collectStepValues()/Api.registerDriver),
-      // fullAddress is collected too but is now always derived, never
-      // hand-typed.
       const fullAddressField = fieldRow({ id: "fullAddress", labelKey: "field.fullAddress", type: "textarea" });
       fullAddressField.control.readOnly = true;
       fullAddressField.control.classList.add("is-readonly");
 
       const addressParts = [villageField, postOfficeField, unionField, upazilaField, districtField];
-      /**
-       * Guesses whether the driver is typing this address in English or
-       * Bangla by the share of English (Latin-script) words across all
-       * five boxes combined — this is a heuristic, not a language
-       * setting, since the page's own display language and the address
-       * script don't have to match (e.g. a Bangla page with an English
-       * address). >60% English words -> treat the whole address as
-       * English for the গ্রাম/Village + ডাকঘর/Post Office prefixes and
-       * the trailing punctuation; otherwise Bangla.
-       */
       function addressIsEnglish() {
         const words = addressParts
           .map((f) => Utils.clean(f.control.value))
@@ -568,8 +432,6 @@
 
       const fullNameField = fieldRow({ id: "fullName", labelKey: "field.fullName" });
       fullNameField.wrap.classList.add("field--tint-a");
-      // English-name box: the example name always stays in Latin script,
-      // wrapped in the same bracket style used for the number examples below.
       fullNameField.control.placeholder = isBn ? "আপনার নাম লিখুন যেমন (Saiful Islam)" : "Enter your name like (Saiful Islam)";
 
       const fullNameBnField = fieldRow({ id: "fullNameBn", labelKey: "field.fullNameBn" });
@@ -578,7 +440,6 @@
 
       const guardianField = fieldRow({ id: "guardianName", labelKey: "field.guardianName" });
       guardianField.wrap.classList.add("field--tint-a", "field--label-noshrink-guard");
-      // Same placeholder as the Bangla-name box above — no example name here.
       guardianField.control.placeholder = isBn ? "নাম লিখুন" : "Enter name";
 
       const altMobileField = fieldRow({ id: "altMobile", labelKey: "field.altMobile", type: "tel" });
@@ -640,14 +501,7 @@
     function buildStep3() {
       const photoUploadRow = photoUploadField(session);
       const driveField = driveImageField(app, (value, available) => { driveCheck = { value, available }; session.driveCheck = driveCheck; });
-      // No hint/description under the PIN box at all — it's collected
-      // via WhatsApp (see the header instructions above), never shown
-      // or explained on screen.
       const pinField = fieldRow({ id: "photoPin", labelKey: "register.step3.pinLabel" });
-      // Lightweight live feedback only (client-side, same today's-date
-      // PIN check as todaysPhotoPin()/Next already do) — just tells the
-      // driver "PIN ভুল"/"PIN সঠিক" as they type; it never blocks Next
-      // and never replaces the existing submit-time PIN validation.
       const pinCheck = Utils.debounce(() => {
         const field = app.querySelector('[data-field="photoPin"]');
         if (!field) return;
@@ -666,16 +520,14 @@
       }, 300);
       pinField.control.addEventListener("input", pinCheck);
       return [
-        // Profile Photo Upload button — opens the gallery and uploads to Drive.
         photoUploadRow,
         Utils.el("div", { class: "photo-method-divider", text: Lang.t("register.step3.orDivider") }),
         Utils.el("div", { class: "photo-instructions hint" }, [
           photoWhatsappHelpLink()
         ]),
-        // Drive Link (~70%) and PIN (~30%) side by side in one row.
         Utils.el("div", { class: "photo-input-row" }, [driveField.wrap, pinField.wrap]),
-        // Vehicle Photo — same optional URL field; header now has the Google Form button.
-        vehiclePhotoField(Utils.clean(data.mobile))
+        vehiclePhotoField(Utils.clean(data.mobile)),
+        socialLinksField(Utils.clean(data.mobile))
       ];
     }
 
@@ -703,8 +555,6 @@
           Utils.el("dd", { text: String(value) })
         ])
       ));
-      // Full Address goes last, right before Submit — shown even when
-      // blank (it's optional) so the review list stays predictable.
       const addressRow = Utils.el("div", { class: "review-row" }, [
         Utils.el("dt", { text: Lang.t("field.fullAddress") }),
         Utils.el("dd", { text: data.fullAddress ? data.fullAddress : "—" })
@@ -718,12 +568,6 @@
     function collectStepValues() {
       const checkboxGroups = {};
       Utils.qsa("input, select, textarea", stepBody).forEach((el) => {
-        // The Photo Upload card manages its own state on
-        // `session.photoUpload` (idle/opened/confirmed), separate from
-        // this generic field collection. This guard is kept defensively
-        // in case any file input is ever reintroduced — a browser also
-        // throws if a file input's .value is set back to anything but
-        // "", which hydrateStepValues() below would hit.
         if (el.type === "file") return;
         const key = el.name || el.id;
         if (el.type === "checkbox") {
@@ -734,8 +578,6 @@
         }
       });
       Object.keys(checkboxGroups).forEach((key) => { data[key] = checkboxGroups[key].join(", "); });
-      // Combine the Experience number + unit into one free-text value
-      // (e.g. "2 Years") — same format the Sheet already stores.
       if (data.experienceValue) {
         const unitLabel = data.experienceUnit === "months" ? "Months" : "Years";
         data.experience = Utils.clean(data.experienceValue) + " " + unitLabel;
@@ -743,13 +585,11 @@
         data.experience = "";
       }
     }
-    // Always points at THIS render's collectStepValues, whatever step is
-    // currently showing — see flushActiveSessionFields's own comment above.
     flushActiveSessionFields = collectStepValues;
 
     function hydrateStepValues() {
       Utils.qsa("input, select, textarea", stepBody).forEach((el) => {
-        if (el.type === "file") return; // see collectStepValues() above
+        if (el.type === "file") return;
         const key = el.name || el.id;
         if (el.type === "checkbox") {
           const selected = Utils.splitMulti(data[key]);
@@ -782,13 +622,6 @@
         });
       }
       if (currentStep === 3) {
-        // Photo Upload OR a Google Drive photo link OR a PIN makes this
-        // step valid — any ONE of the three is enough, and they're
-        // independent alternatives, so leftover/wrong data in one box
-        // must never block a valid entry via another (e.g. a confirmed
-        // Photo Upload still passes even with stale PIN digits or a
-        // half-typed Drive link left in the other boxes). Vehicle Photo
-        // stays optional either way.
         const photoUploadOk = !!(session.photoUpload && session.photoUpload.valid);
         const imageValue = Utils.clean(data.imageUrl);
         const pinValue = Utils.clean(data.photoPin);
@@ -801,16 +634,11 @@
             setFieldError(app, "imageUrl", Lang.t("validation.required"));
             valid = false;
           } else if (!pinOk && !looksLikeDriveLink) {
-            // Neither method is satisfiable yet — flag whichever the
-            // user actually attempted.
             if (pinValue) setFieldError(app, "photoPin", Lang.t("validation.pinInvalid"));
             if (imageValue) setFieldError(app, "imageUrl", Lang.t("validation.driveLinkInvalid"));
             valid = false;
           }
         }
-        // Actual Drive-link accessibility is confirmed asynchronously
-        // right before advancing (see the Next handler), the same way
-        // Mobile/Username availability is — never here.
       }
       if (currentStep === 4) {
         ["username", "password", "confirmPassword"].forEach((id) => {
@@ -854,13 +682,6 @@
         nextBtn.addEventListener("click", async () => {
           if (!validateStep()) { focusFirstError(stepBody); return; }
 
-          // Step 1 (Mobile) / Step 4 (Username): the value must be
-          // confirmed available right before advancing. ensureAvailability()
-          // reuses the remembered result when the value hasn't changed
-          // since it was last checked (no repeat API call/loading either
-          // way, available or taken) and only awaits a fresh check when
-          // it's genuinely new/unknown — e.g. the user clicked Next
-          // before the debounced as-you-type check resolved.
           if (currentStep === 1) {
             const value = Utils.clean(data.mobile);
             nextBtn.disabled = true;
@@ -878,9 +699,6 @@
             const imageValue = Utils.clean(data.imageUrl);
             const pinValue = Utils.clean(data.photoPin);
             const pinOk = !!pinValue && pinValue === todaysPhotoPin();
-            // A confirmed Photo Upload already makes this step valid on
-            // its own — never block Next on stale/incomplete Drive-link
-            // text left in that other box.
             if (!photoUploadOk && !pinOk && imageValue) {
               nextBtn.disabled = true;
               driveCheck = await ensureDriveAccessible(driveCheck, imageValue);
@@ -918,7 +736,6 @@
           submitBtn.textContent = Lang.t("action.submitting");
           try {
             const payload = Object.assign({}, data, { phone: data.mobile, altPhone: data.altMobile });
-            // A successfully uploaded profile photo's Drive link is what gets saved as the Driver Image URL.
             if (session.photoUpload && session.photoUpload.valid && session.photoUpload.url) payload.imageUrl = session.photoUpload.url;
             const result = await Api.registerDriver(payload);
             activeRegistrationSession = null;

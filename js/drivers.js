@@ -1,29 +1,9 @@
-/**
- * drivers.js — the core customer-facing journey:
- * Home -> Choose Bazar -> Choose Vehicle Type -> Driver List -> Driver Details -> Call.
- * No login is required anywhere in this file.
- *
- * PERFORMANCE NOTE: Markets, Vehicle Categories and the Driver
- * directory are preloaded in the background right after the app
- * starts (see Api.preload in api.js, called from app.js). Every
- * view below checks Api.peek*() first — if the data already
- * landed, the view renders immediately with no loading flash;
- * otherwise it shows a loader and awaits the (shared, cached)
- * request normally.
- */
 (function (window, document, Utils, Lang, Icons, Api, Router, ViewHelpers, Modal, Toast, Search) {
   "use strict";
 
   function marketName(market) { return Lang.current() === "bn" ? market.nameBn : market.nameEn; }
   function vehicleName(vehicle) { return Lang.current() === "bn" ? vehicle.nameBn : vehicle.nameEn; }
 
-  /**
-   * Click-to-speak button (browser's own built-in speech synthesis —
-   * see Utils.speak) — reused for bazar/vehicle-type names and the
-   * "Choose Your Bazar"/vehicle-type section headings. Always stops
-   * the click from bubbling up, so tapping it inside a clickable
-   * card/heading never also triggers that card's own navigation.
-   */
   function speakerButton(text) {
     return Utils.el("button", {
       type: "button", class: "speak-btn",
@@ -33,7 +13,6 @@
     });
   }
 
-  /** A section <h2> with a click-to-speak button beside it, reading exactly that heading text — used only where explicitly requested (Bazar/Vehicle Type selection headings), not added to every heading site-wide. */
   function speakableHeading(text) {
     return Utils.el("h2", { class: "section-head__title-row" }, [
       Utils.el("span", { text }),
@@ -41,13 +20,6 @@
     ]);
   }
 
-  /**
-   * A heading <h2> with a click-to-speak button beside it, same as
-   * speakableHeading, except the button reads different text than the
-   * heading itself displays (e.g. reading a description below the
-   * heading, not the heading text) — used for the Home page header and
-   * the Vehicle Type page header, per the site's speaker rules.
-   */
   function speakableHeadingCustom(displayText, spokenText, extraClass) {
     return Utils.el("h2", { class: "section-head__title-row" + (extraClass ? " " + extraClass : "") }, [
       Utils.el("span", { text: displayText }),
@@ -55,12 +27,6 @@
     ]);
   }
 
-  /**
-   * Like speakerButton, but its spoken text can be changed later via
-   * the returned .setSpokenText() — used where the correct text isn't
-   * known synchronously yet (Vehicle Type page header, before the
-   * market name has resolved from a network fetch).
-   */
   function mutableSpeakerButton(initialText) {
     let spoken = initialText || "";
     const btn = Utils.el("button", {
@@ -76,18 +42,13 @@
     return btn;
   }
 
-  /** Spoken text for the Vehicle Type page header speaker: reads the dynamic "which vehicle type in <market>?" description, never the static heading. */
   function vehicleHeaderSpeech(marketNameStr) {
     return Lang.current() === "bn"
       ? `${marketNameStr} বাজারে আপনি কোন ধরনের গাড়ির ড্রাইভার খুঁজছেন?`
       : `What type of vehicle driver are you looking for in ${marketNameStr}?`;
   }
 
-  // ---------------------------------------------------------
-  // CALL HANDLING
-  // ---------------------------------------------------------
   function canPlaceCall() {
-    // Heuristic: touch-capable devices (phones/tablets) can dial directly.
     return matchMedia("(pointer: coarse)").matches;
   }
 
@@ -112,62 +73,15 @@
     });
   }
 
-  // ---------------------------------------------------------
-  // DRIVER DETAILS MODAL <-> BACK BUTTON INTEGRATION
-  // ---------------------------------------------------------
-  // Only one driver-details modal exists at a time, so a couple of
-  // shared flags are enough to coordinate it with the browser's
-  // history. First Back press closes the modal only; the underlying
-  // page/route is untouched and the next Back continues normally.
-  let driverModalHistoryPushed = false;
-  let driverModalClosingFromPopstate = false;
-
   function openDriverModalWithHistory(contentNode) {
-    function onPopState() {
-      driverModalClosingFromPopstate = true;
-      window.removeEventListener("popstate", onPopState);
-      Modal.close();
-    }
-
-    Modal.open(contentNode, {
-      onClose: () => {
-        window.removeEventListener("popstate", onPopState);
-        const wasFromPopstate = driverModalClosingFromPopstate;
-        driverModalClosingFromPopstate = false;
-        if (driverModalHistoryPushed) {
-          driverModalHistoryPushed = false;
-          if (!wasFromPopstate) {
-            // Closed via X / overlay / Escape / breadcrumb link — collapse
-            // the extra history entry so Back never hits a phantom stop.
-            history.back();
-          }
-        }
-      }
-    });
-
-    // Push a history entry (same hash — no route change) so the first
-    // Back press closes this modal instead of leaving it stranded on
-    // top of whatever the underlying page's own Back would do.
-    history.pushState({ driverModal: true }, "", window.location.hash || "#/");
-    driverModalHistoryPushed = true;
-    window.addEventListener("popstate", onPopState);
+    Modal.open(contentNode);
   }
 
-  // ---------------------------------------------------------
-  // DRIVER CARD + DETAIL
-  // ---------------------------------------------------------
   function driverPhotoNode(driver, size) {
     const wrap = Utils.el("div", { class: size === "large" ? "detail-photo" : "driver-card__photo" });
     const url = Utils.resolveImageUrl(driver.imageUrl);
     const localUrl = Utils.localFixtureUrl("profile", driver.driverId);
     if (url || localUrl) {
-      // Driver text info is already rendered by the time this image
-      // starts loading — the card/detail body never waits on the
-      // photo. `loading="lazy"` defers off-screen photos so a long
-      // driver grid doesn't fetch every image up front. Tier 1 is a
-      // local file named after this driver's ID (if one was added to
-      // assets/local-photos/profilePhoto/), then the Sheet's link,
-      // then the placeholder icon.
       const img = Utils.el("img", { alt: Utils.driverDisplayName(driver), loading: "lazy", decoding: "async" });
       Utils.wireImageFallback(img, driver.imageUrl, () => {
         wrap.innerHTML = size === "large" ? Icons.userLarge : Icons.user;
@@ -187,7 +101,6 @@
     });
   }
 
-  /** Renders a 5-star row (rounded from a raw, possibly decimal/empty value) — never the numeric value itself. */
   function starsNode(ratingRaw) {
     const count = Utils.starCount(ratingRaw);
     const stars = Utils.el("span", { class: "stars", role: "img", "aria-label": Lang.t("driver.ratingAria", { n: count }) });
@@ -200,20 +113,17 @@
     return stars;
   }
 
-  /** Uppercased, comma-joined display of a possibly multi-value field (e.g. "cng, auto" -> "CNG, AUTO"). */
   function formatMultiUpper(raw) {
     const parts = Utils.splitMulti(raw);
     return parts.length ? parts.map((s) => s.toUpperCase()).join(", ") : "—";
   }
 
-  /** "VEHICLE TYPE · Service Area" — always a single line, Service Area optional. */
   function vehicleServiceLine(driver, vehicleLabel) {
     const label = vehicleLabel || formatMultiUpper(driver.vehicleType);
     const text = driver.serviceArea ? label + " · " + driver.serviceArea : label;
     return Utils.el("div", { class: "driver-card__meta", title: text, text });
   }
 
-  /** "Experience · ★★★★☆" row — Experience hidden when empty, rating always shown (0 stars if empty). */
   function experienceRatingRow(driver) {
     const parts = [];
     if (driver.experience) {
@@ -242,9 +152,6 @@
         onClick: (e) => e.stopPropagation()
       }));
     }
-    // A fixed-width empty space always sits at the right edge of the
-    // button row, whether or not WhatsApp is shown — the Call button
-    // (and WhatsApp, when present) share the remaining width.
     actions.push(Utils.el("div", { class: "driver-card__spacer", "aria-hidden": "true" }));
 
     const card = Utils.el("div", {
@@ -260,12 +167,12 @@
         experienceRatingRow(driver),
         statusNode(driver),
         Utils.el("div", { class: "driver-card__actions" }, actions)
-      ])
+      ]),
+      window.Admin ? window.Admin.penButton("driver", driver.driverId) : null
     ]);
     return card;
   }
 
-  /** Two-column "label / value" detail row (plain-text values only). */
   function twoColRow(labelA, valueA, labelB, valueB) {
     return Utils.el("div", { class: "detail-row" }, [
       Utils.el("div", { class: "detail-col" }, [
@@ -279,11 +186,6 @@
     ]);
   }
 
-  /**
-   * Thumbnail + main-image gallery for "Vehicle Image URL" (comma-separated
-   * when a driver has more than one photo). Returns null when the driver
-   * has no vehicle images at all, so callers can skip the section entirely.
-   */
   function buildGallery(driver) {
     const rawUrls = Utils.splitMulti(driver.vehicleImageUrl).filter(Boolean);
     const urls = rawUrls.map(Utils.resolveImageUrl);
@@ -334,12 +236,6 @@
     return Utils.el("div", { class: "gallery" }, children);
   }
 
-  /**
-   * "Rate This Driver" — UI-only demo widget. Stars are clickable and
-   * comment is typeable, but Submit never saves anything anywhere; it
-   * just shows a friendly "not available yet" message.
-   */
-  /** Human-readable date for a review's ISO "Date Time" — falls back to nothing rather than throwing on a bad/missing value. */
   function formatReviewDate(iso) {
     if (!iso) return "";
     try {
@@ -362,16 +258,6 @@
     });
   }
 
-  /**
-   * The full public Rating/Review widget: the driver's blended
-   * rating (verified public reviews + the admin's own Manual Rating,
-   * capped at 5 — see finalRating from the API), a short preview of
-   * verified reviews with a "View All Reviews" option, and the
-   * star + comment submission form. A new submission always starts
-   * unverified and is never shown here until the sheet owner approves
-   * it (see Public Ratings in Code.gs) — so submitting one never
-   * changes what this widget displays.
-   */
   function buildRatingSection(driver) {
     const summaryRow = Utils.el("div", { class: "reviews-summary" }, [
       starsNode(driver.finalRating),
@@ -379,12 +265,7 @@
       Utils.el("span", { class: "reviews-summary__count", text: Lang.t("driver.reviewCount", { n: driver.publicRatingCount || 0 }) })
     ]);
 
-    // Preview (unchanged design/behavior) — up to 2 reviews, no scroll area.
     const listContainer = Utils.el("div", { class: "reviews-list" }, [ViewHelpers.loadingBlock()]);
-    // "View All Reviews" expands into its OWN capped-height, scrollable
-    // container instead — never the full list inline on the page — so
-    // 100/500/1000 reviews never make the Details page itself long;
-    // only this one area scrolls.
     const expandedContainer = Utils.el("div", { class: "reviews-list reviews-list--expanded" });
     expandedContainer.style.display = "none";
 
@@ -397,9 +278,6 @@
     closeReviewsBtn.style.display = "none";
     if ((driver.publicRatingCount || 0) <= 2) viewAllBtn.style.display = "none";
 
-    // Non-clickable "Review the driver" speech bubble, sitting to the right of
-    // the View All / Close button with its tail pointing down at the stars.
-    // With no View All button showing, it centers itself instead.
     const reviewBubble = Utils.el("span", { class: "review-bubble", text: Lang.t("driver.reviewBubble") });
     const reviewActionRow = Utils.el("div", { class: "reviews-action-row" }, [viewAllBtn, closeReviewsBtn, reviewBubble]);
     function syncReviewActionRow() {
@@ -430,8 +308,6 @@
     });
 
     closeReviewsBtn.addEventListener("click", () => {
-      // The 2-review preview is still sitting in listContainer exactly
-      // as it was — no re-fetch needed to collapse back to it.
       expandedContainer.style.display = "none";
       expandedContainer.innerHTML = "";
       listContainer.style.display = "";
@@ -506,14 +382,14 @@
     const children = [];
     if (crumbTrail && crumbTrail.length) {
       const crumbNode = ViewHelpers.breadcrumb(crumbTrail.concat([{ label: Utils.driverDisplayName(driver) }]));
-      // Breadcrumb links navigate the underlying page — always close
-      // this modal first so it doesn't stay stuck open on top of it.
-      Utils.qsa("a", crumbNode).forEach((a) => a.addEventListener("click", () => Modal.close()));
+      Utils.qsa("a", crumbNode).forEach((a) => a.addEventListener("click", (e) => {
+        e.preventDefault();
+        const target = a.getAttribute("href");
+        Modal.closeThen(() => { window.location.hash = target; });
+      }));
       children.push(crumbNode);
     }
 
-    // Name + Close share one header row, directly under the breadcrumb.
-    // The close button lives ONLY here — never beside the gallery below.
     children.push(Utils.el("div", { class: "detail-name-row" }, [
       Utils.el("h2", { class: "detail-name", text: Utils.driverDisplayName(driver) }),
       Utils.el("button", { class: "icon-btn", "aria-label": Lang.t("a11y.closeModal"), html: Icons.close, onClick: () => Modal.close() })
@@ -551,7 +427,6 @@
     ]));
     children.push(Utils.el("div", { class: "detail-row" }, expRatingCols));
 
-    /** A clickable phone number with a small, consistent call icon in front (still plain text, not a big button). */
     function phoneLinkNode(number) {
       return Utils.el("a", { class: "detail-col__value detail-col__value--link detail-col__value--phone", href: "tel:" + Utils.normalizePhone(number) }, [
         Utils.el("span", { class: "detail-col__phone-icon", "aria-hidden": "true", html: Icons.phone }),
@@ -573,9 +448,6 @@
     }
     children.push(Utils.el("div", { class: "detail-row" }, phoneCols));
 
-    // Compact, fixed-height action row (matches the Driver Card's Call
-    // button height): Call is always present; Call Alternative and
-    // WhatsApp only appear when that data actually exists.
     const actionButtons = [
       Utils.el("button", {
         class: "btn btn--primary btn--sm action-row__btn",
@@ -607,18 +479,16 @@
       children.push(gallery);
     }
 
-    // Personal Details — plain text OR basic HTML from the Sheet,
-    // rendered as-is; the whole section (heading included) is left out
-    // entirely when the column is empty.
     if (Utils.clean(driver.personalDetails)) {
       children.push(Utils.el("div", { class: "personal-details-section mt-5" }, [
         Utils.el("h3", { class: "detail-section-title", text: Lang.t("detail.personalDetails") }),
-        Utils.el("div", { class: "personal-details", html: driver.personalDetails })
+        Utils.el("div", { class: "personal-details", html: Utils.safeHtml(driver.personalDetails) })
       ]));
     }
 
     children.push(buildRatingSection(driver));
-    children.push(Utils.buildSocialLinksSection());
+    const socialSection = Utils.buildSocialLinksSection(driver.socialUrl);
+    if (socialSection) children.push(socialSection);
 
     const videoSection = Utils.buildVideoSection(driver.videoUrl, Lang.t("detail.video"));
     if (videoSection) { videoSection.classList.add("mt-5"); children.push(videoSection); }
@@ -628,9 +498,6 @@
     openDriverModalWithHistory(Utils.el("div", {}, children));
   }
 
-  // ---------------------------------------------------------
-  // HOME VIEW (no breadcrumb — this is the top of the journey)
-  // ---------------------------------------------------------
   async function renderHome(app) {
     app.innerHTML = "";
 
@@ -661,7 +528,7 @@
     ]));
 
     const cachedMarkets = Api.peekMarkets();
-    let marketSection; // forward-declared so the sort-modal's refresh callback (built below, but only ever called later, on click) can reference it
+    let marketSection;
     const refreshMarketGrid = () => {
       const fresh = Api.peekMarkets();
       if (fresh && marketSection) marketSection.replaceChild(marketGrid(fresh, (m) => Router.navigate(`/markets/${m.slug}`)), marketSection.lastChild);
@@ -688,7 +555,6 @@
     }
   }
 
-  /** Generic "Others" tile — reveals everything when the list was capped. */
   function othersChip(onClick) {
     return Utils.el("button", { class: "chip-card chip-card--others", onClick }, [
       Utils.el("div", { class: "chip-card__icon", html: Icons.more }),
@@ -696,45 +562,26 @@
     ]);
   }
 
-  /**
-   * 4 or fewer items -> show them all directly. More than 4 -> show only
-   * the first 3 plus an "Others" tile that expands the grid in place to
-   * reveal the rest (no navigation, no extra request).
-   */
+  const expandedChipGrids = {};
+
   function cappedChipGrid(items, buildChip) {
     if (!items.length) return null;
-    let expanded = false;
+    const gridKey = window.location.hash || "#/";
+    let expanded = !!expandedChipGrids[gridKey];
     const container = Utils.el("div", { class: "chip-grid" });
     function paint() {
       container.innerHTML = "";
       const capped = items.length > 4 && !expanded;
       const visible = capped ? items.slice(0, 3) : items;
       visible.forEach((item) => container.appendChild(buildChip(item)));
-      if (capped) container.appendChild(othersChip(() => { expanded = true; paint(); }));
+      if (capped) container.appendChild(othersChip(() => { expanded = true; expandedChipGrids[gridKey] = true; paint(); }));
     }
     paint();
     return container;
   }
 
-  /**
-   * Sets a large card-background photo (with a dark overlay so the
-   * card's text stays readable) once the image has actually finished
-   * loading — probed off-DOM first, so a missing/broken "Markets BG
-   * Image URL" silently leaves the card's existing plain background
-   * (white in Light Mode, dark in Dark Mode) in place. Never a broken
-   * image, never touches the small market image/icon in the card.
-   */
-  /** Same local-fixture -> Drive-link(+retry+cache) -> nothing chain as every other image here — see Utils.wireImageFallback's own comment. The probe <img> is never added to the page; only its eventual src (a real URL, a Drive one, or an IndexedDB object URL) is used, as the card's CSS background. */
   const MARKET_ORDER_KEY = "nobi.marketOrder";
 
-  /**
-   * Everyone sees the Sheet's own market order by default. If this
-   * person has customized it (see openMarketOrderModal below), their
-   * saved slug order takes over instead — purely on this device/
-   * browser, nothing sent anywhere. Any market not in a saved order
-   * (e.g. a brand new one added after they last customized it) simply
-   * falls in at the end, in whatever order the Sheet already had it.
-   */
   function applyCustomMarketOrder(markets) {
     const order = Utils.storage.get(MARKET_ORDER_KEY, null);
     if (!order || !order.length) return markets;
@@ -746,13 +593,6 @@
     });
   }
 
-  /**
-   * The small sort icon-button next to "Choose your Market" (Home page
-   * preview AND the full /markets page both call this, so fixing/
-   * changing it once covers both). `onSaved` lets whichever page opened
-   * this modal refresh its own on-screen grid the instant the order
-   * changes, without a full page reload.
-   */
   function marketSectionHead(onSaved) {
     const heading = speakableHeading(Lang.t("market.chooseHeading"));
     heading.appendChild(Utils.el("button", {
@@ -767,7 +607,6 @@
     ]);
   }
 
-  /** Tap-up/tap-down reordering (not drag — far more reliable on a touchscreen) for this device's own market order. */
   function openMarketOrderModal(onSaved) {
     const markets = Api.peekMarkets();
     if (!markets || !markets.length) { Toast.show(Lang.t("market.loading")); return; }
@@ -842,17 +681,10 @@
       if (imgUrl || localImgUrl) {
         const img = Utils.el("img", { alt: "", loading: "lazy" });
         const imgWrap = Utils.el("div", { class: "chip-card__image" }, [img]);
-        // No image at all (no local fixture AND no Sheet link), or a
-        // genuinely broken one after every tier's retries -> fall back
-        // to the icon alone.
         Utils.wireImageFallback(img, m.imageUrl, () => imgWrap.remove(), localImgUrl);
         topChildren.push(imgWrap);
       }
       const name = marketName(m);
-      // A plain <div role="button"> (not a real <button>) so the small
-      // speak button below can be a real, separately-clickable <button>
-      // nested inside it — real buttons can't be nested inside a
-      // <button> — while keeping identical click/keyboard behavior.
       const card = Utils.el("div", {
         class: "chip-card chip-card--vehicle chip-card--market",
         role: "button", tabindex: "0", "aria-label": name,
@@ -870,7 +702,6 @@
     });
   }
 
-  /** Vehicle-category chip: existing small icon + optional category image + name + dynamic online count. */
   function vehicleChip(v, onSelect, onlineCount) {
     const topChildren = [Utils.el("div", { class: "chip-card__icon", html: Icons.vehicle(v.slug) })];
     const imgUrl = Utils.resolveImageUrl(v.imageUrl);
@@ -878,8 +709,6 @@
     if (imgUrl || localImgUrl) {
       const img = Utils.el("img", { alt: "", loading: "lazy" });
       const imgWrap = Utils.el("div", { class: "chip-card__image" }, [img]);
-      // No image at all, or a genuinely broken one after every tier's
-      // retries -> fall back to the icon alone (never a broken-image icon).
       Utils.wireImageFallback(img, v.imageUrl, () => imgWrap.remove(), localImgUrl);
       topChildren.push(imgWrap);
     }
@@ -908,7 +737,6 @@
     return cappedChipGrid(vehicles, (v) => vehicleChip(v, onSelect, (onlineCounts && onlineCounts.get(v.slug)) || 0));
   }
 
-  /** Set of vehicle-type slugs that have at least one approved driver in the given market (multi-value aware). */
   function categoriesWithDrivers(directory, marketSlug) {
     const set = new Set();
     directory.forEach((d) => {
@@ -919,11 +747,6 @@
     return set;
   }
 
-  /**
-   * Map of vehicle-type slug -> count of currently AVAILABLE (not
-   * unavailable/offline) drivers in the given market, multi-value aware.
-   * Reuses the existing availability flag — no new status system.
-   */
   function onlineCountByCategory(directory, marketSlug) {
     const counts = new Map();
     directory.forEach((d) => {
@@ -949,7 +772,6 @@
     ]));
   }
 
-  /** Sets a background photo (with a dark tint so text stays legible) on a .cta-band, with a graceful no-op if the path is missing/broken — CSS background-image never shows a broken-image icon, so the existing solid color just keeps showing through underneath. */
   function applyCtaBandBackground(el, path) {
     if (!path) return;
     el.style.backgroundImage = `linear-gradient(rgba(10, 30, 20, 0.55), rgba(10, 30, 20, 0.55)), url("${path}")`;
@@ -965,12 +787,6 @@
     app.appendChild(Utils.el("section", { class: "section container" }, [band]));
   }
 
-  /**
-   * Doctor CTA — visually identical to the Driver Registration band
-   * above (same .cta-band styling, now with its own optional background
-   * photo). Only the "Find Doctors" button itself is clickable — clicking
-   * elsewhere in the section does nothing, per the spec.
-   */
   function appendDoctorSection(app) {
     const band = Utils.el("div", { class: "cta-band" }, [
       Utils.el("h2", { text: Lang.t("doctor.sectionHeading") }),
@@ -984,31 +800,6 @@
     app.appendChild(Utils.el("section", { class: "section container" }, [band]));
   }
 
-  /**
-   * Homepage banner — 3 slides (home-banner-01/02/03), auto-advancing
-   * every 5s, swipeable. Slide 1 is dynamic: it always shows the
-   * automatic site headline/text (translated live) on a solid
-   * background — the SAME default background as the Doctor/
-   * Registration sections — and only swaps that solid background for
-   * home-banner-01.jpg when that file is actually present and loads.
-   * Slides 2/3 use their own configured image paths, falling back to a
-   * clean placeholder (never a broken-image icon) until a real image
-   * is added.
-   *
-   * DIRECTION: "forward" (auto-advance, or a left-swipe) always slides
-   * the new banner in from the right; "backward" (a right-swipe) always
-   * slides the new banner in from the left — including across the
-   * wrap-around (slide 3 -> slide 1 is still a forward move, so it
-   * still comes from the right, the same as slide 1 -> 2 and 2 -> 3).
-   * This is done with a classic clone-at-both-ends filmstrip: the track
-   * actually holds [clone-of-last, slide1, slide2, slide3,
-   * clone-of-first]. Animating past the real slides onto a clone still
-   * looks correct (the clone is visually identical), and the moment
-   * that animation finishes, the track jumps back to the matching REAL
-   * slide with transitions briefly turned off — invisible to the eye,
-   * but resets the counter so the next move has clones to travel to
-   * again in either direction, forever.
-   */
   function buildBanner() {
     const bannerImages = window.NOBI_CONFIG.BANNER_IMAGES || {};
     const slideDefs = [
@@ -1017,14 +808,14 @@
       { src: bannerImages.slide3 }
     ];
     const realCount = slideDefs.length;
-    const frameCount = realCount + 2; // + leading clone-of-last + trailing clone-of-first
+    const frameCount = realCount + 2;
     const stepPercent = 100 / frameCount;
 
     const track = Utils.el("div", { class: "banner__track" });
     track.style.width = (frameCount * 100) + "%";
-    track.appendChild(buildSlide(slideDefs[realCount - 1])); // leading clone
+    track.appendChild(buildSlide(slideDefs[realCount - 1]));
     slideDefs.forEach((def) => track.appendChild(buildSlide(def)));
-    track.appendChild(buildSlide(slideDefs[0])); // trailing clone
+    track.appendChild(buildSlide(slideDefs[0]));
     Utils.qsa(".banner__slide", track).forEach((el) => { el.style.width = stepPercent + "%"; });
 
     const dots = slideDefs.map((_, i) =>
@@ -1035,8 +826,8 @@
     const viewport = Utils.el("div", { class: "banner__viewport" }, [track]);
     const root = Utils.el("div", { class: "banner" }, [Utils.el("div", { class: "container" }, [viewport, dotsRow])]);
 
-    let real = 0; // logical slide, 0..realCount-1 — this is what the dots reflect
-    let frame = 1; // actual track position, 0..frameCount-1 (1 == real slide 0, since frame 0 is the leading clone)
+    let real = 0;
+    let frame = 1;
     let intervalId = null;
 
     function paint(animate) {
@@ -1044,21 +835,17 @@
       track.style.transform = "translateX(-" + (frame * stepPercent) + "%)";
       dots.forEach((d, i) => d.classList.toggle("is-active", i === real));
       if (!animate) {
-        void track.offsetHeight; // force a reflow so the transition re-enables cleanly for the NEXT move
+        void track.offsetHeight;
         track.style.transition = "";
       }
     }
 
-    // Direct jump (dot click): goes straight to that real slide. Only
-    // the timer/swipe moves below need the clone illusion, since those
-    // are always exactly one step and can land on a clone frame.
     function goToIndex(i) {
       real = (i + realCount) % realCount;
       frame = real + 1;
       paint(true);
     }
 
-    // delta is always +1 (forward/next) or -1 (backward/previous).
     function step(delta) {
       real = (real + delta + realCount) % realCount;
       frame += delta;
@@ -1066,19 +853,12 @@
     }
 
     track.addEventListener("transitionend", () => {
-      // Landed on either boundary clone frame (0 = clone-of-last,
-      // frameCount-1 = clone-of-first) — silently re-point the track at
-      // the matching REAL slide's frame (transitions off for this one
-      // jump only), so there are always clones to travel to next time,
-      // in either direction, forever.
       if (frame === 0 || frame === frameCount - 1) { frame = real + 1; paint(false); }
     });
 
     function startTimer() {
       if (intervalId) clearInterval(intervalId);
       intervalId = setInterval(() => {
-        // If this banner is no longer on screen (user navigated away),
-        // stop advancing it instead of leaking an interval forever.
         if (!document.body.contains(root)) { clearInterval(intervalId); return; }
         step(1);
       }, 5000);
@@ -1086,17 +866,13 @@
 
     dots.forEach((d, i) => d.addEventListener("click", () => { goToIndex(i); startTimer(); }));
 
-    // Touch/swipe: dragging left (finger moves left) = next = forward =
-    // always in from the right; dragging right = previous = backward =
-    // always in from the left. Then restart the timer (never stacking
-    // a duplicate one).
     let touchStartX = null;
     viewport.addEventListener("touchstart", (e) => { touchStartX = e.touches[0].clientX; }, { passive: true });
     viewport.addEventListener("touchend", (e) => {
       if (touchStartX == null) return;
       const dx = e.changedTouches[0].clientX - touchStartX;
       touchStartX = null;
-      if (Math.abs(dx) < 30) return; // ignore tiny/accidental movements
+      if (Math.abs(dx) < 30) return;
       step(dx < 0 ? 1 : -1);
       startTimer();
     }, { passive: true });
@@ -1107,11 +883,6 @@
   }
 
   function buildSlide(def) {
-    // Slide 1: always the automatic headline/text, translated live, on
-    // the same solid background used by the Doctor/Registration
-    // sections by default. If home-banner-01.jpg is present and loads,
-    // it replaces that solid background — the text/layout stay the
-    // same either way.
     if (def.type === "dynamic") {
       const slide = Utils.el("div", { class: "banner__slide banner__slide--text" }, [
         Utils.el("div", { class: "banner__slide-text" }, [
@@ -1120,10 +891,6 @@
         ])
       ]);
       if (def.src) {
-        // Probe-load off-DOM first — if it 404s/errors we simply never
-        // touch the background, so the solid colour background just
-        // keeps showing through (no broken-image icon possible here
-        // since this is a CSS background-image, not an <img>).
         const probe = new Image();
         probe.onload = () => {
           slide.style.backgroundImage = `linear-gradient(rgba(10, 30, 20, 0.45), rgba(10, 30, 20, 0.45)), url("${def.src}")`;
@@ -1149,9 +916,6 @@
     return slide;
   }
 
-  // ---------------------------------------------------------
-  // MARKET SELECTION VIEW (/markets)
-  // ---------------------------------------------------------
   async function renderMarkets(app) {
     app.innerHTML = "";
     const crumb = ViewHelpers.breadcrumb([
@@ -1160,7 +924,7 @@
     ]);
 
     const cachedMarkets = Api.peekMarkets();
-    let section; // forward-declared for the same reason as in renderHome above
+    let section;
     const refreshMarketGrid = () => {
       const fresh = Api.peekMarkets();
       if (fresh && section) section.replaceChild(marketGrid(fresh, (m) => Router.navigate(`/markets/${m.slug}`)), section.lastChild);
@@ -1183,9 +947,6 @@
     }
   }
 
-  // ---------------------------------------------------------
-  // VEHICLE SELECTION VIEW (/markets/:market)
-  // ---------------------------------------------------------
   async function renderVehicles(app, params) {
     app.innerHTML = "";
 
@@ -1193,9 +954,6 @@
     const cachedVehicles = Api.peekVehicleCategories();
     const cachedDirectory = Api.peekDriverDirectory();
 
-    // A category only appears for THIS market if at least one approved
-    // driver there actually has that vehicle type — an active category
-    // with zero drivers in this particular market stays hidden here.
     function buildBody(market, vehicles, directory) {
       const availableSlugs = categoriesWithDrivers(directory, market.slug);
       const filtered = vehicles.filter((v) => availableSlugs.has(v.slug));
@@ -1203,9 +961,6 @@
       return vehicleGrid(filtered, (v) => Router.navigate(`/markets/${market.slug}/${v.slug}`), onlineCounts);
     }
 
-    // If we already know the market slug is invalid we still need a
-    // network round trip once to find out — but if markets are cached
-    // we can validate synchronously and avoid a flash of the wrong UI.
     const knownMarket = cachedMarkets && cachedMarkets.find((m) => m.slug === params.market);
     const allCachedReady = knownMarket && cachedVehicles && cachedDirectory;
 
@@ -1215,9 +970,6 @@
       { label: knownMarket ? marketName(knownMarket) : "…" }
     ]);
 
-    // The header's speak button never reads the static heading — it
-    // reads the dynamic "which vehicle type in <market>?" line, and its
-    // text is updated once the market name resolves (see below).
     const vehicleSpeaker = mutableSpeakerButton(knownMarket ? vehicleHeaderSpeech(marketName(knownMarket)) : "");
     const vehicleHeadingRow = Utils.el("h2", { class: "section-head__title-row" }, [
       Utils.el("span", { text: Lang.t("vehicle.chooseHeading") }),
@@ -1255,9 +1007,6 @@
     }
   }
 
-  // ---------------------------------------------------------
-  // DRIVER LIST VIEW (/markets/:market/:vehicle)
-  // ---------------------------------------------------------
   async function renderDriverList(app, params) {
     app.innerHTML = "";
 
@@ -1327,8 +1076,6 @@
       Lang.t("drivers.heading", { vehicle: vehicleName(vehicle) }) + " " + Lang.t("drivers.subInMarket", { market: marketName(market) });
 
     async function load(query) {
-      // Once the driver directory is cached, filtering is instant and
-      // local — no need to show a loader and interrupt the UI.
       const alreadyCached = !!Api.peekDriverDirectory();
       if (!alreadyCached) {
         resultsWrap.innerHTML = "";
@@ -1346,14 +1093,6 @@
       }
     }
 
-    // driverId -> { node, sig } for whatever's currently on screen, so a
-    // re-run of renderResults() (typing in Search, toggling "Available
-    // only", or simply re-opening this same list) only touches drivers
-    // that are actually new/changed/removed — a driver whose data is
-    // byte-for-byte the same as last time keeps its exact existing card
-    // (photo already loaded and all) instead of being torn down and
-    // rebuilt. With hundreds/thousands of drivers and only a handful
-    // changing, this avoids replacing the whole grid for nothing.
     let renderedCards = new Map();
 
     function renderResults(list, query) {
@@ -1376,7 +1115,6 @@
         resultsWrap.appendChild(grid);
         renderedCards.clear();
       }
-      // Api.getDrivers() already returns Active drivers before Inactive ones.
       const nextIds = new Set();
       list.forEach((d) => {
         const id = d.driverId;
@@ -1385,16 +1123,12 @@
         const existing = renderedCards.get(id);
         let node;
         if (existing && existing.sig === sig) {
-          node = existing.node; // nothing about this driver changed — reuse the exact same card/photo
+          node = existing.node;
         } else {
           node = driverCard(d, vehicleName(vehicle), crumbTrail);
           if (existing && existing.node.parentNode) existing.node.parentNode.removeChild(existing.node);
           renderedCards.set(id, { node, sig });
         }
-        // appendChild on a node already in the grid just repositions it
-        // (same element instance — its <img> never re-fetches); on a
-        // brand-new node it inserts it. Iterating in list order this way
-        // leaves the grid in the correct final order either way.
         grid.appendChild(node);
       });
       renderedCards.forEach((entry, id) => {
@@ -1412,9 +1146,6 @@
     load("");
   }
 
-  // ---------------------------------------------------------
-  // GLOBAL QUICK SEARCH VIEW (/search)
-  // ---------------------------------------------------------
   async function renderSearch(app) {
     app.innerHTML = "";
     const searchInput = Utils.el("input", {
@@ -1436,7 +1167,7 @@
       if (!alreadyCached) resultsWrap.appendChild(ViewHelpers.loadingBlock(Lang.t("drivers.loading")));
       try {
         let list = await Api.getDrivers(null, null, query);
-        list = Search.filterLocal(list, query); // defense-in-depth against backend matching differences
+        list = Search.filterLocal(list, query);
         resultsWrap.innerHTML = "";
         if (!list.length) {
           resultsWrap.appendChild(ViewHelpers.emptyBlock({ message: Lang.t("empty.noSearchResults") }));
@@ -1454,9 +1185,6 @@
     searchInput.focus();
   }
 
-  // ---------------------------------------------------------
-  // EMERGENCY CONTACT LIST (/emergency)
-  // ---------------------------------------------------------
   async function renderEmergencyList(app) {
     app.innerHTML = "";
 

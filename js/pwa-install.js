@@ -1,33 +1,3 @@
-/**
- * pwa-install.js — the custom "Install app" banner + the "new version
- * ready" banner. Both reuse the same #pwa-install-banner element (see
- * index.html), since they're never needed at the same moment in
- * practice: install is for a first-time visitor, update-ready is for a
- * returning one who already has the app installed/cached.
- *
- * INSTALL BANNER
- * ---------------
- * Chrome/Edge/Samsung Internet on Android fire "beforeinstallprompt"
- * when this site qualifies as installable (manifest + service worker in
- * place). The browser's own address-bar install icon is easy to miss,
- * especially for less tech-savvy users and on older phones/launchers —
- * so this listens for that event, stops the browser's own mini-prompt,
- * and shows this site's own on-brand banner with a big "Install" button
- * instead. iOS Safari never fires this event at all (Apple doesn't
- * support it) — there, a simple "Share -> Add to Home Screen"
- * instruction banner is shown instead, since no programmatic install is
- * possible there.
- *
- * A dismissed banner stays hidden for DISMISS_COOLDOWN_DAYS so it never
- * nags on every single visit.
- *
- * UPDATE-READY BANNER
- * --------------------
- * sw.js uses skipWaiting()/clients.claim(), so a new version can finish
- * installing while someone already has the app open. This listens for
- * that and offers a one-tap Refresh instead of the person only finding
- * out something changed on their next natural reload.
- */
 (function (window, document, Utils, Lang) {
   "use strict";
 
@@ -39,7 +9,7 @@
   if (!banner) return;
 
   let deferredPrompt = null;
-  let mode = null; // "install" | "ios" | "update" | null
+  let mode = null;
 
   function isStandalone() {
     return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
@@ -130,17 +100,11 @@
     banner.hidden = false;
   }
 
-  // Re-render whatever's currently showing in the new language, same
-  // pattern the rest of the app uses for dynamic (non-[data-i18n]) text.
   document.addEventListener("nobi:languagechange", () => {
     if (mode === "install") renderInstall();
     else if (mode === "ios") renderIos();
-    // "update" mode's refresh handler is re-created fresh each render
-    // elsewhere (its listener is attached once in initServiceWorkerWatch),
-    // so it's deliberately left alone here rather than rebuilt without one.
   });
 
-  // ---- Android/Chrome/Edge/Samsung Internet: native install prompt ----
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
     deferredPrompt = event;
@@ -153,12 +117,10 @@
     hide();
   });
 
-  // ---- iOS Safari: beforeinstallprompt never fires, show instructions instead ----
   if (isIos() && !isStandalone() && !withinCooldown(STORAGE_DISMISS_IOS)) {
     renderIos();
   }
 
-  // ---- Update-ready: a new Service Worker finished installing while this tab was open ----
   window.addEventListener("nobi:swregistered", (event) => {
     const reg = event.detail && event.detail.registration;
     if (!reg) return;
@@ -166,8 +128,6 @@
       const installing = reg.installing;
       if (!installing) return;
       installing.addEventListener("statechange", () => {
-        // "installed" + an existing controller means this is a genuine
-        // update (not the very first install with nothing to replace).
         if (installing.state === "installed" && navigator.serviceWorker.controller) {
           renderUpdateReady(() => window.location.reload());
         }

@@ -1,14 +1,3 @@
-/**
- * language.js — centralized translation system.
- * All user-facing strings live in TRANSLATIONS below. Nothing
- * else in the app should hard-code English or Bengali text.
- *
- * Usage:
- *   Lang.t("nav.home")               -> translated string
- *   Lang.t("empty.noDrivers")        -> translated string
- *   Lang.apply()                     -> re-renders every [data-i18n] node
- *   Lang.setLanguage("bn")           -> switches language + re-renders
- */
 (function (window, Utils) {
   "use strict";
 
@@ -172,6 +161,8 @@
       "field.driverPhoto": "Enter Drive Link",
     "register.step3.vehicleLabelPrefix": "Enter the vehicle photo link or",
     "register.step3.vehicleLabelButton": "Send via Google Form",
+    "register.step3.socialLabelPrefix": "Enter social media links or",
+    "register.step3.socialHint": "Optional. Separate several links with a comma and a space.",
       "register.step3.whatsappHelp": "Send your photo on WhatsApp and collect a PIN.",
       "register.step3.pinLabel": "Enter PIN",
       "register.step3.orDivider": "OR",
@@ -283,7 +274,6 @@
 
       "profile.vehiclePhotosSub": "View your vehicle images",
       "profile.noPhotos": "No photos available",
-
 
       "loading.generic": "Loading…",
       "error.network": "Unable to load driver information. Please try again.",
@@ -475,6 +465,8 @@
       "field.driverPhoto": "ড্রাইভ লিঙ্ক দিন",
     "register.step3.vehicleLabelPrefix": "গাড়ির ছবির লিংক দিন অথবা",
     "register.step3.vehicleLabelButton": "গুগল ফর্মের মধ্যে পাঠান",
+    "register.step3.socialLabelPrefix": "সোশ্যাল মিডিয়া লিংক দিন অথবা",
+    "register.step3.socialHint": "ঐচ্ছিক। একাধিক লিংক কমা ও স্পেস দিয়ে আলাদা করুন।",
       "register.step3.whatsappHelp": "WhatsApp এ ছবি পাঠিয়ে পিন সংগ্রহ করুন।",
       "register.step3.pinLabel": "পিন দিন",
       "register.step3.orDivider": "অথবা",
@@ -649,7 +641,6 @@
     document.dispatchEvent(new CustomEvent("nobi:languagechange", { detail: { lang } }));
   };
 
-  /** Re-render every element carrying a data-i18n attribute. */
   Lang.apply = function () {
     Utils.qsa("[data-i18n]").forEach((node) => {
       const key = node.getAttribute("data-i18n");
