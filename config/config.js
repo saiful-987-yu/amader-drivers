@@ -39,7 +39,7 @@ window.NOBI_CONFIG = {
   // Leave this as null to run the site in DEMO MODE with
   // built-in sample data (no Google Sheet required). This is
   // useful for local testing before you connect a real sheet.
-  API_BASE_URL: "https://script.google.com/macros/s/AKfycbyvBTXKZWRwrkfohEwGB63AYO0cHTB-iCepv7uHf70wpOgQiusUjfEjhIE9K7wYLQxPTA/exec",
+  API_BASE_URL: "https://script.google.com/macros/s/AKfycbwIukXr-D8lSyshvRuPqZp4_Mci8nnjDr2wt3Zb7ioIJpWwrA6cCgkMti7G22bndBttfA/exec",
 
   // --------------------------------------------------------
   // PROFILE PHOTO — GOOGLE FORM (Registration Step 3, "Photo Upload")
