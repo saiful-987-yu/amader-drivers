@@ -307,24 +307,32 @@
     const socialNav = Utils.el("nav", { class: "footer-social", "aria-label": "Social media" });
     const socialCfg = (window.NOBI_CONFIG && window.NOBI_CONFIG.SOCIAL_LINKS) || {};
     [
-      { key: "facebook", icon: Icons.facebook, labelKey: "footer.facebook" },
+      { key: "call", icon: Icons.phone, labelKey: "footer.call" },
       { key: "whatsapp", icon: Icons.whatsapp, labelKey: "footer.whatsapp" },
+      { key: "facebook", icon: Icons.facebook, labelKey: "footer.facebook" },
       { key: "tiktok", icon: Icons.tiktok, labelKey: "footer.tiktok" },
-      { key: "linkedin", icon: Icons.linkedin, labelKey: "footer.linkedin" }
+      { key: "instagram", icon: Icons.instagram, labelKey: "footer.instagram" },
+      { key: "website", icon: Icons.website, labelKey: "footer.website" }
     ].forEach((p) => {
       let href = socialCfg[p.key] || "#";
       if (p.key === "whatsapp" && href !== "#") href = Utils.waLink(href);
-      socialNav.appendChild(Utils.el("a", { href, target: "_blank", rel: "noopener", "aria-label": Lang.t(p.labelKey), html: p.icon }));
+      if (p.key === "call" && href !== "#") href = "tel:" + Utils.normalizePhone(href);
+      const attrs = { "aria-label": Lang.t(p.labelKey), html: p.icon };
+      if (href !== "#") attrs.href = href;
+      if (p.key !== "call" && href !== "#") { attrs.target = "_blank"; attrs.rel = "noopener"; }
+      socialNav.appendChild(Utils.el("a", attrs));
     });
 
+    const socialRow = Utils.el("div", { class: "footer-row footer-row--social" }, [socialNav]);
+
     const bottomRow = Utils.el("div", { class: "footer-row footer-row--bottom" }, [
-      Utils.el("span", { text: "© " + new Date().getFullYear() + " " + Lang.t("site.name") + " · " + Lang.t("footer.rights") }),
-      socialNav
+      Utils.el("span", { text: "© " + new Date().getFullYear() + " " + Lang.t("site.name") + " · " + Lang.t("footer.rights") })
     ]);
 
     return Utils.el("footer", { class: "site-footer" }, [
       Utils.el("div", { class: "footer-compact" }, [
         Utils.el("div", { class: "footer-row footer-row--top" }, [brand, nav]),
+        socialRow,
         bottomRow
       ])
     ]);
