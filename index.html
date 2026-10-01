@@ -144,15 +144,11 @@
           <a href="#/login" data-i18n="nav.login">Login</a>
         </nav>
       </div>
+      <div class="footer-row footer-row--social">
+        <nav class="footer-social" id="footer-social" aria-label="Social media"></nav>
+      </div>
       <div class="footer-row footer-row--bottom">
         <span>© <span data-year></span> <span data-i18n="site.name">Amader Drivers</span> · <span data-i18n="footer.rights">All rights reserved.</span></span>
-        <div style="display:flex; align-items:center; gap: var(--space-3); flex-wrap: wrap;">
-          <nav class="footer-social" id="footer-social" aria-label="Social media"></nav>
-          <div class="lang-toggle lang-toggle--sm" role="group" aria-label="Language">
-            <button type="button" data-lang-toggle="en">EN</button>
-            <button type="button" data-lang-toggle="bn">বাংলা</button>
-          </div>
-        </div>
       </div>
     </div>
   </footer>
@@ -233,10 +229,12 @@
       var socialNav = document.getElementById("footer-social");
       if (socialNav && window.NOBI_CONFIG && window.NOBI_CONFIG.SOCIAL_LINKS) {
         var platforms = [
-          { key: "facebook", icon: Icons.facebook, labelKey: "footer.facebook" },
+          { key: "call", icon: Icons.phone, labelKey: "footer.call" },
           { key: "whatsapp", icon: Icons.whatsapp, labelKey: "footer.whatsapp" },
+          { key: "facebook", icon: Icons.facebook, labelKey: "footer.facebook" },
           { key: "tiktok", icon: Icons.tiktok, labelKey: "footer.tiktok" },
-          { key: "linkedin", icon: Icons.linkedin, labelKey: "footer.linkedin" }
+          { key: "instagram", icon: Icons.instagram, labelKey: "footer.instagram" },
+          { key: "website", icon: Icons.website, labelKey: "footer.website" }
         ];
         platforms.forEach(function (p) {
           var href = window.NOBI_CONFIG.SOCIAL_LINKS[p.key] || "#";
@@ -244,10 +242,13 @@
           // reuse the same wa.me link builder as everywhere else on the
           // site (Utils.waLink) instead of a one-off implementation here.
           if (p.key === "whatsapp" && href !== "#") href = Utils.waLink(href);
+          if (p.key === "call" && href !== "#") href = "tel:" + Utils.normalizePhone(href);
           var a = document.createElement("a");
-          a.href = href;
-          a.target = "_blank";
-          a.rel = "noopener";
+          if (href !== "#") a.href = href;
+          if (p.key !== "call" && href !== "#") {
+            a.target = "_blank";
+            a.rel = "noopener";
+          }
           a.setAttribute("aria-label", Lang.t(p.labelKey));
           a.innerHTML = p.icon;
           socialNav.appendChild(a);
