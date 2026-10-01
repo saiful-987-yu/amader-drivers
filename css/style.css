@@ -956,7 +956,8 @@ a:hover { text-decoration: underline; }
 .lang-toggle--sm button { padding: 4px var(--space-2); font-size: 0.7rem; }
 
 /* Footer social links — compact icon row beside the language toggle. */
-.footer-social { display: flex; align-items: center; gap: var(--space-2); }
+.footer-row--social { justify-content: center; }
+.footer-social { display: flex; align-items: center; justify-content: center; gap: var(--space-2); }
 .footer-social a {
   width: 30px;
   height: 30px;
