@@ -130,12 +130,14 @@ window.NOBI_CONFIG = {
   },
 
   // Footer social links — leave as "#" until a real URL is available.
-  // whatsapp is the only exception: give it a plain phone number (any
-  // format), not a URL — the footer builds the wa.me link from it.
+  // call and whatsapp are the exceptions: give them a plain phone number
+  // (any format), not a URL — the footer builds the tel: / wa.me link.
   SOCIAL_LINKS: {
-    facebook: "https://fb.com/Saiful.Islam.Personal",
+    call: "01610-253221",
     whatsapp: "01610-253221",
+    facebook: "https://fb.com/Saiful.Islam.Personal",
     tiktok: "https://tiktok.com/@saiful.islam.personal",
-    linkedin: "#"
+    instagram: "#",
+    website: "https://saiful-987-yu.github.io/sacarmart/?page=home"
   }
 };
