@@ -22,6 +22,7 @@
   .home-actions { max-width: 480px; margin: 0 auto; }
   .banner .container { max-width: 640px; }
   .cta-band { max-width: 480px; margin: 0 auto; }
+  .cta-band.cta-band--other { max-width: 400px; }
 
   .chip-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .driver-grid { grid-template-columns: repeat(2, 1fr); }
