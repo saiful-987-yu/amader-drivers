@@ -117,7 +117,6 @@
       markets: "nobi.demo.markets",
       vehicles: "nobi.demo.vehicles",
       drivers: "nobi.demo.drivers",
-      doctors: "nobi.demo.doctors",
       pending: "nobi.demo.pending",
       session: "nobi.demo.session",
       ratings: "nobi.demo.ratings"
@@ -156,23 +155,17 @@
           { driverId: "D005", name: "Farid Hossain", nameBn: "", emergencyContact: "", phone: "01711000005", altPhone: "", vehicleType: "auto", vehicleNumber: "DHA-AUTO-0154", marketSlug: "bangla-bazar", serviceArea: "", experience: "5 years", rating: "2", whatsapp: "", imageUrl: "", vehicleImageUrl: "", username: "farid.driver", password: "demo1234", status: "active", availability: "active" },
           { driverId: "D006", name: "Nurul Islam", nameBn: "নুরুল ইসলাম", emergencyContact: "FALSE", sortStatus: "3rd", phone: "01711000006", altPhone: "01911000006", vehicleType: "cng, auto", vehicleNumber: "DHA-MULTI-7788", marketSlug: "nobi-bazar, bangla-bazar", serviceArea: "Nobi Bazar, Bangla Bazar, Station Road", experience: "7 years", rating: "4", whatsapp: "F", imageUrl: "", vehicleImageUrl: "https://picsum.photos/seed/nurul-1/600/450, https://picsum.photos/seed/nurul-2/600/450, https://picsum.photos/seed/nurul-3/600/450", username: "nurul.driver", password: "demo1234", status: "active", availability: "active" },
           { driverId: "D007", name: "Kamal Hossain", nameBn: "কামাল হোসেন", emergencyContact: "TRUE", phone: "01711000007", altPhone: "", vehicleType: "motorcycle", vehicleNumber: "DHA-MOTO-2201", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar Bypass Road", experience: "4 years", rating: "4.5", whatsapp: "F", imageUrl: "", vehicleImageUrl: "", username: "kamal.driver", password: "demo1234", status: "active", availability: "active" },
-          { driverId: "D008", name: "Anwar Sheikh", nameBn: "", emergencyContact: "", phone: "01711000008", altPhone: "", vehicleType: "easy-bike", vehicleNumber: "DHA-EASY-3390", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar Local Roads", experience: "2 years", rating: "3", whatsapp: "N", imageUrl: "", vehicleImageUrl: "", username: "anwar.driver", password: "demo1234", status: "active", availability: "active" }
+          { driverId: "D008", name: "Anwar Sheikh", nameBn: "", emergencyContact: "", phone: "01711000008", altPhone: "", vehicleType: "easy-bike", vehicleNumber: "DHA-EASY-3390", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar Local Roads", experience: "2 years", rating: "3", whatsapp: "N", imageUrl: "", vehicleImageUrl: "", username: "anwar.driver", password: "demo1234", status: "active", availability: "active" },
+          { driverId: "D009", name: "Dr. Rafiqul Islam", nameBn: "ডা. রফিকুল ইসলাম", doctorStatus: "TRUE", phone: "01611000001", altPhone: "01911000011", vehicleType: "MBBS, FCPS (Medicine)", vehicleNumber: "BMDC-A-45210", marketSlug: "nobi-bazar", serviceArea: "Nobi Bazar Health Complex", experience: "12 years", rating: "4.8", whatsapp: "F", imageUrl: "", vehicleImageUrl: "", username: "rafiqul.doctor", password: "demo1234", status: "active", availability: "active", personalDetails: "<h3>Chamber Hours</h3><p>Saturday–Thursday, 6 PM – 9 PM.</p>" },
+          { driverId: "D010", name: "Dr. Farzana Yasmin", nameBn: "ডা. ফারজানা ইয়াসমিন", doctorStatus: "TRUE", phone: "01611000002", altPhone: "", vehicleType: "MBBS, MD (Gynecology)", vehicleNumber: "BMDC-A-51120", marketSlug: "bangla-bazar", serviceArea: "Bangla Bazar Chamber", experience: "8 years", rating: "4.5", whatsapp: "N", imageUrl: "", vehicleImageUrl: "", username: "farzana.doctor", password: "demo1234", status: "active", availability: "inactive" }
         ]);
       }
       if (!Utils.storage.get(KEYS.pending)) Utils.storage.set(KEYS.pending, []);
-      if (!Utils.storage.get(KEYS.doctors)) {
-        Utils.storage.set(KEYS.doctors, [
-          { doctorId: "DOC001", name: "Dr. Rafiqul Islam", nameBn: "ডা. রফিকুল ইসলাম", degree: "MBBS, FCPS (Medicine)", regNumber: "BMDC-A-45210", phone: "01611000001", altPhone: "01911000011", whatsapp: "F", serviceArea: "Nobi Bazar Health Complex", experience: "12 years", rating: "4.8", imageUrl: "", sampleImageUrl: "https://picsum.photos/seed/doc1-1/600/450, https://picsum.photos/seed/doc1-2/600/450", status: "active", availability: "active", personalDetails: "<h3>Chamber Hours</h3><p>Saturday–Thursday, 6 PM – 9 PM.</p><p><strong>Specializes in:</strong> general medicine, diabetes management.</p>", videoUrl: "", manualRating: 3 },
-          { doctorId: "DOC002", name: "Dr. Farzana Yasmin", nameBn: "ডা. ফারজানা ইয়াসমিন", degree: "MBBS, MD (Gynecology)", regNumber: "BMDC-A-51120", phone: "01611000002", altPhone: "", whatsapp: "N", serviceArea: "Bangla Bazar Chamber", experience: "8 years", rating: "4.5", imageUrl: "", sampleImageUrl: "", status: "active", availability: "inactive" },
-          { doctorId: "DOC003", name: "Dr. Shamsul Alam", nameBn: "", degree: "BDS", regNumber: "BDCB-11890", phone: "01611000003", altPhone: "", whatsapp: "01711999888", serviceArea: "", experience: "5 years", rating: "4", imageUrl: "", sampleImageUrl: "https://picsum.photos/seed/doc3-1/600/450", status: "active", availability: "active" }
-        ]);
-      }
       if (!Utils.storage.get(KEYS.ratings)) {
         Utils.storage.set(KEYS.ratings, [
           { id: "R001", targetType: "driver", targetId: "D001", stars: 5, comment: "Very punctual and polite. Highly recommended!", dateTime: "2026-01-04T10:00:00.000Z", verified: true },
           { id: "R002", targetType: "driver", targetId: "D001", stars: 4, comment: "Good service, fair price.", dateTime: "2026-01-10T08:30:00.000Z", verified: true },
           { id: "R003", targetType: "driver", targetId: "D001", stars: 3, comment: "Was a bit late but drove safely.", dateTime: "2026-01-15T14:00:00.000Z", verified: false },
-          { id: "R004", targetType: "doctor", targetId: "DOC001", stars: 5, comment: "Very thorough and explained everything clearly.", dateTime: "2026-01-06T12:00:00.000Z", verified: true }
         ]);
       }
     }
@@ -184,7 +177,6 @@
       markets: () => Utils.storage.get(KEYS.markets, []),
       vehicles: () => Utils.storage.get(KEYS.vehicles, []),
       drivers: () => Utils.storage.get(KEYS.drivers, []),
-      doctors: () => Utils.storage.get(KEYS.doctors, []),
       pending: () => Utils.storage.get(KEYS.pending, []),
       ratings: () => Utils.storage.get(KEYS.ratings, []),
       saveDrivers: (list) => Utils.storage.set(KEYS.drivers, list),
@@ -219,9 +211,6 @@
         if (query) list = list.filter((d) => matchesQuery(d, query));
         return list.map(publicDriverFields);
       }
-
-      case "getDoctors":
-        return sortDrivers(DemoStore.doctors().filter((d) => d.status === "active").map(publicDoctorFields));
 
       case "checkUsername": {
         const username = String(payload.username || "").trim().toLowerCase();
@@ -359,7 +348,7 @@
       }
 
       case "getPublicRatings": {
-        const targetType = payload.targetType === "doctor" ? "doctor" : "driver";
+        const targetType = "driver";
         const targetId = String(payload.targetId || "").trim();
         if (!targetId) return [];
         const list = DemoStore.ratings()
@@ -370,15 +359,13 @@
       }
 
       case "submitPublicRating": {
-        const targetType = payload.targetType === "doctor" ? "doctor" : "driver";
+        const targetType = "driver";
         const targetId = String(payload.targetId || "").trim();
         const stars = Math.round(Number(payload.stars));
         if (!targetId || !stars || stars < 1 || stars > 5) {
           const err = new Error("VALIDATION_FAILED"); err.code = "VALIDATION_FAILED"; throw err;
         }
-        const targetList = targetType === "doctor" ? DemoStore.doctors() : DemoStore.drivers();
-        const idField = targetType === "doctor" ? "doctorId" : "driverId";
-        const exists = targetList.some((t) => t[idField] === targetId && t.status === "active");
+        const exists = DemoStore.drivers().some((t) => t.driverId === targetId && t.status === "active");
         if (!exists) {
           const err = new Error("VALIDATION_FAILED"); err.code = "VALIDATION_FAILED"; throw err;
         }
@@ -437,34 +424,8 @@
       vehicleImageUrl: d.vehicleImageUrl || "",
       availability: d.availability,
       emergency: String(d.emergencyContact || "").trim().toUpperCase() === "TRUE",
+      doctor: String(d.doctorStatus || "").trim().toUpperCase() === "TRUE",
       sortStatus: d.sortStatus || "",
-      personalDetails: d.personalDetails || "",
-      videoUrl: d.videoUrl || "",
-      socialUrl: d.socialUrl || "",
-      publicRating: summary.avg,
-      publicRatingCount: summary.count,
-      finalRating: Math.min(summary.avg + manualRating, 5)
-    };
-  }
-
-  function publicDoctorFields(d) {
-    const summary = verifiedRatingSummary("doctor", d.doctorId);
-    const manualRating = Number(d.manualRating) || 0;
-    return {
-      doctorId: d.doctorId,
-      name: d.name,
-      nameBn: d.nameBn || "",
-      phone: d.phone,
-      altPhone: d.altPhone || "",
-      degree: d.degree,
-      regNumber: d.regNumber,
-      serviceArea: d.serviceArea,
-      experience: d.experience,
-      rating: d.rating || "",
-      whatsapp: d.whatsapp || "",
-      imageUrl: d.imageUrl || "",
-      sampleImageUrl: d.sampleImageUrl || "",
-      availability: d.availability,
       personalDetails: d.personalDetails || "",
       videoUrl: d.videoUrl || "",
       socialUrl: d.socialUrl || "",
@@ -497,15 +458,15 @@
   }
 
   function sortBySortStatusThenRating(list) {
-    const rank = { "1st": 0, "2nd": 1, "3rd": 2 };
+    const rank = { "1st": 0, "2nd": 1, "3rd": 2, "4th": 3, "5th": 4, "6th": 5, "7th": 6, "8th": 7, "9th": 8, "10th": 9 };
     return list.slice().sort((a, b) => {
       const aActive = a.availability === "active" ? 0 : 1;
       const bActive = b.availability === "active" ? 0 : 1;
       if (aActive !== bActive) return aActive - bActive;
       const ra = rank[String(a.sortStatus || "").trim().toLowerCase()];
       const rb = rank[String(b.sortStatus || "").trim().toLowerCase()];
-      const ranka = ra != null ? ra : 3;
-      const rankb = rb != null ? rb : 3;
+      const ranka = ra != null ? ra : 10;
+      const rankb = rb != null ? rb : 10;
       if (ranka !== rankb) return ranka - rankb;
       const ratingA = parseFloat(a.rating) || 0;
       const ratingB = parseFloat(b.rating) || 0;
@@ -533,8 +494,10 @@
     return sortBySortStatusThenRating(list.filter((d) => d.emergency === true));
   };
 
-  Api.getDoctorDirectory = () => cachedCall("getDoctors", {}, STATUS_CACHE_TTL).then(sortBySortStatusThenRating);
-  Api.peekDoctorDirectory = () => peek("getDoctors", {}, STATUS_CACHE_TTL);
+  Api.getDoctorDrivers = async () => {
+    const list = await Api.getDriverDirectory();
+    return sortBySortStatusThenRating(list.filter((d) => d.doctor === true));
+  };
 
   Api.peekMarkets = () => peek("getMarkets", {});
   Api.peekVehicleCategories = () => peek("getVehicleCategories", {});
@@ -544,7 +507,6 @@
     return Api.getMarkets().then((markets) => {
       Api.getVehicleCategories().catch(() => {});
       Api.getDriverDirectory().catch(() => {});
-      Api.getDoctorDirectory().catch(() => {});
       return markets;
     });
   };
@@ -589,7 +551,7 @@
     call("submitPublicRating", { targetType, targetId, stars, comment });
 
   Api.refreshDirectories = function () {
-    ["getDrivers", "getDoctors", "getProfile"].forEach((prefix) => {
+    ["getDrivers", "getProfile"].forEach((prefix) => {
       invalidateCache(prefix);
       clearPersisted(prefix);
     });
@@ -614,6 +576,13 @@
       Api.refreshDirectories();
       return res;
     });
+  Api.adminListPendingRatings = (token, adminToken) => call("adminListPendingRatings", { token, adminToken });
+  Api.adminApproveRating = (token, adminToken, id, targetId) =>
+    call("adminApproveRating", { token, adminToken, id, targetId }).then((res) => {
+      Api.refreshDirectories();
+      return res;
+    });
+  Api.adminPendingCounts = (token, adminToken) => call("adminPendingCounts", { token, adminToken });
 
   window.Api = Api;
 })(window, window.Utils);

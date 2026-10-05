@@ -302,7 +302,7 @@
           accountStatus === "active" ? "success" : (accountStatus === "pending" ? "warning" : "danger")
         )),
         overviewItem(Icons.checkCircle, Lang.t("profile.availability"), availabilityPill),
-        overviewItem(Icons.shield, Lang.t("profile.adminStatus"), driver.isAdmin ? statusPill(Lang.t("profile.setActive"), "success") : statusPill("False", "neutral"))
+        overviewItem(Icons.shield, Lang.t("profile.adminStatus"), driver.isAdmin ? statusPill(Lang.t("profile.adminActive"), "success") : statusPill("False", "neutral"))
       ])
     ]);
 
@@ -368,10 +368,10 @@
       Utils.el("div", { class: "vehicle-info-grid" }, [
         galleryBlock,
         Utils.el("div", { class: "vehicle-info-top" }, [
-          overviewItem(Icons.vehicle(primarySlug || "other"), Lang.t("driver.vehicleNumber"), driver.vehicleNumber || "—"),
-          overviewItem(Icons.shield, Lang.t("driver.experience"), driver.experience || "—")
+          overviewItem(Icons.vehicle(primarySlug || "other"), Lang.t("detail.regNumber"), driver.vehicleNumber || "—"),
+          overviewItem(Icons.shield, Lang.t("detail.experience"), driver.experience || "—")
         ]),
-        overviewItem(Icons.userLarge, Lang.t("driver.vehicleType"), resolveVehicleTypeNames(driver.vehicleType, vehicleCategories).join(", ") || "—"),
+        overviewItem(Icons.userLarge, Lang.t("detail.serviceType"), resolveVehicleTypeNames(driver.vehicleType, vehicleCategories).join(", ") || "—"),
         overviewItem(Icons.map, Lang.t("profile.preferredBazar"),
           marketNames.length
             ? Utils.el("div", { class: "info-chip-row", style: "margin-bottom:0;" }, marketNames.map((name) => Utils.el("span", { class: "info-chip", text: name })))
@@ -411,7 +411,7 @@
     const vehiclePhotosRow = Utils.el("button", { type: "button", class: "profile-link-row", onClick: () => openVehiclePhotosModal(driver) }, [
       Utils.el("div", { class: "profile-link-row__icon", html: Icons.gallery }),
       Utils.el("div", { class: "profile-link-row__body" }, [
-        Utils.el("div", { class: "profile-link-row__title", text: Lang.t("driver.vehiclePhotos") }),
+        Utils.el("div", { class: "profile-link-row__title", text: Lang.t("detail.photos") }),
         Utils.el("div", { class: "profile-link-row__sub", text: Lang.t("profile.vehiclePhotosSub") })
       ]),
       Utils.el("span", { class: "profile-link-row__chevron", html: Icons.chevronRight })
@@ -486,7 +486,7 @@
     const altPhoneField = formField({ id: "editAltPhone", labelText: Lang.t("driver.altPhone"), type: "tel", value: driver.altPhone });
     const whatsappField = formField({ id: "editWhatsapp", labelText: Lang.t("driver.whatsapp"), type: "tel", value: driver.whatsapp });
     const serviceAreaField = formField({ id: "editServiceArea", labelText: Lang.t("driver.serviceArea"), value: driver.serviceArea });
-    const vehicleNumberField = formField({ id: "editVehicleNumber", labelText: Lang.t("driver.vehicleNumber"), value: driver.vehicleNumber });
+    const vehicleNumberField = formField({ id: "editVehicleNumber", labelText: Lang.t("detail.regNumber"), value: driver.vehicleNumber });
 
     const saveBtn = Utils.el("button", { type: "submit", class: "btn btn--primary btn--block mt-5", text: Lang.t("profile.save") });
 
@@ -605,7 +605,7 @@
   function openVehiclePhotosModal(driver) {
     const content = Utils.el("div", {}, [
       Utils.el("div", { class: "modal-head" }, [
-        Utils.el("h3", { text: Lang.t("driver.vehiclePhotos") }),
+        Utils.el("h3", { text: Lang.t("detail.photos") }),
         Utils.el("button", { class: "icon-btn", "aria-label": Lang.t("a11y.closeModal"), html: Icons.close, onClick: () => Modal.close() })
       ]),
       buildVehicleGallery(driver)

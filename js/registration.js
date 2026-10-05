@@ -243,7 +243,7 @@
   function photoUploadField(session) {
     const up = session.photoUpload;
     const fileInput = Utils.el("input", { type: "file", accept: "image/*", style: "display:none;" });
-    const drop = Utils.el("button", { type: "button", class: "photo-upload-card__drop", onClick: () => fileInput.click() }, [
+    const drop = Utils.el("button", { type: "button", class: "photo-upload-card__drop", onClick: () => { if (up.stage === "uploading") return; fileInput.click(); } }, [
       Utils.el("span", { class: "photo-upload-card__icon", html: Icons.upload }),
       Utils.el("div", {}, [
         Utils.el("div", { class: "photo-upload-card__title", text: Lang.t("register.step3.photoUpload.title") }),
@@ -259,7 +259,11 @@
       status.innerHTML = "";
       drop.disabled = up.stage === "uploading";
       if (up.stage === "uploading") {
-        status.appendChild(Utils.el("span", { class: "photo-status", text: Lang.t("field.photoUploading") }));
+        status.appendChild(Utils.el("span", { class: "photo-status photo-status--loading", role: "status" }, [
+          Utils.el("span", { class: "photo-spinner", "aria-hidden": "true" }),
+          Utils.el("span", { text: Lang.t("field.photoUploading") })
+        ]));
+        status.appendChild(Utils.el("div", { class: "photo-progress", "aria-hidden": "true" }, [Utils.el("span", { class: "photo-progress__bar" })]));
       } else if (up.stage === "confirmed" && up.valid) {
         const preview = Utils.el("img", { class: "photo-preview", alt: "" });
         preview.src = up.preview;
@@ -319,12 +323,7 @@
 
   function socialLinksField(mobile) {
     const row = fieldRow({ id: "socialUrl", labelKey: "register.step3.socialLabelPrefix", type: "textarea", hint: Lang.t("register.step3.socialHint") });
-    const label = row.wrap.querySelector("label");
-    label.textContent = Lang.t("register.step3.socialLabelPrefix") + " ";
-    label.appendChild(Utils.el("button", {
-      type: "button", class: "photo-form-link-btn", text: Lang.t("register.step3.vehicleLabelButton"),
-      onClick: () => window.open(buildPhotoFormUrl(mobile), "_blank", "noopener")
-    }));
+    row.control.rows = 1;
     return row;
   }
 

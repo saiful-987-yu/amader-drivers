@@ -78,6 +78,25 @@
 
   const tokens = () => ({ token: Auth.getToken(), adminToken: state && state.adminToken });
 
+  let counts = { pendingUsers: 0, pendingRatings: 0 };
+
+  function setCount(key, value) {
+    counts[key] = Math.max(0, Number(value) || 0);
+    document.dispatchEvent(new CustomEvent("nobi:admincounts"));
+  }
+
+  Admin.refreshCounts = async function () {
+    if (!Admin.isOn()) return;
+    try {
+      const t = tokens();
+      const res = await guarded(() => Api.adminPendingCounts(t.token, t.adminToken));
+      if (res) {
+        counts = { pendingUsers: Math.max(0, Number(res.pendingUsers) || 0), pendingRatings: Math.max(0, Number(res.pendingRatings) || 0) };
+        document.dispatchEvent(new CustomEvent("nobi:admincounts"));
+      }
+    } catch (err) { }
+  };
+
   Admin.enable = async function (password) {
     const res = await Api.adminEnableMode(Auth.getToken(), password);
     state = { adminToken: res.adminToken, expiresAt: localExpiry(res) };
@@ -190,9 +209,19 @@
   Admin.buildDashboardCard = function () {
     const card = Utils.el("div", { class: "profile-card admin-card" });
     let timeEl = null;
+    let badges = {};
+
+    function paintBadges() {
+      Object.keys(badges).forEach((key) => {
+        const n = counts[key] || 0;
+        badges[key].textContent = n > 99 ? "99+" : String(n);
+        badges[key].hidden = n <= 0;
+      });
+    }
 
     function paint() {
       card.innerHTML = "";
+      badges = {};
       const on = Admin.isOn();
 
       card.appendChild(Utils.el("div", { class: "profile-card__head" }, [
@@ -202,7 +231,16 @@
       const sw = Utils.el("button", {
         type: "button", class: "admin-switch" + (on ? " is-on" : ""), role: "switch",
         "aria-checked": on ? "true" : "false", "aria-label": T("Admin Mode", "অ্যাডমিন মোড"),
-        onClick: () => { if (Admin.isOn()) Admin.disable(); else openVerifyModal(); }
+        onClick: async () => {
+          if (!Admin.isOn()) { openVerifyModal(); return; }
+          const confirmed = await Modal.confirm({
+            title: T("Turn off Admin Mode?", "অ্যাডমিন মোড বন্ধ করবেন?"),
+            body: T("You will need to verify again to turn it back on.", "আবার চালু করতে আপনাকে নতুন করে যাচাই করতে হবে।"),
+            confirmLabel: T("Turn Off", "বন্ধ করুন"),
+            danger: true
+          });
+          if (confirmed) Admin.disable();
+        }
       }, [Utils.el("span", { class: "admin-switch__knob" })]);
       card.appendChild(Utils.el("div", { class: "admin-toggle-row" }, [
         Utils.el("span", { class: "admin-toggle-row__label", text: T("Admin Mode", "অ্যাডমিন মোড") }),
@@ -232,17 +270,25 @@
         Utils.el("div", { class: "admin-timer-group" }, [chip("+10m", 10), chip("+30m", 30), chip("+1h", 60)])
       ]));
 
-      function action(icon, label, onClick) {
-        return Utils.el("button", { type: "button", class: "admin-action", onClick }, [
+      function action(icon, label, onClick, badgeKey) {
+        const kids = [
           Utils.el("span", { class: "admin-action__icon", html: icon }),
           Utils.el("span", { class: "admin-action__label", text: label })
-        ]);
+        ];
+        if (badgeKey) {
+          const badge = Utils.el("span", { class: "admin-badge", "aria-hidden": "true" });
+          badges[badgeKey] = badge;
+          kids.push(badge);
+        }
+        return Utils.el("button", { type: "button", class: "admin-action", onClick }, kids);
       }
       card.appendChild(Utils.el("div", { class: "admin-actions" }, [
-        action(Icons.formPlus, T("Add Driver", "ড্রাইভার যোগ"), () => Router.navigate("/registration")),
-        action(Icons.pencil, T("Edit Driver", "ড্রাইভার এডিট"), () => Router.navigate("/markets")),
-        action(Icons.checkCircle, T("Pending Drivers", "পেন্ডিং ড্রাইভার"), () => Admin.openPending())
+        action(Icons.formPlus, T("Add User", "ইউজার যোগ"), () => Router.navigate("/registration")),
+        action(Icons.star, T("Public Rating", "পাবলিক রেটিং"), () => Admin.openRatings(), "pendingRatings"),
+        action(Icons.checkCircle, T("Pending Users", "পেন্ডিং ইউজার"), () => Admin.openPending(), "pendingUsers")
       ]));
+      paintBadges();
+      Admin.refreshCounts();
     }
 
     function onChange() { if (!card.isConnected) { document.removeEventListener("nobi:adminchange", onChange); document.removeEventListener("nobi:admintick", onTick); return; } paint(); }
@@ -250,8 +296,22 @@
       if (!card.isConnected) { document.removeEventListener("nobi:adminchange", onChange); document.removeEventListener("nobi:admintick", onTick); return; }
       if (timeEl) timeEl.textContent = formatRemaining(Admin.remainingMs());
     }
+    function onCounts() {
+      if (!card.isConnected) { document.removeEventListener("nobi:admincounts", onCounts); return; }
+      paintBadges();
+    }
+    function onVisible() {
+      if (!card.isConnected) { document.removeEventListener("visibilitychange", onVisible); return; }
+      if (!document.hidden) Admin.refreshCounts();
+    }
+    const countsPoll = setInterval(() => {
+      if (!card.isConnected) { clearInterval(countsPoll); return; }
+      if (!document.hidden) Admin.refreshCounts();
+    }, 60000);
     document.addEventListener("nobi:adminchange", onChange);
     document.addEventListener("nobi:admintick", onTick);
+    document.addEventListener("nobi:admincounts", onCounts);
+    document.addEventListener("visibilitychange", onVisible);
     paint();
     return card;
   };
@@ -299,7 +359,8 @@
   ];
   const DRIVER_ONLY_MANAGED = [
     F("emergency", "Emergency Contact", "ইমার্জেন্সি কন্টাক্ট", "select", { options: ["TRUE", "FALSE"], allowBlank: true }),
-    F("sortStatus", "Sort Status", "সর্ট স্ট্যাটাস", "select", { options: ["1st", "2nd", "3rd"], allowBlank: true })
+    F("doctor", "Doctor Status", "ডক্টর স্ট্যাটাস", "select", { options: ["TRUE", "FALSE"], allowBlank: true }),
+    F("sortStatus", "Sort Status", "সর্ট স্ট্যাটাস", "select", { options: ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th"], allowBlank: true })
   ];
   const RATING_FIELDS = [
     F("starRating", "Star Rating (0–5)", "স্টার রেটিং (০–৫)", "number"),
@@ -308,34 +369,17 @@
     F("videoUrl", "Video URL", "ভিডিও লিংক", "url")
   ];
 
-  const DOCTOR_FIELDS = [
-    F("name", "Name", "নাম"),
-    F("nameBn", "Bengali Name", "বাংলা নাম"),
-    F("phone", "Phone", "ফোন", "tel"),
-    F("altPhone", "Alternative Phone", "বিকল্প ফোন", "tel"),
-    F("whatsapp", "WhatsApp", "হোয়াটসঅ্যাপ"),
-    F("vehicleType", "Degree", "ডিগ্রি"),
-    F("vehicleNumber", "Registration Number", "রেজিস্ট্রেশন নম্বর"),
-    F("serviceArea", "Service Area", "সার্ভিস এরিয়া"),
-    F("experience", "Experience", "অভিজ্ঞতা"),
-    F("imageUrl", "Photo URL", "ছবির লিংক", "url"),
-    F("vehicleImageUrl", "Sample Image URL(s)", "নমুনা ছবির লিংক", "textarea", { hint: ["Separate several links with commas", "একাধিক লিংক কমা দিয়ে আলাদা করুন"] }),
-    SOCIAL_FIELD
-  ].concat(MANAGED_FIELDS, RATING_FIELDS);
-
   function fieldsFor(kind) {
-    if (kind === "doctor") return DOCTOR_FIELDS;
     const driverBase = REGISTRATION_FIELDS.slice();
     driverBase.splice(driverBase.findIndex((f) => f.key === "vehicleImageUrl") + 1, 0, SOCIAL_FIELD);
     if (kind === "pending") return driverBase;
     return driverBase.concat(MANAGED_FIELDS, DRIVER_ONLY_MANAGED, RATING_FIELDS);
   }
 
-  const PAIRS = [["nameBn", "guardianName"], ["altPhone", "whatsapp"], ["postOffice", "union"], ["upazila", "district"], ["serviceArea", "experience"], ["status", "availability"], ["emergency", "sortStatus"], ["starRating", "manualRating"]];
-  const DOCTOR_PAIRS = [["vehicleType", "vehicleNumber"]];
+  const PAIRS = [["nameBn", "guardianName"], ["altPhone", "whatsapp"], ["postOffice", "union"], ["upazila", "district"], ["serviceArea", "experience"], ["status", "availability"], ["emergency", "doctor"], ["starRating", "manualRating"]];
 
   function layoutNodes(controls, kind) {
-    const pairs = PAIRS.concat(kind === "doctor" ? DOCTOR_PAIRS : []);
+    const pairs = PAIRS;
     const nodes = [];
     for (let i = 0; i < controls.length; i++) {
       const a = controls[i];
@@ -350,10 +394,9 @@
     return nodes;
   }
 
-  const REQUIRED = { driver: ["name", "phone", "username"], pending: ["name", "phone", "username"], doctor: ["name"] };
+  const REQUIRED = { driver: ["name", "phone", "username"], pending: ["name", "phone", "username"] };
 
   function titleFor(kind) {
-    if (kind === "doctor") return T("Edit Doctor", "ডাক্তার এডিট");
     if (kind === "pending") return T("Edit Pending Driver", "পেন্ডিং ড্রাইভার এডিট");
     return T("Edit Driver", "ড্রাইভার এডিট");
   }
@@ -474,11 +517,10 @@
     const lists = { markets: [], vehicles: [] };
     try {
       const t = tokens();
-      const needLists = kind !== "doctor";
       const results = await guarded(() => Promise.all([
         Api.adminGetRecord(t.token, t.adminToken, kind, id),
-        needLists ? Api.getMarkets().catch(() => []) : Promise.resolve([]),
-        needLists ? Api.getVehicleCategories().catch(() => []) : Promise.resolve([])
+        Api.getMarkets().catch(() => []),
+        Api.getVehicleCategories().catch(() => [])
       ]));
       record = results[0];
       lists.markets = results[1] || [];
@@ -491,7 +533,7 @@
     }
 
     const defs = fieldsFor(kind);
-    const controls = defs.map((def) => buildControl(def, (record.fields || {})[def.key] || "", lists, kind !== "doctor"));
+    const controls = defs.map((def) => buildControl(def, (record.fields || {})[def.key] || "", lists, true));
     const saveBtn = Utils.el("button", { type: "submit", class: "btn btn--primary btn--block mt-5", text: Lang.t("profile.save") });
     const form = Utils.el("form", { class: "admin-edit-form", novalidate: "novalidate" }, layoutNodes(controls, kind).concat([saveBtn]));
 
@@ -545,7 +587,7 @@
 
   Admin.openPending = async function () {
     const listBox = Utils.el("div", { class: "admin-pending-list" }, [Utils.el("div", { class: "admin-loading" }, [spinnerNode()])]);
-    Modal.open(Utils.el("div", {}, [closeHead(T("Pending Drivers", "পেন্ডিং ড্রাইভার"), () => Modal.close()), listBox]));
+    Modal.open(Utils.el("div", {}, [closeHead(T("Pending Users", "পেন্ডিং ইউজার"), () => Modal.close()), listBox]));
 
     let items;
     try {
@@ -557,14 +599,27 @@
       listBox.appendChild(Utils.el("p", { class: "admin-verify__error", text: errorText(err) }));
       return;
     }
+    setCount("pendingUsers", items.length);
 
     function paintList() {
       listBox.innerHTML = "";
       if (!items.length) {
-        listBox.appendChild(Utils.el("p", { class: "admin-empty", text: T("No pending drivers.", "কোনো পেন্ডিং ড্রাইভার নেই।") }));
+        listBox.appendChild(Utils.el("p", { class: "admin-empty", text: T("No pending users.", "কোনো পেন্ডিং ইউজার নেই।") }));
         return;
       }
       items.forEach((item) => listBox.appendChild(pendingRow(item)));
+    }
+
+    function pendingPhotoNode(f) {
+      const wrap = Utils.el("div", { class: "admin-rating-item__photo" });
+      if (Utils.resolveImageUrl(f.imageUrl)) {
+        const img = Utils.el("img", { alt: f.name || "", loading: "lazy", decoding: "async" });
+        Utils.wireImageFallback(img, f.imageUrl, () => { wrap.innerHTML = Icons.user; }, null);
+        wrap.appendChild(img);
+      } else {
+        wrap.innerHTML = Icons.user;
+      }
+      return wrap;
     }
 
     function pendingRow(item) {
@@ -580,6 +635,7 @@
           const t = tokens();
           const res = await guarded(() => Api.adminApprovePending(t.token, t.adminToken, item.applicationId));
           items = items.filter((x) => x.applicationId !== item.applicationId);
+          setCount("pendingUsers", items.length);
           Toast.show(T("Approved. Driver ID: ", "অনুমোদিত। ড্রাইভার আইডি: ") + (res && res.driverId ? res.driverId : ""), "success");
           paintList();
         } catch (err) {
@@ -590,12 +646,110 @@
         }
       });
       return Utils.el("div", { class: "admin-pending-item" }, [
+        pendingPhotoNode(f),
         Utils.el("div", { class: "admin-pending-item__info" }, [
           Utils.el("div", { class: "admin-pending-item__name", text: f.name || item.applicationId }),
           Utils.el("div", { class: "admin-pending-item__meta", text: meta }),
           item.submittedDate ? Utils.el("div", { class: "admin-pending-item__meta", text: new Date(item.submittedDate).toLocaleDateString() }) : null
         ]),
         Utils.el("div", { class: "admin-pending-item__actions" }, [editBtn, okBtn])
+      ]);
+    }
+
+    paintList();
+  };
+
+  Admin.openRatings = async function () {
+    const listBox = Utils.el("div", { class: "admin-pending-list" }, [Utils.el("div", { class: "admin-loading" }, [spinnerNode()])]);
+    Modal.open(Utils.el("div", {}, [closeHead(T("Public Rating", "পাবলিক রেটিং"), () => Modal.close()), listBox]));
+
+    let items;
+    try {
+      const t = tokens();
+      items = await guarded(() => Api.adminListPendingRatings(t.token, t.adminToken));
+    } catch (err) {
+      if (err && LOST_CODES.indexOf(err.code) !== -1) return;
+      listBox.innerHTML = "";
+      listBox.appendChild(Utils.el("p", { class: "admin-verify__error", text: errorText(err) }));
+      return;
+    }
+    setCount("pendingRatings", items.length);
+
+    function paintList() {
+      listBox.innerHTML = "";
+      if (!items.length) {
+        listBox.appendChild(Utils.el("p", { class: "admin-empty", text: T("No pending reviews.", "কোনো পেন্ডিং রিভিউ নেই।") }));
+        return;
+      }
+      items.forEach((item) => listBox.appendChild(ratingRow(item)));
+    }
+
+    function displayName(item) {
+      const bn = Lang.current() === "bn";
+      return (bn ? item.nameBn || item.name : item.name || item.nameBn) || item.targetId;
+    }
+
+    function photoNode(item) {
+      const wrap = Utils.el("div", { class: "admin-rating-item__photo" });
+      const url = Utils.resolveImageUrl(item.imageUrl);
+      const localUrl = Utils.localFixtureUrl("profile", item.targetId);
+      if (url || localUrl) {
+        const img = Utils.el("img", { alt: displayName(item), loading: "lazy", decoding: "async" });
+        Utils.wireImageFallback(img, item.imageUrl, () => { wrap.innerHTML = Icons.user; }, localUrl);
+        wrap.appendChild(img);
+      } else {
+        wrap.innerHTML = Icons.user;
+      }
+      return wrap;
+    }
+
+    function starsNode(value) {
+      const n = Math.max(0, Math.min(5, Math.round(Number(value) || 0)));
+      const box = Utils.el("span", { class: "stars", role: "img", "aria-label": n + "/5" });
+      for (let i = 1; i <= 5; i++) {
+        box.appendChild(Utils.el("span", { class: "star " + (i <= n ? "star--filled" : "star--empty"), "aria-hidden": "true", text: i <= n ? "★" : "☆" }));
+      }
+      return box;
+    }
+
+    function ratingRow(item) {
+      const okBtn = Utils.el("button", { type: "button", class: "btn btn--primary btn--sm", text: T("True", "ট্রু") });
+      okBtn.addEventListener("click", async () => {
+        okBtn.disabled = true;
+        okBtn.textContent = "";
+        okBtn.appendChild(spinnerNode());
+        try {
+          const t = tokens();
+          await guarded(() => Api.adminApproveRating(t.token, t.adminToken, item.id, item.targetId));
+          items = items.filter((x) => x.id !== item.id);
+          setCount("pendingRatings", items.length);
+          Toast.show(T("Review marked True.", "রিভিউ ট্রু করা হয়েছে।"), "success");
+          paintList();
+        } catch (err) {
+          if (err && LOST_CODES.indexOf(err.code) !== -1) return;
+          if (err && err.code === "NOT_FOUND") {
+            items = items.filter((x) => x.id !== item.id);
+            setCount("pendingRatings", items.length);
+            Toast.show(errorText(err), "error");
+            paintList();
+            return;
+          }
+          Toast.show(errorText(err), "error");
+          okBtn.textContent = T("True", "ট্রু");
+          okBtn.disabled = false;
+        }
+      });
+      return Utils.el("div", { class: "admin-rating-item" }, [
+        photoNode(item),
+        Utils.el("div", { class: "admin-rating-item__body" }, [
+          Utils.el("div", { class: "admin-pending-item__name", text: displayName(item) }),
+          Utils.el("div", { class: "admin-pending-item__meta", text: "ID: " + item.targetId }),
+          Utils.el("div", { class: "admin-rating-item__stars" }, [starsNode(item.stars), Utils.el("span", { class: "admin-pending-item__meta", text: " " + (Number(item.stars) || 0) + "/5" })]),
+          item.comment
+            ? Utils.el("div", { class: "admin-rating-item__comment", text: item.comment })
+            : Utils.el("div", { class: "admin-pending-item__meta", text: T("No comment", "কোনো মন্তব্য নেই") })
+        ]),
+        Utils.el("div", { class: "admin-pending-item__actions" }, [okBtn])
       ]);
     }
 

@@ -289,6 +289,7 @@
 
     const nav = Utils.el("nav", { class: "footer-nav", "aria-label": "Footer" }, [
       Utils.el("a", { href: "#/markets", text: Lang.t("nav.drivers") }),
+      Utils.el("a", { href: "#/doctor", text: Lang.t("nav.doctor") }),
       Utils.el("a", { href: "#/registration", text: Lang.t("nav.register") }),
       isLoggedIn
         ? Utils.el("a", { href: "#/profile", text: Lang.t("nav.profile") })
@@ -318,6 +319,10 @@
       if (p.key === "whatsapp" && href !== "#") href = Utils.waLink(href);
       if (p.key === "call" && href !== "#") href = "tel:" + Utils.normalizePhone(href);
       const attrs = { "aria-label": Lang.t(p.labelKey), html: p.icon };
+      if (p.key === "website") {
+        attrs.html = '<img src="assets/icons/sacarmart-logo.svg" alt="" width="20" height="20" decoding="async">';
+        attrs.class = "footer-social__brand";
+      }
       if (href !== "#") attrs.href = href;
       if (p.key !== "call" && href !== "#") { attrs.target = "_blank"; attrs.rel = "noopener"; }
       socialNav.appendChild(Utils.el("a", attrs));

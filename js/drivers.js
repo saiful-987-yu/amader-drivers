@@ -139,8 +139,8 @@
     const actions = [
       Utils.el("button", {
         class: "driver-card__call-btn",
-        "aria-label": Lang.t("driver.call") + " " + Utils.driverDisplayName(driver),
-        html: Icons.phone + "<span>" + Lang.t("driver.call") + "</span>",
+        "aria-label": Lang.t("detail.call") + " " + Utils.driverDisplayName(driver),
+        html: Icons.phone + "<span>" + Lang.t("detail.call") + "</span>",
         disabled: driver.availability !== "active" ? "true" : null,
         onClick: (e) => driver.availability === "active" && handleCall(driver, e)
       })
@@ -278,7 +278,7 @@
     closeReviewsBtn.style.display = "none";
     if ((driver.publicRatingCount || 0) <= 2) viewAllBtn.style.display = "none";
 
-    const reviewBubble = Utils.el("span", { class: "review-bubble", text: Lang.t("driver.reviewBubble") });
+    const reviewBubble = Utils.el("span", { class: "review-bubble", text: Lang.t("detail.reviewBubble") });
     const reviewActionRow = Utils.el("div", { class: "reviews-action-row" }, [viewAllBtn, closeReviewsBtn, reviewBubble]);
     function syncReviewActionRow() {
       const anyBtn = viewAllBtn.style.display !== "none" || closeReviewsBtn.style.display !== "none";
@@ -318,7 +318,7 @@
 
     const starButtons = [];
     let selectedStars = 0;
-    const starsRow = Utils.el("div", { class: "rate-stars", role: "radiogroup", "aria-label": Lang.t("driver.ratingSectionTitle") });
+    const starsRow = Utils.el("div", { class: "rate-stars", role: "radiogroup", "aria-label": Lang.t("detail.rateSectionTitle") });
 
     function select(n) {
       selectedStars = n;
@@ -367,7 +367,7 @@
     });
 
     return Utils.el("div", { class: "rate-section" }, [
-      Utils.el("h3", { class: "detail-section-title", text: Lang.t("driver.ratingSectionTitle") }),
+      Utils.el("h3", { class: "detail-section-title", text: Lang.t("detail.rateSectionTitle") }),
       summaryRow,
       listContainer,
       expandedContainer,
@@ -398,11 +398,11 @@
     children.push(driverPhotoNode(driver, "large"));
     children.push(statusNode(driver, true));
 
-    children.push(Utils.el("h3", { class: "detail-section-title", text: Lang.t("driver.information") }));
+    children.push(Utils.el("h3", { class: "detail-section-title", text: Lang.t("detail.information") }));
 
     children.push(twoColRow(
-      Lang.t("driver.vehicleType"), formatMultiUpper(driver.vehicleType),
-      Lang.t("driver.vehicleNumber"), driver.vehicleNumber || "—"
+      Lang.t("detail.serviceType"), formatMultiUpper(driver.vehicleType),
+      Lang.t("detail.regNumber"), driver.vehicleNumber || "—"
     ));
 
     if (driver.serviceArea) {
@@ -417,7 +417,7 @@
     const expRatingCols = [];
     if (driver.experience) {
       expRatingCols.push(Utils.el("div", { class: "detail-col" }, [
-        Utils.el("div", { class: "detail-col__label", text: Lang.t("driver.experience") }),
+        Utils.el("div", { class: "detail-col__label", text: Lang.t("detail.experience") }),
         Utils.el("div", { class: "detail-col__value", text: driver.experience })
       ]));
     }
@@ -451,7 +451,7 @@
     const actionButtons = [
       Utils.el("button", {
         class: "btn btn--primary btn--sm action-row__btn",
-        html: Icons.phone + "<span>" + Lang.t("driver.call") + "</span>",
+        html: Icons.phone + "<span>" + Lang.t("detail.call") + "</span>",
         disabled: driver.availability !== "active" ? "true" : null,
         onClick: () => driver.availability === "active" && handleCall(driver)
       })
@@ -475,7 +475,7 @@
 
     const gallery = buildGallery(driver);
     if (gallery) {
-      children.push(Utils.el("h3", { class: "detail-section-title mt-5", text: Lang.t("driver.vehiclePhotos") }));
+      children.push(Utils.el("h3", { class: "detail-section-title mt-5", text: Lang.t("detail.photos") }));
       children.push(gallery);
     }
 
@@ -543,6 +543,7 @@
 
     appendHowItWorks(app);
     appendRegisterCta(app);
+    appendOtherSection(app);
     appendDoctorSection(app);
 
     if (cachedMarkets) return;
@@ -787,6 +788,16 @@
     app.appendChild(Utils.el("section", { class: "section container" }, [band]));
   }
 
+  function appendOtherSection(app) {
+    const band = Utils.el("div", { class: "cta-band cta-band--other" }, [
+      Utils.el("h2", { text: Lang.t("other.sectionHeading") }),
+      Utils.el("p", { text: Lang.t("other.sectionSub") }),
+      Utils.el("button", { class: "btn btn--accent", text: Lang.t("other.sectionCta"), onClick: () => Router.navigate("/other") })
+    ]);
+    applyCtaBandBackground(band, (window.NOBI_CONFIG.SECTION_BACKGROUNDS || {}).other);
+    app.appendChild(Utils.el("section", { class: "section container" }, [band]));
+  }
+
   function appendDoctorSection(app) {
     const band = Utils.el("div", { class: "cta-band" }, [
       Utils.el("h2", { text: Lang.t("doctor.sectionHeading") }),
@@ -956,7 +967,7 @@
 
     function buildBody(market, vehicles, directory) {
       const availableSlugs = categoriesWithDrivers(directory, market.slug);
-      const filtered = vehicles.filter((v) => availableSlugs.has(v.slug));
+      const filtered = vehicles.filter((v) => !v.isOther && availableSlugs.has(v.slug));
       const onlineCounts = onlineCountByCategory(directory, market.slug);
       return vehicleGrid(filtered, (v) => Router.navigate(`/markets/${market.slug}/${v.slug}`), onlineCounts);
     }
@@ -1146,6 +1157,183 @@
     load("");
   }
 
+  function buildOtherBody(vehicles, directory) {
+    const withDrivers = new Set();
+    const onlineCounts = new Map();
+    directory.forEach((d) => {
+      Utils.splitMulti(d.vehicleType).forEach((slug) => {
+        withDrivers.add(slug);
+        if (d.availability === "active") onlineCounts.set(slug, (onlineCounts.get(slug) || 0) + 1);
+      });
+    });
+    const filtered = vehicles.filter((v) => v.isOther && withDrivers.has(v.slug));
+    if (!filtered.length) return ViewHelpers.emptyBlock({ message: Lang.t("other.empty") });
+    return vehicleGrid(filtered, (v) => Router.navigate(`/other/${v.slug}`), onlineCounts);
+  }
+
+  async function renderOtherCategories(app) {
+    app.innerHTML = "";
+    const cachedVehicles = Api.peekVehicleCategories();
+    const cachedDirectory = Api.peekDriverDirectory();
+    const ready = cachedVehicles && cachedDirectory;
+
+    const section = Utils.el("section", { class: "section container" }, [
+      ViewHelpers.breadcrumb([
+        { label: Lang.t("nav.home"), path: "/" },
+        { label: Lang.t("other.sectionHeading") }
+      ]),
+      Utils.el("div", { class: "section-head" }, [
+        speakableHeading(Lang.t("other.sectionHeading")),
+        Utils.el("p", { text: Lang.t("other.chooseSub") })
+      ]),
+      ready ? buildOtherBody(cachedVehicles, cachedDirectory) : ViewHelpers.loadingBlock(Lang.t("vehicle.loading"))
+    ]);
+    app.appendChild(section);
+
+    if (ready) return;
+
+    try {
+      const [vehicles, directory] = await Promise.all([Api.getVehicleCategories(), Api.getDriverDirectory()]);
+      section.replaceChild(buildOtherBody(vehicles, directory), section.lastChild);
+    } catch (err) {
+      section.replaceChild(ViewHelpers.errorBlock(Lang.t("error.network"), () => renderOtherCategories(app)), section.lastChild);
+    }
+  }
+
+  async function renderOtherDriverList(app, params) {
+    app.innerHTML = "";
+
+    const cachedVehicles = Api.peekVehicleCategories();
+    const knownVehicle = cachedVehicles && cachedVehicles.find((v) => v.slug === params.vehicle);
+
+    const crumbHolder = Utils.el("div");
+    function paintCrumb(vehicle) {
+      crumbHolder.innerHTML = "";
+      crumbHolder.appendChild(ViewHelpers.breadcrumb([
+        { label: Lang.t("nav.home"), path: "/" },
+        { label: Lang.t("other.sectionHeading"), path: "/other" },
+        { label: vehicle ? vehicleName(vehicle) : "…" }
+      ]));
+    }
+    paintCrumb(knownVehicle);
+
+    const searchInput = Utils.el("input", {
+      type: "search", "data-i18n-placeholder": "search.placeholder",
+      placeholder: Lang.t("search.placeholder"), "aria-label": Lang.t("search.heading")
+    });
+    const searchBar = Utils.el("div", { class: "search-bar" }, [
+      Utils.el("span", { html: Icons.search }), searchInput
+    ]);
+
+    const availableOnlyToggle = Utils.el("input", { type: "checkbox", id: "avail-only" });
+    const filterRow = Utils.el("div", { class: "filter-row" }, [
+      Utils.el("span", { class: "result-count", "data-count": "true" }),
+      Utils.el("label", { class: "toggle-pill", for: "avail-only" }, [availableOnlyToggle, Utils.el("span", { text: Lang.t("drivers.filterAvailableOnly") })])
+    ]);
+
+    const resultsWrap = Utils.el("div", {});
+    const section = Utils.el("section", { class: "section container" }, [
+      crumbHolder,
+      Utils.el("div", { class: "section-head" }, [Utils.el("h2", { "data-heading": "true" })]),
+      searchBar, filterRow, resultsWrap
+    ]);
+    app.appendChild(section);
+    if (!Api.peekDriverDirectory()) {
+      resultsWrap.appendChild(ViewHelpers.loadingBlock(Lang.t("drivers.loading")));
+    }
+
+    let vehicles;
+    try {
+      vehicles = await Api.getVehicleCategories();
+    } catch (err) {
+      resultsWrap.innerHTML = "";
+      resultsWrap.appendChild(ViewHelpers.errorBlock(Lang.t("error.network"), () => renderOtherDriverList(app, params)));
+      return;
+    }
+    const vehicle = vehicles.find((v) => v.slug === params.vehicle);
+    if (!vehicle || !vehicle.isOther) { Router.navigate("/other"); return; }
+
+    paintCrumb(vehicle);
+    const crumbTrail = [
+      { label: Lang.t("nav.home"), path: "/" },
+      { label: Lang.t("other.sectionHeading"), path: "/other" },
+      { label: vehicleName(vehicle), path: `/other/${vehicle.slug}` }
+    ];
+
+    section.querySelector("[data-heading]").textContent =
+      Lang.t("drivers.heading", { vehicle: vehicleName(vehicle) });
+
+    async function load(query) {
+      const alreadyCached = !!Api.peekDriverDirectory();
+      if (!alreadyCached) {
+        resultsWrap.innerHTML = "";
+        renderedCards.clear();
+        resultsWrap.appendChild(ViewHelpers.loadingBlock(Lang.t("drivers.loading")));
+      }
+      try {
+        let list = await Api.getDrivers(null, vehicle.slug, query);
+        if (availableOnlyToggle.checked) list = list.filter((d) => d.availability === "active");
+        renderResults(list, query);
+      } catch (err) {
+        resultsWrap.innerHTML = "";
+        renderedCards.clear();
+        resultsWrap.appendChild(ViewHelpers.errorBlock(Lang.t("error.network"), () => load(query)));
+      }
+    }
+
+    let renderedCards = new Map();
+
+    function renderResults(list, query) {
+      section.querySelector("[data-count]").textContent = Lang.t("drivers.count", { count: list.length });
+      if (!list.length) {
+        resultsWrap.innerHTML = "";
+        renderedCards.clear();
+        resultsWrap.appendChild(ViewHelpers.emptyBlock({
+          message: query ? Lang.t("empty.noSearchResults") : Lang.t("empty.noDrivers"),
+          sub: query ? undefined : Lang.t("empty.noDriversSub"),
+          actionLabel: Lang.t("other.backToCategories"),
+          onAction: () => Router.navigate("/other")
+        }));
+        return;
+      }
+      let grid = resultsWrap.querySelector(".driver-grid");
+      if (!grid) {
+        resultsWrap.innerHTML = "";
+        grid = Utils.el("div", { class: "driver-grid" });
+        resultsWrap.appendChild(grid);
+        renderedCards.clear();
+      }
+      const nextIds = new Set();
+      list.forEach((d) => {
+        const id = d.driverId;
+        nextIds.add(id);
+        const sig = JSON.stringify(d);
+        const existing = renderedCards.get(id);
+        let node;
+        if (existing && existing.sig === sig) {
+          node = existing.node;
+        } else {
+          node = driverCard(d, vehicleName(vehicle), crumbTrail);
+          if (existing && existing.node.parentNode) existing.node.parentNode.removeChild(existing.node);
+          renderedCards.set(id, { node, sig });
+        }
+        grid.appendChild(node);
+      });
+      renderedCards.forEach((entry, id) => {
+        if (!nextIds.has(id)) {
+          if (entry.node.parentNode) entry.node.parentNode.removeChild(entry.node);
+          renderedCards.delete(id);
+        }
+      });
+    }
+
+    const debouncedSearch = Utils.debounce((q) => load(q), 250);
+    searchInput.addEventListener("input", () => debouncedSearch(searchInput.value.trim()));
+    availableOnlyToggle.addEventListener("change", () => load(searchInput.value.trim()));
+
+    load("");
+  }
+
   async function renderSearch(app) {
     app.innerHTML = "";
     const searchInput = Utils.el("input", {
@@ -1192,13 +1380,28 @@
       { label: Lang.t("nav.home"), path: "/" },
       { label: Lang.t("emergency.heading") }
     ]);
+    const searchInput = Utils.el("input", {
+      type: "search", "data-i18n-placeholder": "search.placeholder",
+      placeholder: Lang.t("search.placeholder"), "aria-label": Lang.t("search.heading")
+    });
+    const searchBar = Utils.el("div", { class: "search-bar" }, [
+      Utils.el("span", { html: Icons.search }), searchInput
+    ]);
+    const availableOnlyToggle = Utils.el("input", { type: "checkbox", id: "avail-only" });
+    const countNode = Utils.el("span", { class: "result-count" });
+    const filterRow = Utils.el("div", { class: "filter-row" }, [
+      countNode,
+      Utils.el("label", { class: "toggle-pill", for: "avail-only" }, [availableOnlyToggle, Utils.el("span", { text: Lang.t("drivers.filterAvailableOnly") })])
+    ]);
     const resultsWrap = Utils.el("div", {});
     const section = Utils.el("section", { class: "section container" }, [
       crumb,
       Utils.el("div", { class: "section-head" }, [
-        Utils.el("h2", { text: Lang.t("emergency.heading") }),
+        speakableHeadingCustom(Lang.t("emergency.heading"), Lang.t("emergency.sub")),
         Utils.el("p", { text: Lang.t("emergency.sub") })
       ]),
+      searchBar,
+      filterRow,
       resultsWrap
     ]);
     app.appendChild(section);
@@ -1217,10 +1420,92 @@
         { label: Lang.t("nav.home"), path: "/" },
         { label: Lang.t("emergency.heading"), path: "/emergency" }
       ];
-      resultsWrap.appendChild(Utils.el("div", { class: "driver-grid" }, list.map((d) => driverCard(d, null, crumbTrail))));
+      function paintList(query) {
+        resultsWrap.innerHTML = "";
+        let shown = Search.filterLocal(list, query);
+        if (availableOnlyToggle.checked) shown = shown.filter((d) => d.availability === "active");
+        countNode.textContent = Lang.t("drivers.count", { count: shown.length });
+        if (!shown.length) {
+          resultsWrap.appendChild(ViewHelpers.emptyBlock({ message: Lang.t("empty.noSearchResults") }));
+          return;
+        }
+        resultsWrap.appendChild(Utils.el("div", { class: "driver-grid" }, shown.map((d) => driverCard(d, null, crumbTrail))));
+      }
+      paintList("");
+      const debouncedFilter = Utils.debounce((q) => paintList(q), 250);
+      searchInput.addEventListener("input", () => debouncedFilter(searchInput.value.trim()));
+      availableOnlyToggle.addEventListener("change", () => paintList(searchInput.value.trim()));
     } catch (err) {
       resultsWrap.innerHTML = "";
       resultsWrap.appendChild(ViewHelpers.errorBlock(Lang.t("error.network"), () => renderEmergencyList(app)));
+    }
+  }
+
+  async function renderDoctorList(app) {
+    app.innerHTML = "";
+
+    const crumb = ViewHelpers.breadcrumb([
+      { label: Lang.t("nav.home"), path: "/" },
+      { label: Lang.t("doctor.heading") }
+    ]);
+    const searchInput = Utils.el("input", {
+      type: "search", "data-i18n-placeholder": "search.placeholderDoctor",
+      placeholder: Lang.t("search.placeholderDoctor"), "aria-label": Lang.t("search.heading")
+    });
+    const searchBar = Utils.el("div", { class: "search-bar" }, [
+      Utils.el("span", { html: Icons.search }), searchInput
+    ]);
+    const availableOnlyToggle = Utils.el("input", { type: "checkbox", id: "avail-only" });
+    const countNode = Utils.el("span", { class: "result-count" });
+    const filterRow = Utils.el("div", { class: "filter-row" }, [
+      countNode,
+      Utils.el("label", { class: "toggle-pill", for: "avail-only" }, [availableOnlyToggle, Utils.el("span", { text: Lang.t("drivers.filterAvailableOnly") })])
+    ]);
+    const resultsWrap = Utils.el("div", {});
+    const section = Utils.el("section", { class: "section container" }, [
+      crumb,
+      Utils.el("div", { class: "section-head" }, [
+        speakableHeadingCustom(Lang.t("doctor.pageHeading"), Lang.t("doctor.sectionSub")),
+        Utils.el("p", { text: Lang.t("doctor.sectionSub") })
+      ]),
+      searchBar,
+      filterRow,
+      resultsWrap
+    ]);
+    app.appendChild(section);
+
+    const alreadyCached = !!Api.peekDriverDirectory();
+    if (!alreadyCached) resultsWrap.appendChild(ViewHelpers.loadingBlock(Lang.t("drivers.loading")));
+
+    try {
+      const list = await Api.getDoctorDrivers();
+      resultsWrap.innerHTML = "";
+      if (!list.length) {
+        resultsWrap.appendChild(ViewHelpers.emptyBlock({ message: Lang.t("empty.noDoctors") }));
+        return;
+      }
+      const crumbTrail = [
+        { label: Lang.t("nav.home"), path: "/" },
+        { label: Lang.t("doctor.heading"), path: "/doctor" }
+      ];
+      function paintList(query) {
+        resultsWrap.innerHTML = "";
+        let shown = Search.filterLocal(list, query);
+        if (availableOnlyToggle.checked) shown = shown.filter((d) => d.availability === "active");
+        countNode.textContent = Lang.t("doctors.count", { count: shown.length });
+        if (!shown.length) {
+          resultsWrap.appendChild(ViewHelpers.emptyBlock({ message: Lang.t("empty.noDoctorSearchResults") }));
+          return;
+        }
+        resultsWrap.appendChild(Utils.el("div", { class: "driver-grid" }, shown.map((d) => driverCard(d, null, crumbTrail))));
+      }
+      paintList("");
+      const debouncedFilter = Utils.debounce((q) => paintList(q), 250);
+      searchInput.addEventListener("input", () => debouncedFilter(searchInput.value.trim()));
+      availableOnlyToggle.addEventListener("change", () => paintList(searchInput.value.trim()));
+    } catch (err) {
+      resultsWrap.innerHTML = "";
+      resultsWrap.appendChild(ViewHelpers.errorBlock(Lang.t("error.network"), () => renderDoctorList(app)));
     }
   }
 
@@ -1230,4 +1515,7 @@
   Router.register("/markets/:market/:vehicle", renderDriverList, ["/", "/markets", "/markets/:market"]);
   Router.register("/search", renderSearch, ["/"]);
   Router.register("/emergency", renderEmergencyList, ["/"]);
+  Router.register("/doctor", renderDoctorList, ["/"]);
+  Router.register("/other", renderOtherCategories, ["/"]);
+  Router.register("/other/:vehicle", renderOtherDriverList, ["/", "/other"]);
 })(window, document, window.Utils, window.Lang, window.Icons, window.Api, window.Router, window.ViewHelpers, window.Modal, window.Toast, window.Search);
