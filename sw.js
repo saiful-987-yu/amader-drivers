@@ -25,7 +25,6 @@ const APP_SHELL = [
   "./js/app.js",
   "./js/pwa-install.js",
   "./js/drivers.js",
-  "./js/doctors.js",
   "./js/registration.js",
   "./js/profile.js",
   "./js/admin.js",

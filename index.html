@@ -141,7 +141,8 @@
           <a href="#/markets" data-i18n="nav.drivers">Drivers</a>
           <a href="#/doctor" data-i18n="nav.doctor">Doctor</a>
           <a href="#/registration" data-i18n="nav.register">Register</a>
-          <a href="#/login" data-i18n="nav.login">Login</a>
+          <a href="#/login" data-auth-link="loggedOut" data-i18n="nav.login">Login</a>
+          <a href="#/profile" data-auth-link="loggedIn" data-i18n="nav.profile">Profile</a>
         </nav>
       </div>
       <div class="footer-row footer-row--social">
@@ -175,7 +176,6 @@
 
   <!-- Screens (each registers its own route(s) with the router) -->
   <script src="js/drivers.js"></script>
-  <script src="js/doctors.js"></script>
   <script src="js/registration.js"></script>
   <script src="js/profile.js"></script>
   <script src="js/admin.js"></script>
@@ -251,6 +251,10 @@
           }
           a.setAttribute("aria-label", Lang.t(p.labelKey));
           a.innerHTML = p.icon;
+          if (p.key === "website") {
+            a.className = "footer-social__brand";
+            a.innerHTML = '<img src="assets/icons/sacarmart-logo.svg" alt="" width="20" height="20" decoding="async">';
+          }
           socialNav.appendChild(a);
         });
       }
