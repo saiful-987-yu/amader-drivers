@@ -11,7 +11,7 @@
  *      rename the file to anything else, and do not delete
  *      this example file (it is documentation).
  *
- * IMPORTANT — WHAT NEVER GOES IN THIS FILE:
+ * IMPORTANT — WHAT NEVER GOES IN THIS FILE:-
  *   - Google service-account private keys
  *   - Google API secrets
  *   - Any password or credential
