@@ -4,9 +4,8 @@ Deploy as a Web app (Execute as: Me, Access: Anyone) and put the URL in config/c
 Sheet tabs and column headers: see README.md.
 */
 
-const SHEET_DRIVERS = "Drivers";
-const SHEET_DOCTORS = "Doctors";
-const SHEET_PENDING = "Pending Drivers";
+const SHEET_DRIVERS = "Users";
+const SHEET_PENDING = "Pending Users";
 const SHEET_MARKETS = "Markets";
 const SHEET_VEHICLES = "Vehicle Categories";
 const SHEET_SESSIONS = "Sessions";
@@ -33,7 +32,6 @@ switch (op) {
 case "getMarkets": return respond({ ok: true, result: getMarkets() });
 case "getVehicleCategories": return respond({ ok: true, result: getVehicleCategories() });
 case "getDrivers": return respond({ ok: true, result: getDrivers(payload) });
-case "getDoctors": return respond({ ok: true, result: getDoctors() });
 case "registerDriver": return respond({ ok: true, result: registerDriver(payload) });
 case "uploadDriverPhoto": return respond({ ok: true, result: uploadDriverPhoto(payload) });
 case "checkUsername": return respond({ ok: true, result: checkUsernameAvailable(payload) });
@@ -53,6 +51,9 @@ case "adminListPending": return respond({ ok: true, result: adminListPending(pay
 case "adminGetRecord": return respond({ ok: true, result: adminGetRecord(payload) });
 case "adminSaveRecord": return respond({ ok: true, result: adminSaveRecord(payload) });
 case "adminApprovePending": return respond({ ok: true, result: adminApprovePending(payload) });
+case "adminListPendingRatings": return respond({ ok: true, result: adminListPendingRatings(payload) });
+case "adminApproveRating": return respond({ ok: true, result: adminApproveRating(payload) });
+case "adminPendingCounts": return respond({ ok: true, result: adminPendingCounts(payload) });
 default: return respond({ ok: false, errorCode: "UNKNOWN_OPERATION" });
 }
 } catch (err) {
@@ -157,6 +158,7 @@ nameEn: clean(r["English Name"]),
 nameBn: clean(r["Bengali Name"]),
 icon: slugify(r["English Name"]),
 imageUrl: clean(r["Vehicle Categories Image URL"]),
+isOther: slugOf(r["Other Categories"]) === "true",
 status: "active",
 sortOrder: Number(r["Sort Order"] || 0)
 }));
@@ -219,44 +221,8 @@ imageUrl: clean(r["Driver Image URL"]),
 vehicleImageUrl: clean(r["Vehicle Image URL"]),
 availability: slugOf(r["Availability"]) === "active" ? "active" : "inactive",
 emergency: slugOf(r["Emergency Contact"]) === "true",
+doctor: slugOf(r["Doctor Status"]) === "true",
 sortStatus: clean(r["Sort Status"]),
-personalDetails: clean(r["Personal Details"]),
-videoUrl: clean(r["Video URL"]),
-socialUrl: clean(r["Social Media URL"]),
-publicRating: publicRatingCacheValue(r),
-publicRatingCount: publicRatingCountValue(r),
-finalRating: finalRatingValue(r)
-};
-}
-
-function getDoctors() {
-return readRows(SHEET_DOCTORS)
-.filter((r) => slugOf(r["Status"]) === "active")
-.map(publicDoctorFields)
-.sort((a, b) => {
-const aActive = a.availability === "active" ? 0 : 1;
-const bActive = b.availability === "active" ? 0 : 1;
-if (aActive !== bActive) return aActive - bActive;
-return (a.name || "").localeCompare(b.name || "");
-});
-}
-
-function publicDoctorFields(r) {
-return {
-doctorId: clean(r["Driver ID"]),
-name: clean(r["Name"]),
-nameBn: clean(r["Bengali Name"]),
-phone: clean(r["Phone"]),
-altPhone: clean(r["Alternative Phone"]),
-degree: clean(r["Vehicle Type"]),
-regNumber: clean(r["Vehicle Number"]),
-serviceArea: clean(r["Service Area"]),
-experience: clean(r["Driving Experience"]),
-rating: clean(r["Star Rating"]),
-whatsapp: clean(r["WhatsApp"]),
-imageUrl: clean(r["Driver Image URL"]),
-sampleImageUrl: clean(r["Vehicle Image URL"]),
-availability: slugOf(r["Availability"]) === "active" ? "active" : "inactive",
 personalDetails: clean(r["Personal Details"]),
 videoUrl: clean(r["Video URL"]),
 socialUrl: clean(r["Social Media URL"]),
@@ -544,13 +510,12 @@ s.appendRow(["Rating ID", "Target Type", "Target ID", "Star Rating", "Comment", 
 }
 
 function submitPublicRating(payload) {
-const targetType = slugOf(payload.targetType) === "doctor" ? "doctor" : "driver";
+const targetType = "driver";
 const targetId = clean(payload.targetId);
 const stars = Math.round(Number(payload.stars));
 if (!targetId || !stars || stars < 1 || stars > 5) throw appError("VALIDATION_FAILED");
 
-const targetSheet = targetType === "doctor" ? SHEET_DOCTORS : SHEET_DRIVERS;
-const exists = readRows(targetSheet).some((r) => clean(r["Driver ID"]) === targetId && slugOf(r["Status"]) === "active");
+const exists = readRows(SHEET_DRIVERS).some((r) => clean(r["Driver ID"]) === targetId && slugOf(r["Status"]) === "active");
 if (!exists) throw appError("VALIDATION_FAILED");
 
 ensureRatingsSheet();
@@ -567,7 +532,7 @@ return { ok: true };
 }
 
 function getPublicRatings(payload) {
-const targetType = slugOf(payload.targetType) === "doctor" ? "doctor" : "driver";
+const targetType = "driver";
 const targetId = clean(payload.targetId);
 if (!targetId) return [];
 ensureRatingsSheet();
@@ -585,7 +550,6 @@ return payload.all ? list : list.slice(0, 2);
 }
 
 function recalcTargetRating(targetType, targetId) {
-const sheetName = targetType === "doctor" ? SHEET_DOCTORS : SHEET_DRIVERS;
 const verified = readRows(SHEET_RATINGS).filter((r) =>
 slugOf(r["Target Type"]) === targetType &&
 clean(r["Target ID"]) === targetId &&
@@ -594,7 +558,7 @@ slugOf(r["Verified"]) === "true"
 const count = verified.length;
 const avg = count ? verified.reduce((sum, r) => sum + (Number(r["Star Rating"]) || 0), 0) / count : 0;
 
-const s = sheet(sheetName);
+const s = sheet(SHEET_DRIVERS);
 const values = s.getDataRange().getValues();
 const headers = values[0].map((h) => String(h).trim());
 const idCol = headers.indexOf("Driver ID");
@@ -634,7 +598,7 @@ const editedRows = sh.getRange(startRow, 1, numRows, sh.getLastColumn()).getValu
 
 const seen = {};
 editedRows.forEach((row) => {
-const type = String(row[targetTypeCol]).trim().toLowerCase() === "doctor" ? "doctor" : "driver";
+const type = "driver";
 const id = String(row[targetIdCol]).trim();
 if (!id) return;
 const key = type + "|" + id;
@@ -737,8 +701,7 @@ const ADMIN_MANAGED_COLUMNS = {
 status: "Status", availability: "Availability", starRating: "Star Rating", manualRating: "Manual Rating",
 personalDetails: "Personal Details", videoUrl: "Video URL"
 };
-const ADMIN_DRIVER_ONLY_MANAGED = { emergency: "Emergency Contact", sortStatus: "Sort Status" };
-const ADMIN_DOCTOR_KEYS = ["name", "nameBn", "phone", "altPhone", "whatsapp", "vehicleType", "vehicleNumber", "serviceArea", "experience", "imageUrl", "vehicleImageUrl", "socialUrl", "status", "availability", "starRating", "manualRating", "personalDetails", "videoUrl"];
+const ADMIN_DRIVER_ONLY_MANAGED = { emergency: "Emergency Contact", doctor: "Doctor Status", sortStatus: "Sort Status" };
 
 function adminKindSpec(kind) {
 if (kind === "driver") {
@@ -746,12 +709,6 @@ return {
 sheet: SHEET_DRIVERS, idHeader: "Driver ID", hasPassword: true, checkUnique: true,
 cols: Object.assign({}, ADMIN_TEXT_COLUMNS_COMMON, ADMIN_REGISTRATION_ONLY_COLUMNS, ADMIN_MANAGED_COLUMNS, ADMIN_DRIVER_ONLY_MANAGED)
 };
-}
-if (kind === "doctor") {
-const all = Object.assign({}, ADMIN_TEXT_COLUMNS_COMMON, ADMIN_MANAGED_COLUMNS);
-const cols = {};
-ADMIN_DOCTOR_KEYS.forEach((k) => { cols[k] = all[k]; });
-return { sheet: SHEET_DOCTORS, idHeader: "Driver ID", hasPassword: false, checkUnique: false, cols: cols };
 }
 if (kind === "pending") {
 return {
@@ -766,7 +723,8 @@ const ADMIN_ENUMS = {
 status: ["Active", "Inactive"],
 availability: ["Active", "Inactive"],
 emergency: ["TRUE", "FALSE", ""],
-sortStatus: ["1st", "2nd", "3rd", ""]
+doctor: ["TRUE", "FALSE", ""],
+sortStatus: ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th", ""]
 };
 
 function adminRecordFields(spec, row) {
@@ -861,7 +819,7 @@ return { ok: true };
 const ADMIN_HISTORY_FIXED_HEADERS = ["Date Time", "Admin Driver ID", "Admin Name", "Target Type", "Target ID", "Target Name"];
 
 function historyTargetType(kind) {
-return kind === "driver" ? "Driver" : kind === "doctor" ? "Doctor" : "Pending";
+return kind === "driver" ? "Driver" : "Pending";
 }
 
 function bangladeshTimeText() {
@@ -1007,4 +965,93 @@ logAdminHistory(adminCtx, "Pending", payload.id, approvedName, [
 { oldText: "Status: Pending", newText: "Status: Approved \u2192 Driver ID: " + approvedDriverId }
 ]);
 return { driverId: approvedDriverId };
+}
+
+function pendingRatingEntries() {
+ensureRatingsSheet();
+const values = sheet(SHEET_RATINGS).getDataRange().getValues();
+if (values.length < 2) return [];
+const headers = values[0].map((h) => String(h).trim());
+const idCol = headers.indexOf("Rating ID");
+const typeCol = headers.indexOf("Target Type");
+const targetCol = headers.indexOf("Target ID");
+const starsCol = headers.indexOf("Star Rating");
+const commentCol = headers.indexOf("Comment");
+const verifiedCol = headers.indexOf("Verified");
+if (targetCol === -1 || verifiedCol === -1) throw appError("SHEET_MISCONFIGURED");
+const out = [];
+for (let i = 1; i < values.length; i++) {
+const row = values[i];
+const targetId = clean(row[targetCol]);
+if (!targetId) continue;
+if (slugOf(row[verifiedCol]) === "true") continue;
+const type = typeCol === -1 ? "" : slugOf(row[typeCol]);
+if (type && type !== "driver") continue;
+const ratingId = idCol === -1 ? "" : clean(row[idCol]);
+out.push({
+rowNumber: i + 1,
+id: ratingId || "row:" + (i + 1),
+targetId: targetId,
+stars: starsCol === -1 ? 0 : Number(row[starsCol]) || 0,
+comment: commentCol === -1 ? "" : clean(row[commentCol]),
+verified: clean(row[verifiedCol])
+});
+}
+return out;
+}
+
+function adminListPendingRatings(payload) {
+requireAdminMode(payload);
+const entries = pendingRatingEntries();
+const byId = {};
+readRows(SHEET_DRIVERS).forEach((r) => { byId[clean(r["Driver ID"])] = r; });
+return entries.map((e) => {
+const d = byId[e.targetId];
+return {
+id: e.id,
+targetId: e.targetId,
+stars: e.stars,
+comment: e.comment,
+name: d ? clean(d["Name"]) : "",
+nameBn: d ? clean(d["Bengali Name"]) : "",
+imageUrl: d ? clean(d["Driver Image URL"]) : ""
+};
+});
+}
+
+function adminApproveRating(payload) {
+const adminCtx = requireAdminMode(payload);
+const id = clean(payload.id);
+if (!id) throw appError("VALIDATION_FAILED");
+const lock = LockService.getScriptLock();
+lock.waitLock(20000);
+let entry = null;
+let driverName = "";
+try {
+dropRowMemo();
+entry = pendingRatingEntries().find((e) => e.id === id && (id.indexOf("row:") !== 0 || e.targetId === clean(payload.targetId)));
+if (!entry) throw appError("NOT_FOUND");
+const s = sheet(SHEET_RATINGS);
+const headers = s.getRange(1, 1, 1, s.getLastColumn()).getValues()[0].map((h) => String(h).trim());
+s.getRange(entry.rowNumber, headers.indexOf("Verified") + 1).setValue("TRUE");
+dropRowMemo();
+const driverRow = readRows(SHEET_DRIVERS).find((r) => clean(r["Driver ID"]) === entry.targetId);
+driverName = driverRow ? clean(driverRow["Name"]) : "";
+try {
+recalcTargetRating("driver", entry.targetId);
+} catch (err) {
+Logger.log("recalcTargetRating failed: " + err);
+}
+} finally {
+lock.releaseLock();
+}
+logAdminHistory(adminCtx, "Rating", entry.id, driverName ? driverName + " (" + entry.targetId + ")" : entry.targetId, [
+{ oldText: "Verified: " + (entry.verified ? entry.verified.toUpperCase() : "BLANK"), newText: "Verified: TRUE" }
+]);
+return { ok: true };
+}
+
+function adminPendingCounts(payload) {
+requireAdminMode(payload);
+return { pendingUsers: readRows(SHEET_PENDING).length, pendingRatings: pendingRatingEntries().length };
 }
