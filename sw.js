@@ -3,7 +3,7 @@ Service Worker — app-shell caching only.
 Google Drive photos and Apps Script (backend) requests are deliberately never intercepted: caching them broke image loading in the past.
 Bump CACHE_VERSION whenever any APP_SHELL file changes, otherwise visitors keep seeing the old files.
 */
-const CACHE_VERSION = "v5";
+const CACHE_VERSION = "v6";
 const SHELL_CACHE = `amader-shell-${CACHE_VERSION}`;
 
 const APP_SHELL = [
