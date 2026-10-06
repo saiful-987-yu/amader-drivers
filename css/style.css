@@ -386,6 +386,105 @@ a:hover { text-decoration: underline; }
 }
 .banner__dot.is-active { background: var(--color-primary); width: 20px; }
 
+/* Slides built from several sources (GIF→JPG chain, video + fallback picture). */
+.banner__slide--blank { background: var(--color-primary-soft); }
+.banner__fallback { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: var(--space-2); }
+.banner__video {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+}
+.banner__video.is-playing { opacity: 1; }
+.banner__video iframe {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  transform: translateY(-50%);
+  border: 0;
+  pointer-events: none;
+}
+/* Transparent layer over the video: swipes reach the banner and a tap never opens YouTube or pauses the video. */
+.banner__shield { position: absolute; inset: 0; z-index: 2; }
+.banner__sound {
+  position: absolute;
+  right: var(--space-2);
+  bottom: var(--space-2);
+  z-index: 5;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  cursor: pointer;
+}
+.banner__sound.is-visible { display: flex; }
+.banner__sound svg { width: 18px; height: 18px; }
+
+/* Emergency page: 2:1 banner (same shape as the Home banner) sitting BEHIND the
+   breadcrumb / heading / subtitle. It is absolutely positioned inside
+   .banner-zone, so it takes no space and nothing below it (search bar, list)
+   moves. Its bottom edge stays just above the search bar; it grows upward
+   into the empty space under the site header. */
+.banner-zone { position: relative; }
+.banner-zone > .breadcrumb,
+.banner-zone > .section-head { position: relative; z-index: 1; pointer-events: none; }
+.banner-zone .breadcrumb__link,
+.banner-zone .speak-btn { pointer-events: auto; }
+/* Heading + subtitle start where the breadcrumb text starts (list indent 40px + link padding 2px). */
+.banner-zone > .section-head { padding-left: 42px; }
+.banner--emergency {
+  position: absolute;
+  left: var(--space-4);
+  right: var(--space-4);
+  bottom: calc(-1 * var(--space-2));
+  margin: 0 auto;
+  aspect-ratio: 2 / 1;
+  max-height: calc(100% + var(--space-6) + var(--space-2) - var(--space-1) - var(--zone-lift, 0px));
+  padding: 0;
+  z-index: 0;
+}
+.banner--emergency .banner__viewport { aspect-ratio: auto; height: 100%; }
+.banner--emergency .banner__dots { position: absolute; left: 0; right: 0; bottom: 6px; margin: 0; z-index: 4; }
+/* Standard banner height for every section (Emergency, Doctor, Market, Other and any future one): a zone with short text gets the same height as the Emergency/Doctor zone, so its banner is the same size. Add class "banner-zone--standard" to any new banner-zone. */
+@media (max-width: 479px) {
+  .banner-zone--standard { min-height: 147px; margin-bottom: var(--space-4); }
+}
+@media (min-width: 480px) {
+  .banner--emergency { left: 50%; right: auto; width: 340px; margin: 0; transform: translateX(-50%); }
+}
+@media (min-width: 720px) {
+  .banner--emergency { width: 300px; }
+}
+
+/* Emergency page text over the banner: bright colours with a dark outline,
+   readable on any picture in both Light and Dark theme. */
+.banner-zone .breadcrumb__link,
+.banner-zone .breadcrumb__current,
+.banner-zone .breadcrumb__sep,
+.banner-zone .section-head p { color: #ffffff; }
+.banner-zone .section-head h2,
+.banner-zone .section-head .speak-btn { color: #ffd43b; }
+.banner-zone .section-head .section-head__sort-btn { pointer-events: auto; margin-right: 22px; }
+@media (max-width: 359px) {
+  .banner-zone .section-head .section-head__sort-btn { margin-right: 8px; }
+}
+.banner-zone .breadcrumb,
+.banner-zone .section-head {
+  text-shadow: 1px 1px 2px #000, -1px -1px 2px #000, 1px -1px 2px #000, -1px 1px 2px #000, 0 0 8px rgba(0, 0, 0, 0.7);
+}
+
 /* ------------------------------------------------------------
    HOMEPAGE ACTIONS — compact, side-by-side even on small phones
    ------------------------------------------------------------ */
@@ -597,6 +696,13 @@ a:hover { text-decoration: underline; }
 /* "Others" tile — same chip shape, centered and visually muted. */
 .chip-card--others { align-items: center; text-align: center; color: var(--color-ink-soft); }
 .chip-card--others .chip-card__icon { background: var(--color-line); color: var(--color-ink-soft); }
+.chip-card--others .chip-card__name { justify-content: center; }
+.chip-collage { display: grid; grid-template-columns: repeat(2, 30px); grid-auto-rows: 30px; gap: 3px; }
+.chip-collage__tile { position: relative; overflow: hidden; border-radius: 6px; background: var(--color-primary-soft); color: var(--color-primary-dark); display: flex; align-items: center; justify-content: center; }
+.chip-collage__icon { display: flex; align-items: center; justify-content: center; }
+.chip-collage__icon svg { width: 16px; height: 16px; }
+.chip-collage__tile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.chip-collage__tile--more { background: var(--color-line); color: var(--color-ink-soft); font-size: var(--font-size-xs); font-weight: 700; }
 
 /* Dynamic online-driver-count badge on each vehicle-category card. */
 .chip-card__online {
