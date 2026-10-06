@@ -112,10 +112,44 @@ window.NOBI_CONFIG = {
   // missing — never a broken image. Drop images into
   // /assets/home-banners/ with these exact filenames (see that
   // folder's own README).
+  // Slide 2 tries slide2Gif first, then slide2 (.jpg). Slide 3 plays the
+  // video from /assets/home-banners/banner-videos.js first; slide3 (.jpg)
+  // is shown if the video can't play.
   BANNER_IMAGES: {
     slide1: "assets/home-banners/home-banner-01.jpg",
+    slide2Gif: "assets/home-banners/home-banner-02.gif",
     slide2: "assets/home-banners/home-banner-02.jpg",
     slide3: "assets/home-banners/home-banner-03.jpg"
+  },
+
+  // Emergency page banner (same folder, same rules as the Home banner).
+  EMERGENCY_BANNER_IMAGES: {
+    slide1: "assets/home-banners/emergency-banner-01.jpg",
+    slide2Gif: "assets/home-banners/emergency-banner-02.gif",
+    slide2: "assets/home-banners/emergency-banner-02.jpg",
+    slide3: "assets/home-banners/emergency-banner-03.jpg"
+  },
+
+  // Doctor page banner (same folder, same rules as the Emergency banner).
+  DOCTOR_BANNER_IMAGES: {
+    slide1: "assets/home-banners/doctor-banner-01.jpg",
+    slide2Gif: "assets/home-banners/doctor-banner-02.gif",
+    slide2: "assets/home-banners/doctor-banner-02.jpg",
+    slide3: "assets/home-banners/doctor-banner-03.jpg"
+  },
+
+  // Markets page and Other Section page banners (same folder, same rules).
+  MARKET_BANNER_IMAGES: {
+    slide1: "assets/home-banners/market-banner-01.jpg",
+    slide2Gif: "assets/home-banners/market-banner-02.gif",
+    slide2: "assets/home-banners/market-banner-02.jpg",
+    slide3: "assets/home-banners/market-banner-03.jpg"
+  },
+  OTHER_BANNER_IMAGES: {
+    slide1: "assets/home-banners/other-banner-01.jpg",
+    slide2Gif: "assets/home-banners/other-banner-02.gif",
+    slide2: "assets/home-banners/other-banner-02.jpg",
+    slide3: "assets/home-banners/other-banner-03.jpg"
   },
 
   // Background photo for the Registration and Doctor homepage sections.
