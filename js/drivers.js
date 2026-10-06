@@ -509,7 +509,7 @@
     ]);
     app.appendChild(hero);
 
-    app.appendChild(buildBanner());
+    app.appendChild(buildBanner(homeBannerSlides()));
 
     app.appendChild(Utils.el("div", { class: "container home-actions" }, [
       Utils.el("div", { class: "hero__actions" }, [
@@ -556,16 +556,38 @@
     }
   }
 
-  function othersChip(onClick) {
+  function othersThumb(item, kind) {
+    const isMarket = kind === "market";
+    const tile = Utils.el("div", { class: "chip-collage__tile" }, [
+      Utils.el("span", { class: "chip-collage__icon", html: isMarket ? Icons.map : Icons.vehicle(item.slug) })
+    ]);
+    const imgUrl = Utils.resolveImageUrl(item.imageUrl);
+    const localImgUrl = Utils.localFixtureUrl(isMarket ? "market" : "vehicle", item.slug);
+    if (imgUrl || localImgUrl) {
+      const img = Utils.el("img", { alt: "", loading: "lazy" });
+      tile.appendChild(img);
+      Utils.wireImageFallback(img, item.imageUrl, () => img.remove(), localImgUrl);
+    }
+    return tile;
+  }
+
+  function othersChip(onClick, hiddenItems, kind) {
+    const hidden = hiddenItems || [];
+    const showMore = hidden.length > 4;
+    const tiles = hidden.slice(0, showMore ? 3 : 4).map((item) => othersThumb(item, kind));
+    if (showMore) tiles.push(Utils.el("div", { class: "chip-collage__tile chip-collage__tile--more", text: "+" + (hidden.length - 3) }));
+    const top = tiles.length
+      ? Utils.el("div", { class: "chip-collage", "aria-hidden": "true" }, tiles)
+      : Utils.el("div", { class: "chip-card__icon", html: Icons.more });
     return Utils.el("button", { class: "chip-card chip-card--others", onClick }, [
-      Utils.el("div", { class: "chip-card__icon", html: Icons.more }),
+      top,
       Utils.el("div", { class: "chip-card__name", text: Lang.t("action.others") })
     ]);
   }
 
   const expandedChipGrids = {};
 
-  function cappedChipGrid(items, buildChip) {
+  function cappedChipGrid(items, buildChip, kind) {
     if (!items.length) return null;
     const gridKey = window.location.hash || "#/";
     let expanded = !!expandedChipGrids[gridKey];
@@ -575,7 +597,7 @@
       const capped = items.length > 4 && !expanded;
       const visible = capped ? items.slice(0, 3) : items;
       visible.forEach((item) => container.appendChild(buildChip(item)));
-      if (capped) container.appendChild(othersChip(() => { expanded = true; expandedChipGrids[gridKey] = true; paint(); }));
+      if (capped) container.appendChild(othersChip(() => { expanded = true; expandedChipGrids[gridKey] = true; paint(); }, items.slice(3), kind));
     }
     paint();
     return container;
@@ -700,7 +722,7 @@
       ]);
       applyMarketCardBackground(card, Utils.resolveImageUrl(m.bgImageUrl), Utils.localFixtureUrl("marketBg", m.slug));
       return card;
-    });
+    }, "market");
   }
 
   function vehicleChip(v, onSelect, onlineCount) {
@@ -735,7 +757,7 @@
 
   function vehicleGrid(vehicles, onSelect, onlineCounts) {
     if (!vehicles.length) return ViewHelpers.emptyBlock({ message: Lang.t("vehicle.empty") });
-    return cappedChipGrid(vehicles, (v) => vehicleChip(v, onSelect, (onlineCounts && onlineCounts.get(v.slug)) || 0));
+    return cappedChipGrid(vehicles, (v) => vehicleChip(v, onSelect, (onlineCounts && onlineCounts.get(v.slug)) || 0), "vehicle");
   }
 
   function categoriesWithDrivers(directory, marketSlug) {
@@ -811,22 +833,107 @@
     app.appendChild(Utils.el("section", { class: "section container" }, [band]));
   }
 
-  function buildBanner() {
-    const bannerImages = window.NOBI_CONFIG.BANNER_IMAGES || {};
-    const slideDefs = [
-      { type: "dynamic", src: bannerImages.slide1 },
-      { src: bannerImages.slide2 },
-      { src: bannerImages.slide3 }
+  const BANNER_SLIDE_MS = 4000;
+
+  const SOUND_OFF_ICON = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 9.5v5h3.2L12 18.3V5.7L7.2 9.5H4Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M16 9.5l5 5M21 9.5l-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+
+  function youTubeIdFromUrl(rawUrl) {
+    const m = Utils.clean(rawUrl).match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{6,})/);
+    return m && m[1] ? m[1] : null;
+  }
+
+  function videoEmbedSrc(videoId) {
+    const params = ["enablejsapi=1", "autoplay=1", "mute=1", "controls=0", "playsinline=1", "rel=0", "modestbranding=1", "fs=0", "disablekb=1", "iv_load_policy=3"];
+    if (/^https?:$/.test(window.location.protocol)) params.push("origin=" + encodeURIComponent(window.location.origin));
+    return "https://www.youtube.com/embed/" + videoId + "?" + params.join("&");
+  }
+
+  let youTubeApiPromise = null;
+  function loadYouTubeApi() {
+    if (window.YT && window.YT.Player) return Promise.resolve(window.YT);
+    if (youTubeApiPromise) return youTubeApiPromise;
+    youTubeApiPromise = new Promise((resolve, reject) => {
+      const previous = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        if (typeof previous === "function") previous();
+        resolve(window.YT);
+      };
+      const script = document.createElement("script");
+      script.src = "https://www.youtube.com/iframe_api";
+      script.async = true;
+      script.onerror = () => { youTubeApiPromise = null; reject(new Error("youtube-api")); };
+      document.head.appendChild(script);
+    });
+    return youTubeApiPromise;
+  }
+
+  function homeBannerSlides() {
+    const images = window.NOBI_CONFIG.BANNER_IMAGES || {};
+    const videos = window.BANNER_VIDEOS || {};
+    const slide2 = images.slide2 || "assets/home-banners/home-banner-02.jpg";
+    return [
+      { type: "dynamic", src: images.slide1 },
+      { type: "image", srcs: [images.slide2Gif || slide2.replace(/\.[a-z0-9]+$/i, ".gif"), slide2], placeholder: true },
+      { type: "video", videoUrl: videos.home03, fallback: images.slide3, placeholder: true }
     ];
+  }
+
+  function emergencyBannerSlides() {
+    const images = window.NOBI_CONFIG.EMERGENCY_BANNER_IMAGES || {};
+    const videos = window.BANNER_VIDEOS || {};
+    const slide2 = images.slide2 || "assets/home-banners/emergency-banner-02.jpg";
+    return [
+      { type: "image", srcs: [images.slide1 || "assets/home-banners/emergency-banner-01.jpg"], placeholder: false },
+      { type: "image", srcs: [images.slide2Gif || slide2.replace(/\.[a-z0-9]+$/i, ".gif"), slide2], placeholder: false },
+      { type: "video", videoUrl: videos.emergency03, fallback: images.slide3 || "assets/home-banners/emergency-banner-03.jpg", placeholder: false }
+    ];
+  }
+
+  function doctorBannerSlides() {
+    const images = window.NOBI_CONFIG.DOCTOR_BANNER_IMAGES || {};
+    const videos = window.BANNER_VIDEOS || {};
+    const slide2 = images.slide2 || "assets/home-banners/doctor-banner-02.jpg";
+    return [
+      { type: "image", srcs: [images.slide1 || "assets/home-banners/doctor-banner-01.jpg"], placeholder: false },
+      { type: "image", srcs: [images.slide2Gif || slide2.replace(/\.[a-z0-9]+$/i, ".gif"), slide2], placeholder: false },
+      { type: "video", videoUrl: videos.doctor03, fallback: images.slide3 || "assets/home-banners/doctor-banner-03.jpg", placeholder: false }
+    ];
+  }
+
+  function sectionBannerSlides(configKey, prefix, videoKey) {
+    const images = window.NOBI_CONFIG[configKey] || {};
+    const videos = window.BANNER_VIDEOS || {};
+    const slide2 = images.slide2 || "assets/home-banners/" + prefix + "-banner-02.jpg";
+    return [
+      { type: "image", srcs: [images.slide1 || "assets/home-banners/" + prefix + "-banner-01.jpg"], placeholder: false },
+      { type: "image", srcs: [images.slide2Gif || slide2.replace(/\.[a-z0-9]+$/i, ".gif"), slide2], placeholder: false },
+      { type: "video", videoUrl: videos[videoKey], fallback: images.slide3 || "assets/home-banners/" + prefix + "-banner-03.jpg", placeholder: false }
+    ];
+  }
+
+  function vehicleBannerSlides(slug) {
+    const videos = (window.BANNER_VIDEOS && window.BANNER_VIDEOS.vehicle03) || {};
+    const base = "assets/home-banners/vehicle-" + slug + "-banner-";
+    return [
+      { type: "image", srcs: [Utils.localFixtureUrl("vehicle", slug)], placeholder: false },
+      { type: "image", srcs: [base + "02.gif", base + "02.jpg"], placeholder: false },
+      { type: "video", videoUrl: videos[slug], fallback: base + "03.jpg", placeholder: false }
+    ];
+  }
+
+  function buildBanner(slideDefs, opts) {
+    const emergency = !!(opts && opts.emergency);
     const realCount = slideDefs.length;
     const frameCount = realCount + 2;
     const stepPercent = 100 / frameCount;
 
+    const slides = slideDefs.map((def) => buildSlide(def));
+
     const track = Utils.el("div", { class: "banner__track" });
     track.style.width = (frameCount * 100) + "%";
-    track.appendChild(buildSlide(slideDefs[realCount - 1]));
-    slideDefs.forEach((def) => track.appendChild(buildSlide(def)));
-    track.appendChild(buildSlide(slideDefs[0]));
+    track.appendChild(buildSlide(slideDefs[realCount - 1], { clone: true }).el);
+    slides.forEach((s) => track.appendChild(s.el));
+    track.appendChild(buildSlide(slideDefs[0], { clone: true }).el);
     Utils.qsa(".banner__slide", track).forEach((el) => { el.style.width = stepPercent + "%"; });
 
     const dots = slideDefs.map((_, i) =>
@@ -835,11 +942,13 @@
     const dotsRow = Utils.el("div", { class: "banner__dots" }, dots);
 
     const viewport = Utils.el("div", { class: "banner__viewport" }, [track]);
-    const root = Utils.el("div", { class: "banner" }, [Utils.el("div", { class: "container" }, [viewport, dotsRow])]);
+    const root = emergency
+      ? Utils.el("div", { class: "banner banner--emergency" }, [viewport, dotsRow])
+      : Utils.el("div", { class: "banner" }, [Utils.el("div", { class: "container" }, [viewport, dotsRow])]);
 
     let real = 0;
     let frame = 1;
-    let intervalId = null;
+    let timerId = null;
 
     function paint(animate) {
       track.style.transition = animate ? "" : "none";
@@ -851,31 +960,45 @@
       }
     }
 
+    function onSlideEnded() {
+      if (!document.body.contains(root)) return;
+      step(1);
+    }
+
+    function activate(prev) {
+      if (prev >= 0 && prev !== real && slides[prev].leave) slides[prev].leave();
+      if (prev !== real && slides[real].enter) slides[real].enter(onSlideEnded);
+      const upcoming = slides[(real + 1) % realCount];
+      if (upcoming.preload) upcoming.preload();
+      if (timerId) clearTimeout(timerId);
+      timerId = setTimeout(() => {
+        if (!document.body.contains(root)) return;
+        if (slides[real].isHolding && slides[real].isHolding()) return;
+        step(1);
+      }, BANNER_SLIDE_MS);
+    }
+
     function goToIndex(i) {
+      const prev = real;
       real = (i + realCount) % realCount;
       frame = real + 1;
       paint(true);
+      activate(prev);
     }
 
     function step(delta) {
+      const prev = real;
       real = (real + delta + realCount) % realCount;
       frame += delta;
       paint(true);
+      activate(prev);
     }
 
     track.addEventListener("transitionend", () => {
       if (frame === 0 || frame === frameCount - 1) { frame = real + 1; paint(false); }
     });
 
-    function startTimer() {
-      if (intervalId) clearInterval(intervalId);
-      intervalId = setInterval(() => {
-        if (!document.body.contains(root)) { clearInterval(intervalId); return; }
-        step(1);
-      }, 5000);
-    }
-
-    dots.forEach((d, i) => d.addEventListener("click", () => { goToIndex(i); startTimer(); }));
+    dots.forEach((d, i) => d.addEventListener("click", () => goToIndex(i)));
 
     let touchStartX = null;
     viewport.addEventListener("touchstart", (e) => { touchStartX = e.touches[0].clientX; }, { passive: true });
@@ -885,15 +1008,39 @@
       touchStartX = null;
       if (Math.abs(dx) < 30) return;
       step(dx < 0 ? 1 : -1);
-      startTimer();
     }, { passive: true });
 
     paint(false);
-    startTimer();
+    activate(-1);
     return root;
   }
 
-  function buildSlide(def) {
+  function attachImageChain(host, srcs, placeholder) {
+    const list = (srcs || []).filter(Boolean);
+    const fail = () => {
+      host.innerHTML = "";
+      if (placeholder) {
+        host.classList.add("banner__slide--placeholder");
+        host.innerHTML = Icons.map;
+      } else {
+        host.classList.add("banner__slide--blank");
+      }
+    };
+    if (!list.length) { fail(); return; }
+    let index = 0;
+    const img = Utils.el("img", { alt: "", loading: "lazy" });
+    img.addEventListener("error", () => {
+      index += 1;
+      if (index < list.length) img.src = list[index];
+      else fail();
+    });
+    img.src = list[0];
+    host.appendChild(img);
+  }
+
+  function buildSlide(def, opts) {
+    const asClone = !!(opts && opts.clone);
+
     if (def.type === "dynamic") {
       const slide = Utils.el("div", { class: "banner__slide banner__slide--text" }, [
         Utils.el("div", { class: "banner__slide-text" }, [
@@ -908,23 +1055,167 @@
         };
         probe.src = def.src;
       }
-      return slide;
+      return { el: slide };
     }
+
     const slide = Utils.el("div", { class: "banner__slide" });
-    const placeholder = () => {
-      slide.innerHTML = "";
-      slide.classList.add("banner__slide--placeholder");
-      slide.innerHTML = Icons.map;
-    };
-    if (def.src) {
-      const img = Utils.el("img", { alt: "", loading: "lazy" });
-      img.addEventListener("error", placeholder);
-      img.src = def.src;
-      slide.appendChild(img);
-    } else {
-      placeholder();
+
+    if (def.type === "image") {
+      attachImageChain(slide, def.srcs, def.placeholder);
+      return { el: slide };
     }
-    return slide;
+
+    const fallbackHost = Utils.el("div", { class: "banner__fallback" });
+    slide.appendChild(fallbackHost);
+    attachImageChain(fallbackHost, [def.fallback], def.placeholder);
+
+    const videoId = asClone ? null : youTubeIdFromUrl(def.videoUrl);
+    if (!videoId) return { el: slide };
+
+    const videoLayer = Utils.el("div", { class: "banner__video" });
+    const shield = Utils.el("div", { class: "banner__shield" });
+    const soundBtn = Utils.el("button", { type: "button", class: "banner__sound" });
+    slide.appendChild(videoLayer);
+    slide.appendChild(shield);
+    slide.appendChild(soundBtn);
+
+    let player = null;
+    let frameEl = null;
+    let ready = false;
+    let pending = false;
+    let frameToken = 0;
+    let active = false;
+    let playing = false;
+    let onEnded = null;
+    let safetyTimer = null;
+
+    function refreshSound() {
+      let muted = true;
+      try { muted = !player || player.isMuted(); } catch (err) { muted = true; }
+      soundBtn.innerHTML = muted ? SOUND_OFF_ICON : Icons.speaker;
+      soundBtn.setAttribute("aria-label", muted ? "Turn sound on" : "Turn sound off");
+    }
+
+    function setPlaying(on) {
+      playing = on;
+      videoLayer.classList.toggle("is-playing", on);
+      soundBtn.classList.toggle("is-visible", on);
+    }
+
+    function finish() {
+      if (safetyTimer) { clearTimeout(safetyTimer); safetyTimer = null; }
+      setPlaying(false);
+      const cb = onEnded;
+      if (active && cb) cb();
+    }
+
+    function armSafety() {
+      if (safetyTimer) clearTimeout(safetyTimer);
+      let seconds = 0;
+      try { seconds = player.getDuration(); } catch (err) { seconds = 0; }
+      safetyTimer = setTimeout(() => { if (active && playing) finish(); }, ((seconds > 0 ? seconds : 120) + 10) * 1000);
+    }
+
+    function teardown() {
+      frameToken += 1;
+      pending = false;
+      ready = false;
+      if (player) { try { player.destroy(); } catch (err) {} }
+      player = null;
+      frameEl = null;
+      videoLayer.innerHTML = "";
+    }
+
+    function kick() {
+      if (!player || !ready) return;
+      try {
+        player.mute();
+        const wasPlaying = player.getPlayerState() === window.YT.PlayerState.PLAYING;
+        player.seekTo(0, true);
+        if (wasPlaying) {
+          if (active && !playing) { setPlaying(true); armSafety(); }
+        } else {
+          player.playVideo();
+        }
+      } catch (err) {}
+      refreshSound();
+    }
+
+    function buildFrame() {
+      if (frameEl || pending) return;
+      if (navigator.onLine === false) return;
+      pending = true;
+      const token = frameToken;
+      loadYouTubeApi().then((YT) => {
+        if (token !== frameToken) return;
+        pending = false;
+        if (!slide.isConnected) return;
+        const iframe = document.createElement("iframe");
+        iframe.setAttribute("allow", "autoplay; encrypted-media; picture-in-picture");
+        iframe.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
+        iframe.setAttribute("frameborder", "0");
+        iframe.setAttribute("tabindex", "-1");
+        iframe.setAttribute("aria-hidden", "true");
+        iframe.setAttribute("title", "Banner video");
+        iframe.src = videoEmbedSrc(videoId);
+        videoLayer.appendChild(iframe);
+        frameEl = iframe;
+        player = new YT.Player(iframe, {
+          events: {
+            onReady: () => {
+              ready = true;
+              if (active) kick();
+            },
+            onStateChange: (e) => {
+              if (e.data === YT.PlayerState.PLAYING) {
+                if (active && !playing) { setPlaying(true); armSafety(); refreshSound(); }
+              } else if (e.data === YT.PlayerState.ENDED) {
+                if (active) finish();
+              }
+            },
+            onError: () => {
+              if (active && playing) finish();
+            }
+          }
+        });
+      }).catch(() => { if (token === frameToken) pending = false; });
+    }
+
+    soundBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!player) return;
+      try {
+        if (player.isMuted()) {
+          player.unMute();
+          if (player.getPlayerState() !== window.YT.PlayerState.PLAYING) player.playVideo();
+        } else {
+          player.mute();
+        }
+      } catch (err) {}
+      refreshSound();
+    });
+
+    refreshSound();
+
+    return {
+      el: slide,
+      preload: buildFrame,
+      enter: (cb) => {
+        active = true;
+        onEnded = cb;
+        setPlaying(false);
+        if (frameEl) kick();
+        else buildFrame();
+      },
+      leave: () => {
+        active = false;
+        onEnded = null;
+        if (safetyTimer) { clearTimeout(safetyTimer); safetyTimer = null; }
+        setPlaying(false);
+        teardown();
+      },
+      isHolding: () => playing
+    };
   }
 
   async function renderMarkets(app) {
@@ -940,14 +1231,19 @@
       const fresh = Api.peekMarkets();
       if (fresh && section) section.replaceChild(marketGrid(fresh, (m) => Router.navigate(`/markets/${m.slug}`)), section.lastChild);
     };
-    section = Utils.el("section", { class: "section container" }, [
+    const bannerZone = Utils.el("div", { class: "banner-zone banner-zone--standard" }, [
+      buildBanner(sectionBannerSlides("MARKET_BANNER_IMAGES", "market", "market03"), { emergency: true }),
       crumb,
-      marketSectionHead(refreshMarketGrid),
+      marketSectionHead(refreshMarketGrid)
+    ]);
+    section = Utils.el("section", { class: "section container" }, [
+      bannerZone,
       cachedMarkets
         ? marketGrid(cachedMarkets, (m) => Router.navigate(`/markets/${m.slug}`))
         : ViewHelpers.loadingBlock(Lang.t("market.loading"))
     ]);
     app.appendChild(section);
+    holdSearchBarPosition(bannerZone);
 
     if (cachedMarkets) return;
     try {
@@ -956,6 +1252,24 @@
     } catch (err) {
       section.replaceChild(ViewHelpers.errorBlock(Lang.t("error.network"), () => renderMarkets(app)), section.lastChild);
     }
+  }
+
+  function driverListHead(headingText, subText) {
+    const speaker = mutableSpeakerButton(headingText);
+    const row = Utils.el("h2", { class: "section-head__title-row" }, [
+      Utils.el("span", { "data-heading": "true", text: headingText }),
+      speaker
+    ]);
+    row.__speaker = speaker;
+    const head = Utils.el("div", { class: "section-head" }, [row, Utils.el("p", { text: subText })]);
+    return head;
+  }
+
+  function setDriverListHeading(section, text) {
+    const node = section.querySelector("[data-heading]");
+    node.textContent = text;
+    const speaker = node.parentNode && node.parentNode.__speaker;
+    if (speaker) speaker.setSpokenText(text);
   }
 
   async function renderVehicles(app, params) {
@@ -1026,15 +1340,16 @@
     const knownMarket = cachedMarkets && cachedMarkets.find((m) => m.slug === params.market);
     const knownVehicle = cachedVehicles && cachedVehicles.find((v) => v.slug === params.vehicle);
 
-    const crumbHolder = Utils.el("div");
+    let crumbNode = null;
     function paintCrumb(market, vehicle) {
-      crumbHolder.innerHTML = "";
-      crumbHolder.appendChild(ViewHelpers.breadcrumb([
+      const nextCrumb = ViewHelpers.breadcrumb([
         { label: Lang.t("nav.home"), path: "/" },
         { label: Lang.t("nav.markets"), path: "/markets" },
         { label: market ? marketName(market) : "…", path: market ? `/markets/${market.slug}` : null },
         { label: vehicle ? vehicleName(vehicle) : "…" }
-      ]));
+      ]);
+      if (crumbNode && crumbNode.parentNode) crumbNode.parentNode.replaceChild(nextCrumb, crumbNode);
+      crumbNode = nextCrumb;
     }
     paintCrumb(knownMarket, knownVehicle);
 
@@ -1053,12 +1368,17 @@
     ]);
 
     const resultsWrap = Utils.el("div", {});
+    const bannerZone = Utils.el("div", { class: "banner-zone banner-zone--standard" }, [
+      buildBanner(vehicleBannerSlides(params.vehicle), { emergency: true }),
+      crumbNode,
+      driverListHead(knownVehicle ? Lang.t("drivers.heading", { vehicle: vehicleName(knownVehicle) }) : "", Lang.t("drivers.sub"))
+    ]);
     const section = Utils.el("section", { class: "section container" }, [
-      crumbHolder,
-      Utils.el("div", { class: "section-head" }, [Utils.el("h2", { "data-heading": "true" })]),
+      bannerZone,
       searchBar, filterRow, resultsWrap
     ]);
     app.appendChild(section);
+    holdSearchBarPosition(bannerZone);
     if (!Api.peekDriverDirectory()) {
       resultsWrap.appendChild(ViewHelpers.loadingBlock(Lang.t("drivers.loading")));
     }
@@ -1083,8 +1403,8 @@
       { label: vehicleName(vehicle), path: `/markets/${market.slug}/${vehicle.slug}` }
     ];
 
-    section.querySelector("[data-heading]").textContent =
-      Lang.t("drivers.heading", { vehicle: vehicleName(vehicle) }) + " " + Lang.t("drivers.subInMarket", { market: marketName(market) });
+    setDriverListHeading(section,
+      Lang.t("drivers.heading", { vehicle: vehicleName(vehicle) }) + " " + Lang.t("drivers.subInMarket", { market: marketName(market) }));
 
     async function load(query) {
       const alreadyCached = !!Api.peekDriverDirectory();
@@ -1177,7 +1497,8 @@
     const cachedDirectory = Api.peekDriverDirectory();
     const ready = cachedVehicles && cachedDirectory;
 
-    const section = Utils.el("section", { class: "section container" }, [
+    const bannerZone = Utils.el("div", { class: "banner-zone banner-zone--standard" }, [
+      buildBanner(sectionBannerSlides("OTHER_BANNER_IMAGES", "other", "other03"), { emergency: true }),
       ViewHelpers.breadcrumb([
         { label: Lang.t("nav.home"), path: "/" },
         { label: Lang.t("other.sectionHeading") }
@@ -1185,10 +1506,14 @@
       Utils.el("div", { class: "section-head" }, [
         speakableHeading(Lang.t("other.sectionHeading")),
         Utils.el("p", { text: Lang.t("other.chooseSub") })
-      ]),
+      ])
+    ]);
+    const section = Utils.el("section", { class: "section container" }, [
+      bannerZone,
       ready ? buildOtherBody(cachedVehicles, cachedDirectory) : ViewHelpers.loadingBlock(Lang.t("vehicle.loading"))
     ]);
     app.appendChild(section);
+    holdSearchBarPosition(bannerZone);
 
     if (ready) return;
 
@@ -1206,20 +1531,21 @@
     const cachedVehicles = Api.peekVehicleCategories();
     const knownVehicle = cachedVehicles && cachedVehicles.find((v) => v.slug === params.vehicle);
 
-    const crumbHolder = Utils.el("div");
+    let crumbNode = null;
     function paintCrumb(vehicle) {
-      crumbHolder.innerHTML = "";
-      crumbHolder.appendChild(ViewHelpers.breadcrumb([
+      const nextCrumb = ViewHelpers.breadcrumb([
         { label: Lang.t("nav.home"), path: "/" },
         { label: Lang.t("other.sectionHeading"), path: "/other" },
         { label: vehicle ? vehicleName(vehicle) : "…" }
-      ]));
+      ]);
+      if (crumbNode && crumbNode.parentNode) crumbNode.parentNode.replaceChild(nextCrumb, crumbNode);
+      crumbNode = nextCrumb;
     }
     paintCrumb(knownVehicle);
 
     const searchInput = Utils.el("input", {
-      type: "search", "data-i18n-placeholder": "search.placeholder",
-      placeholder: Lang.t("search.placeholder"), "aria-label": Lang.t("search.heading")
+      type: "search", "data-i18n-placeholder": "search.placeholderOther",
+      placeholder: Lang.t("search.placeholderOther"), "aria-label": Lang.t("search.heading")
     });
     const searchBar = Utils.el("div", { class: "search-bar" }, [
       Utils.el("span", { html: Icons.search }), searchInput
@@ -1232,12 +1558,17 @@
     ]);
 
     const resultsWrap = Utils.el("div", {});
+    const bannerZone = Utils.el("div", { class: "banner-zone banner-zone--standard" }, [
+      buildBanner(vehicleBannerSlides(params.vehicle), { emergency: true }),
+      crumbNode,
+      driverListHead(knownVehicle ? vehicleName(knownVehicle) : "", Lang.t("other.listSub"))
+    ]);
     const section = Utils.el("section", { class: "section container" }, [
-      crumbHolder,
-      Utils.el("div", { class: "section-head" }, [Utils.el("h2", { "data-heading": "true" })]),
+      bannerZone,
       searchBar, filterRow, resultsWrap
     ]);
     app.appendChild(section);
+    holdSearchBarPosition(bannerZone);
     if (!Api.peekDriverDirectory()) {
       resultsWrap.appendChild(ViewHelpers.loadingBlock(Lang.t("drivers.loading")));
     }
@@ -1260,8 +1591,7 @@
       { label: vehicleName(vehicle), path: `/other/${vehicle.slug}` }
     ];
 
-    section.querySelector("[data-heading]").textContent =
-      Lang.t("drivers.heading", { vehicle: vehicleName(vehicle) });
+    setDriverListHeading(section, vehicleName(vehicle));
 
     async function load(query) {
       const alreadyCached = !!Api.peekDriverDirectory();
@@ -1373,6 +1703,36 @@
     searchInput.focus();
   }
 
+  function holdSearchBarPosition(zone) {
+    const head = zone.querySelector(".section-head");
+    const host = zone.parentNode;
+    if (!head || !host) return;
+    const probe = head.cloneNode(true);
+    probe.setAttribute("aria-hidden", "true");
+    probe.style.cssText = "position:absolute;visibility:hidden;pointer-events:none;left:0;top:0;margin:0;padding:0;";
+    host.insertBefore(probe, zone);
+    let observer = null;
+    function apply() {
+      if (!zone.isConnected) {
+        window.removeEventListener("resize", apply);
+        if (observer) observer.disconnect();
+        return;
+      }
+      probe.style.width = zone.clientWidth + "px";
+      const extra = head.getBoundingClientRect().height - probe.getBoundingClientRect().height;
+      const lift = extra > 0.5 ? Math.min(extra, 28) : 0;
+      zone.style.marginTop = lift ? "-" + lift + "px" : "";
+      zone.style.setProperty("--zone-lift", lift + "px");
+    }
+    if (typeof ResizeObserver === "function") {
+      observer = new ResizeObserver(apply);
+      observer.observe(head);
+    }
+    window.addEventListener("resize", apply);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(apply);
+    apply();
+  }
+
   async function renderEmergencyList(app) {
     app.innerHTML = "";
 
@@ -1394,17 +1754,22 @@
       Utils.el("label", { class: "toggle-pill", for: "avail-only" }, [availableOnlyToggle, Utils.el("span", { text: Lang.t("drivers.filterAvailableOnly") })])
     ]);
     const resultsWrap = Utils.el("div", {});
-    const section = Utils.el("section", { class: "section container" }, [
+    const bannerZone = Utils.el("div", { class: "banner-zone" }, [
+      buildBanner(emergencyBannerSlides(), { emergency: true }),
       crumb,
       Utils.el("div", { class: "section-head" }, [
         speakableHeadingCustom(Lang.t("emergency.heading"), Lang.t("emergency.sub")),
         Utils.el("p", { text: Lang.t("emergency.sub") })
-      ]),
+      ])
+    ]);
+    const section = Utils.el("section", { class: "section container" }, [
+      bannerZone,
       searchBar,
       filterRow,
       resultsWrap
     ]);
     app.appendChild(section);
+    holdSearchBarPosition(bannerZone);
 
     const alreadyCached = !!Api.peekDriverDirectory();
     if (!alreadyCached) resultsWrap.appendChild(ViewHelpers.loadingBlock(Lang.t("drivers.loading")));
@@ -1462,17 +1827,22 @@
       Utils.el("label", { class: "toggle-pill", for: "avail-only" }, [availableOnlyToggle, Utils.el("span", { text: Lang.t("drivers.filterAvailableOnly") })])
     ]);
     const resultsWrap = Utils.el("div", {});
-    const section = Utils.el("section", { class: "section container" }, [
+    const bannerZone = Utils.el("div", { class: "banner-zone" }, [
+      buildBanner(doctorBannerSlides(), { emergency: true }),
       crumb,
       Utils.el("div", { class: "section-head" }, [
         speakableHeadingCustom(Lang.t("doctor.pageHeading"), Lang.t("doctor.sectionSub")),
         Utils.el("p", { text: Lang.t("doctor.sectionSub") })
-      ]),
+      ])
+    ]);
+    const section = Utils.el("section", { class: "section container" }, [
+      bannerZone,
       searchBar,
       filterRow,
       resultsWrap
     ]);
     app.appendChild(section);
+    holdSearchBarPosition(bannerZone);
 
     const alreadyCached = !!Api.peekDriverDirectory();
     if (!alreadyCached) resultsWrap.appendChild(ViewHelpers.loadingBlock(Lang.t("drivers.loading")));

@@ -30,6 +30,7 @@
       "other.sectionSub": "Browse other services and businesses",
       "other.sectionCta": "View",
       "other.chooseSub": "Which category are you looking for?",
+      "other.listSub": "Call directly — no account needed.",
       "other.empty": "No categories are available in this section yet.",
       "other.backToCategories": "Back to Other Section",
       "doctor.heading": "Doctors",
@@ -59,11 +60,13 @@
 
       "search.placeholder": "Search driver name or phone number…",
       "search.placeholderDoctor": "Search doctor name or phone number…",
+      "search.placeholderOther": "Search name or phone number…",
       "search.heading": "Quick Search",
       "search.resultsFor": "Results for \"{query}\"",
 
       "drivers.heading": "{vehicle} Drivers",
       "drivers.subInMarket": "in {market}",
+      "drivers.sub": "Call a driver directly — no account needed.",
       "drivers.loading": "Loading drivers…",
       "drivers.backToVehicles": "Change Vehicle Type",
       "drivers.count": "{count} drivers found",
@@ -347,6 +350,7 @@
       "other.sectionSub": "অন্যান্য সেবা ও ব্যবসায়ীদের তালিকা দেখুন",
       "other.sectionCta": "দেখুন",
       "other.chooseSub": "আপনি কোন ক্যাটাগরি খুঁজছেন?",
+      "other.listSub": "সরাসরি কল করুন — কোনো অ্যাকাউন্ট লাগবে না।",
       "other.empty": "এই সেকশনে এখনো কোনো ক্যাটাগরি নেই।",
       "other.backToCategories": "অন্যান্য সেকশনে ফিরে যান",
       "doctor.heading": "ডাক্তার",
@@ -376,11 +380,13 @@
 
       "search.placeholder": "ড্রাইভারের নাম বা ফোন নম্বর খুঁজুন…",
       "search.placeholderDoctor": "ডাক্তারের নাম বা ফোন নম্বর খুঁজুন…",
+      "search.placeholderOther": "নাম বা ফোন নম্বর খুঁজুন…",
       "search.heading": "দ্রুত খুঁজুন",
       "search.resultsFor": "\"{query}\" এর ফলাফল",
 
       "drivers.heading": "{vehicle} ড্রাইভার",
       "drivers.subInMarket": "{market}-এ",
+      "drivers.sub": "সরাসরি ড্রাইভারকে কল করুন — কোনো অ্যাকাউন্ট লাগবে না।",
       "drivers.loading": "ড্রাইভার লোড হচ্ছে…",
       "drivers.backToVehicles": "যানবাহনের ধরন পরিবর্তন করুন",
       "drivers.count": "{count} জন ড্রাইভার পাওয়া গেছে",
