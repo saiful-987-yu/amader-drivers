@@ -21,6 +21,12 @@ photos load lazily and never block a card's text/call button from
 appearing. In the public driver list, **Active drivers are always sorted
 before Inactive ones**.
 
+Besides the normal Bazar → Vehicle Type → Driver flow, the site also has an
+**Emergency Contact** list, a **Find a Doctor** list and an **Other Section**
+(other services and businesses, see §3.6), a site-wide **search** (name or
+phone number), animated **banners** on every main page (§5.5), and it is an
+installable **PWA** with a service worker (§5.7).
+
 A compact breadcrumb (`Home › Bazar › Vehicle`) sits at the top of the
 directory screens for quick backward navigation, and the footer is a single
 slim two-row bar (brand + links, then copyright + language) rather than a
@@ -34,33 +40,44 @@ tall multi-column block.
 project/
 ├── index.html
 ├── README.md
+├── manifest.json         # PWA manifest (name, icons, theme colors, start_url)
+├── sw.js                 # service worker (app-shell cache, see §5.7)
+├── robots.txt
+├── sitemap.xml
 ├── css/
 │   ├── themes.css        # color tokens, light/dark theme
 │   ├── style.css         # base layout + components (mobile-first)
-│   └── responsive.css    # tablet/desktop breakpoint overrides
+│   ├── responsive.css    # tablet/desktop breakpoint overrides
+│   └── pwa.css           # install / update banner styles
 ├── js/
-│   ├── utils.js          # shared helpers (DOM, phone, storage)
+│   ├── utils.js          # shared helpers (DOM, phone, storage, text-to-speech)
 │   ├── icons.js          # inline SVG icon set
 │   ├── language.js       # EN/BN translation system
 │   ├── theme.js          # light/dark theme switcher
-│   ├── api.js            # data layer (Google Sheets or demo data)
+│   ├── api.js            # data layer (Google Sheets or demo data) + caching
 │   ├── auth.js           # driver session/login state
-│   ├── search.js         # shared search-matching helpers
-│   ├── app.js            # router, toasts, modal, header wiring
-│   ├── drivers.js        # home, banner, bazar/vehicle selection, driver list & detail
-│   ├── registration.js   # multi-step "Register as a Driver" form
+│   ├── search.js         # shared search-matching helpers (name / phone)
+│   ├── app.js            # router, toasts, modal, header wiring, service worker registration
+│   ├── pwa-install.js    # "Add to Home Screen" banner + "new version ready" banner
+│   ├── drivers.js        # home, banners, bazar/vehicle selection, driver lists
+│   │                     # (bazar, Emergency, Doctor, Other Section), driver detail, search
+│   ├── registration.js   # 5-step "Register as a Driver" form
 │   ├── profile.js        # driver login + profile/availability screen
 │   └── admin.js          # Admin Mode: dashboard, record editing, Pending Users, Public Rating review
 ├── assets/
-│   ├── images/           # (empty — driver photos come from Google Sheets)
-│   ├── home-banners/     # homepage banner + section background images (see its own README)
-│   └── icons/
-│       └── favicon.svg
+│   ├── images/           # og-cover.jpg (social-share cover image)
+│   ├── brand/            # logo, favicons, PWA icons (see its own README)
+│   ├── icons/            # favicon.svg, sacarmart-logo.svg
+│   ├── home-banners/     # banner pictures + banner-videos.js (see its own README)
+│   └── local-photos/     # optional bundled photos, see §5.8
+│       ├── markets/      #   <market-slug>.jpg / <market-slug>-bg.jpg
+│       ├── vehicles/     #   <vehicle-slug>.jpg
+│       └── profilePhoto/ #   <Driver ID>.jpg
 ├── config/
 │   ├── config.example.js # documented configuration template
-│   └── config.js         # your actual configuration (demo mode by default)
+│   └── config.js         # your actual configuration
 └── google-apps-script/
-    └── Code.gs           # optional backend for real Google Sheets access
+    └── Code.gs           # backend for real Google Sheets access
 ```
 
 ---
@@ -88,27 +105,31 @@ npx serve .
 
 Create one Google Sheet with these exact tab names — just **4 main tabs**
 (there is no separate `Doctors` tab and no separate account tab; a user's
-own row on `Users` is the only source of truth for their login):
+own row on `Users` is the only source of truth for their login). Three more
+tabs (`Public Ratings`, `Admin Editor History`, `Sessions`) are created
+automatically by the backend when first needed — see below:
 
 | Tab | Purpose |
 |---|---|
 | `Users` | Approved, publicly visible drivers (and doctors) — also where each user's own Username/Password live |
 | `Pending Users` | New registrations awaiting review (approved from Admin Mode, or manually in the sheet) |
 | `Markets` | The list of bazars |
-| `Vehicle Categories` | CNG / Auto / Van / Other, etc. |
+| `Vehicle Categories` | CNG / Auto / Van / Other, etc. (and the categories of the Other Section) |
 
 ### 3.2 Column headers
 
 **Markets**
 `Market ID | Market Name English | Market Name Bengali | Location | Status | Sort Order | Markets Image URL | Markets BG Image URL`
 
+- Only rows with `Status = Active` are shown, ordered by `Sort Order`. A visitor can also reorder the bazars for themselves from the homepage (sort button next to the "Choose your bazar" heading); that custom order is saved only in that visitor's own browser/device and has a Reset button — it never changes the sheet.
 - `Markets Image URL` — an optional photo shown next to the bazar's icon on the homepage's market cards (same idea as the Vehicle Categories image below). Leave it empty and the card just shows its icon as before, no broken image.
-- `Markets BG Image URL` — an optional large background photo for the whole market card (separate from the small icon/image above, which stays visible either way). Leave it empty and the card keeps its existing plain background (white in Light Mode, dark in Dark Mode); if the URL doesn't load, the same plain background is used — never a broken image.
+- `Markets BG Image URL` — an optional large background photo for the whole market card (separate from the small icon/image above, which stays visible either way). Leave it empty and the card keeps its existing plain background (white in Light Mode, dark in Dark Mode); if the URL doesn't load, the same plain background is used — never a broken image. A photo placed in `assets/local-photos/markets/` is tried before either URL (see §5.8).
 
 **Vehicle Categories**
-`Category ID | English Name | Bengali Name | Icon | Status | Sort Order | Vehicle Categories Image URL`
+`Category ID | English Name | Bengali Name | Icon | Status | Sort Order | Vehicle Categories Image URL | Other Categories`
 
-- `Vehicle Categories Image URL` — a category artwork image shown next to the existing small icon on the vehicle-type selection screen (roughly 2:1, wider than tall). This is completely separate from a driver's own `Vehicle Image URL` in the Users tab — leave it empty and the category card just shows its icon as before, no broken image.
+- `Vehicle Categories Image URL` — a category artwork image shown next to the existing small icon on the vehicle-type selection screen (roughly 2:1, wider than tall). This is completely separate from a driver's own `Vehicle Image URL` in the Users tab — leave it empty and the category card just shows its icon as before, no broken image. A photo placed in `assets/local-photos/vehicles/` is tried first (see §5.8).
+- `Other Categories` — `TRUE` (case-insensitive) moves the category out of the normal Bazar → Vehicle flow and into the **Other Section** (see §3.6). `FALSE` or blank keeps it a normal vehicle category. The two groups never overlap: a category marked `TRUE` is not offered under any bazar.
 
 **Users**
 `Driver ID | Name | Bengali Name | Father/Husband Name | Phone | Alternative Phone | Village | Post Office | Union | Upazila | District | Full Address | Vehicle Type | Vehicle Number | Bazar | Service Area | Driving Experience | Driver Image URL | Vehicle Image URL | Social Media URL | Username | Password | Status | Availability | Created Date | Updated Date | Star Rating | WhatsApp | Emergency Contact | Doctor Status | Sort Status | Personal Details | Video URL | Manual Rating | Public Rating Cache | Public Rating Count | Admin Status`
@@ -124,6 +145,7 @@ own row on `Users` is the only source of truth for their login):
 - `Bazar`, `Vehicle Type`, and `Vehicle Image URL` all support **multiple values** in one cell, separated by `, ` (comma + space) — e.g. `Nobi Bazar, Bangla Bazar` or `Motorcycle, CNG, Auto` or `image1.jpg, image2.jpg, image3.jpg`. A driver with multiple bazars/vehicle types shows up under every one of them; multiple vehicle images become a clickable thumbnail gallery on the driver detail screen. A single plain value (no comma) still works exactly as before.
 - `Bazar` must match a `Market Name English` value from the Markets tab (matched by a lowercased, hyphenated "slug" of the name — e.g. "Nobi Bazar" → `nobi-bazar`).
 - `Vehicle Type` must similarly match an `English Name` from Vehicle Categories.
+- For a profile in the Other Section, set `Vehicle Type` to a category that has `Other Categories = TRUE`; it then appears in the Other Section list of that category (see §3.6).
 - `Status` = `Active` to make the driver eligible to appear publicly at all.
 - `Availability` = `Active` or `Inactive` — this is the flag the driver controls from their own profile.
 - `Personal Details` — shown as its own "Personal Details" section right after the Photo Gallery on the driver's detail page. Plain text is shown as plain text; you can also use basic HTML (`<h3>`, `<b>`, `<strong>`, `<p>`, `<ul>`, `<li>`, etc.) and it renders formatted, exactly as written. Leave it empty and the whole section — heading included — doesn't appear at all.
@@ -175,7 +197,8 @@ tab (give it a `Driver ID`) and delete it from `Pending Users`. Because
 with the same credentials they registered with — no separate account
 sheet to keep in sync.
 
-The registration form itself collects: Full Name (English, required),
+The registration form has 5 steps — Personal Information, Driver & Vehicle
+Information, Photo, Account Information, Review & Submit. It collects: Full Name (English, required),
 Full Name (Bangla, required — falls back to the English name anywhere
 it's displayed if left blank later), Mobile (required), Alternative
 Mobile and WhatsApp Number (both optional), a multi-select for Vehicle
@@ -191,6 +214,19 @@ usernames/numbers or any password data). The result for whichever
 value was last checked is remembered, so pressing Next doesn't
 re-check/re-load the same, unchanged value a second time — only
 editing the field invalidates that remembered result.
+
+**Profile photo upload (registration Step 3)**
+Step 3 offers two ways to add a profile photo. (1) Direct upload from the
+phone/computer (JPG, PNG or WebP, between 50 KB and 3 MB): the backend's
+`uploadDriverPhoto()` saves it in a Google Drive folder named
+`Amader Drivers - Driver Photos` (created automatically in the Apps Script
+owner's Drive, with "anyone with the link can view") and the resulting link
+goes into `Driver Image URL`. (2) The Google Form route configured in
+`GOOGLE_FORM` in `config/config.js` — a Google Form file upload always
+needs a Google sign-in and opens in its own tab; `MOBILE_ENTRY_ID`
+pre-fills the mobile number there. The first time `Code.gs` is deployed (or
+after changing it), the script owner must authorize the Drive permission
+once.
 
 **Admin Editor History**
 `Date Time | Admin Driver ID | Admin Name | Target Type | Target ID | Target Name | Old 1 | New 1 | Old 2 | New 2 | ...`
@@ -242,6 +278,9 @@ driver list while Admin Mode is on and use the pen icon on the card.
    - Execute as: **Me**
    - Who has access: **Anyone**
 4. Copy the resulting URL (ends in `/exec`).
+5. After you edit `Code.gs` later, paste the new code and use **Deploy →
+   Manage deployments → Edit → New version**, so the same `/exec` URL
+   keeps working. Approve any permission prompt (Sheets, Drive).
 
 ### 3.4 Configure the frontend
 
@@ -276,6 +315,25 @@ It works exactly like `Emergency Contact`, and it never affects the
 profile's normal listing under its own bazar/vehicle type. The Doctor list
 is ordered by the same `Sort Status` → `Star Rating` rule as the other lists.
 
+### 3.6 Other Section, Emergency Contact list and Doctor list
+
+- **Other Section** (`#/other`): a homepage button/band ("Other Section")
+  opens a page of categories; each category opens a driver-style list
+  (`#/other/<category-slug>`) with the same search box, "available only"
+  filter, cards, call/WhatsApp buttons and detail view as a normal list.
+  A category is shown here only if its `Other Categories` cell on the
+  `Vehicle Categories` tab is `TRUE` **and** at least one approved profile
+  has that `Vehicle Type`. The bazar does not matter. Adding a new
+  category = one new row in `Vehicle Categories`; no code change.
+- **Emergency Contact** (`#/emergency`): every profile with
+  `Emergency Contact = TRUE` (see §3.2).
+- **Find a Doctor** (`#/doctor`): every profile with `Doctor Status = TRUE`
+  (see §3.5).
+- All lists use the same order: offline profiles last, then `Sort Status`,
+  then `Star Rating`.
+- **Search** (`#/search` and the search boxes on the lists) matches the
+  driver's name or phone number.
+
 ---
 
 ## 4. How to add things later
@@ -290,6 +348,7 @@ is ordered by the same `Sort Status` → `Star Rating` rule as the other lists.
   actually has that vehicle type — an active-but-empty category for that
   bazar stays hidden there (it can still show normally in a bazar that
   does have a driver for it).
+- **Add a service to the Other Section:** add a `Vehicle Categories` row with `Other Categories = TRUE`, then give profiles that `Vehicle Type` (see §3.6).
 - **Approve a driver:** use **Pending Users** → **OK** in the Admin
   Dashboard, or move their whole row from `Pending Users` to
   `Users` (see §3.2) — their `Username`/`Password` come along with it,
@@ -316,24 +375,46 @@ is ordered by the same `Sort Status` → `Star Rating` rule as the other lists.
 
 ---
 
-## 5.5 Homepage images & footer social links
+## 5.5 Banners, section backgrounds & footer social links
 
-- **Banner**: Slide 1 is generated from site text (updates live with the
-  language toggle) and needs no image. Slides 2 and 3, plus the
-  Registration and Doctor section backgrounds, all come from
-  `assets/home-banners/` — drop in `home-banner-02.jpg`,
-  `home-banner-03.jpg`, `home-registration-banner.jpg`, and
-  `home-doctor-banner.jpg` (see that folder's own README) and they
-  appear automatically, no code changes. Missing files never break
-  anything: a banner slide without an image shows a clean placeholder,
-  and a section without its background image just keeps its normal
-  solid color — never a broken-image icon. The banner auto-advances
-  every 3 seconds and also responds to touch swipe (left = next, right
-  = previous); swiping restarts the timer instead of running a second
-  one alongside it.
-- **Footer social links**: edit `SOCIAL_LINKS` in `config/config.js`.
-  Leave any entry as `"#"` until you have a real URL — the icon still
-  shows, it just doesn't go anywhere yet.
+All banner pictures live in `assets/home-banners/` and all banner videos are
+set in `assets/home-banners/banner-videos.js` — see that folder's own
+`README.md` for the exact filenames. Nothing needs a code change, and a
+missing file never shows a broken-image icon.
+
+- **Where banners appear:** Home, Markets, Emergency Contact, Find a Doctor,
+  Other Section, and the driver list of every vehicle category (inside a
+  bazar and inside the Other Section). Each is a 3-slide banner.
+- **Slides:**
+  - Slide 1 — Home: automatic headline text (follows the language toggle)
+    on a solid background, with `home-banner-01.jpg` behind it if present.
+    Other pages: a picture only (`<page>-banner-01.jpg`; on vehicle lists,
+    the category photo from `assets/local-photos/vehicles/<slug>.jpg`).
+  - Slide 2 — an animated `.gif` is tried first, then the `.jpg`.
+  - Slide 3 — a YouTube video (link in `banner-videos.js`) plays muted and
+    automatically, with a small speaker button to turn the sound on/off; the
+    slide stays until the video ends. If the video can't start (error,
+    offline, empty link) the `…-banner-03.jpg` picture is shown instead.
+    Vehicle-category video links go in the `vehicle03` list, one line per
+    category slug.
+- **Timing and touch:** every slide stays 4 seconds (`BANNER_SLIDE_MS` in
+  `js/drivers.js`); the banner also responds to touch swipe (left = next,
+  right = previous), and swiping restarts the timer.
+- **Config:** `BANNER_IMAGES`, `EMERGENCY_BANNER_IMAGES`,
+  `DOCTOR_BANNER_IMAGES`, `MARKET_BANNER_IMAGES`, `OTHER_BANNER_IMAGES` and
+  `SECTION_BACKGROUNDS` in `config/config.js` hold the file paths. Banners
+  on non-home pages sit behind the breadcrumb/heading and never move the
+  search bar.
+- **Section backgrounds:** the homepage bands "Register as a Driver",
+  "Other Section" and "Find a Doctor" use `home-registration-banner.jpg`,
+  `home-other-banner.jpg` and `home-doctor-banner.jpg`, and the top button
+  of registration Step 3 uses `register-photo-upload-bg.jpg`. Without the
+  file, the normal solid color is kept.
+- **Footer social links:** edit `SOCIAL_LINKS` in `config/config.js`.
+  `call` and `whatsapp` take a plain phone number (the footer builds the
+  `tel:` / wa.me link); `facebook`, `tiktok`, `instagram` and `website`
+  take URLs. Leave an entry as `"#"` until you have a real URL — the icon
+  still shows, it just doesn't go anywhere yet.
 
 ---
 
@@ -354,11 +435,50 @@ in the browser's `localStorage` (not just in memory), so:
   Categories (`CACHE_TTL_MS`, 5 minutes by default).
 - Images are not re-fetched for a URL the browser has already
   downloaded — this relies on the browser's normal HTTP cache, plus
-  `loading="lazy"` so off-screen photos don't load until needed. This
-  project does not add a Service Worker / Cache Storage layer for
-  fully offline image access — that would be a reasonable future
-  enhancement, but was left out here to avoid the risk of a
-  misconfigured Service Worker breaking the site for visitors.
+  `loading="lazy"` so off-screen photos don't load until needed. The
+  service worker (§5.7) caches only the app's own files; Google Drive
+  photos and Apps Script requests are deliberately never intercepted
+  (caching them broke image loading in the past).
+
+---
+
+## 5.7 Installable app (PWA) & service worker
+
+- `manifest.json` makes the site installable (standalone display, green
+  theme color, 192/512 px icons from `assets/brand/`). On supported browsers
+  a small banner (`js/pwa-install.js`) offers **Add to Home Screen**; on iOS
+  it shows the manual steps instead. Dismissing it hides it for 1 day.
+- `sw.js` caches the app shell — `index.html`, CSS, JS, `config/config.js`,
+  logos and icons — so the site opens even offline. Pages are always
+  requested from the network first, with the cached `index.html` as the
+  offline fallback; Google Drive photos and Apps Script requests are never
+  intercepted.
+- When a new version of the site is deployed, the visitor sees a "new
+  version is ready" banner with a refresh button.
+- **Cache version:** `CACHE_VERSION` at the top of `sw.js` (currently `v5`)
+  decides when visitors' old cached files are replaced. Change it only when
+  you deliberately want every visitor to download the new app files; adding
+  photos or banner files, or editing the Google Sheet, never needs it.
+- If you add a new `.js`/`.css` file to the project, also add it to
+  `APP_SHELL` in `sw.js` so it works offline.
+
+---
+
+## 5.8 Local (bundled) photos
+
+Optional photos placed inside the project load instantly, work offline and
+never depend on Google Drive. Each is tried first; if the file is missing,
+the Sheet's link is used, then a plain icon. Always `.jpg`; file names are
+case-sensitive on GitHub Pages.
+
+| Folder | File name | Used for |
+|---|---|---|
+| `assets/local-photos/markets/` | `<market-slug>.jpg`, `<market-slug>-bg.jpg` | bazar card photo / card background |
+| `assets/local-photos/vehicles/` | `<vehicle-slug>.jpg` | vehicle category photo (also slide 1 of that category's banner) |
+| `assets/local-photos/profilePhoto/` | `<Driver ID>.jpg` (e.g. `D1111.jpg`) | driver/doctor photo everywhere it appears |
+
+The slug is the text after `/markets/` (or after the bazar name) in the page
+address. See the README inside each folder for details.
 
 ---
 
@@ -402,6 +522,11 @@ The frontend is static HTML/CSS/JS, so it can be hosted anywhere that
 serves static files — GitHub Pages, Netlify, Vercel, or a normal web host.
 For GitHub Pages: push this folder to a repository and enable Pages on the
 `main` branch (root). No build step is required.
+
+`robots.txt` and `sitemap.xml` sit in the project root; if the site's public
+address changes, update the URLs inside them and the `og:` tags in
+`index.html`. The service worker (§5.7) needs the site to be served over
+HTTPS (GitHub Pages already is).
 
 The site is a single page (`index.html`) with hash-based routing
 (`#/drivers/nobi-bazar/cng`, etc.), so it will not 404 on refresh when
