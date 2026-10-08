@@ -67,7 +67,7 @@ window.BANNER_VIDEOS = {
     "thresher": "https://youtu.be/JTOKL9UBqFw",
     "van": "https://youtu.be/JTOKL9UBqFw",
     "tom-tom": "https://youtu.be/JTOKL9UBqFw",
-    "truck": "https://youtu.be/JTOKL9UBqFw"
+    "truck": "https://youtu.be/JTOKL9UBqFw",
     "biye-bari": "https://youtu.be/qiwJqaaDRDo"
   }
 
