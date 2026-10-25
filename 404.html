@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>আমরা নতুন ঠিকানায় — আমাদের এলাকা | Amader Elaka</title>
+<meta name="description" content="আমাদের ড্রাইভার এখন আমাদের এলাকা। ড্রাইভার, ডাক্তার, দোকান, মসজিদসহ আপনার এলাকার সব তথ্য এক জায়গায়।" />
+<meta name="theme-color" content="#1F6E4A" />
+<link rel="canonical" href="https://saiful-987-yu.github.io/amader-elaka/" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://saiful-987-yu.github.io/amader-elaka/" />
+<meta property="og:title" content="আমাদের এলাকা (Amader Elaka) — ড্রাইভার, ডাক্তার, দোকান ও এলাকার সব তথ্য" />
+<meta property="og:description" content="ড্রাইভার, ডাক্তার, দোকান, মসজিদ ও জরুরি সেবা — আপনার এলাকার সব ফোন নম্বর এক জায়গায়।" />
+<meta property="og:image" content="https://saiful-987-yu.github.io/amader-elaka/assets/images/og-cover.jpg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:type" content="image/jpeg" />
+<link rel="icon" type="image/png" sizes="32x32" href="assets/brand/favicon-32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="assets/brand/favicon-16.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="assets/brand/apple-touch-icon.png" />
+<link rel="manifest" href="manifest.json" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="আমাদের এলাকা" />
+<noscript><meta http-equiv="refresh" content="3;url=https://saiful-987-yu.github.io/amader-elaka/" /></noscript>
+<style>
+:root{--bg:#F4F7F5;--card:#fff;--text:#16352a;--muted:#4d6a5e;--green:#1F6E4A;--yellow:#F5C518;color-scheme:light dark}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1a15;--card:#17261f;--text:#e8f3ed;--muted:#a3bcb0}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Bengali","Hind Siliguri",sans-serif;text-align:center}
+.card{width:100%;max-width:420px;background:var(--card);border-radius:22px;padding:28px 22px;box-shadow:0 8px 30px rgba(0,0,0,.12);border-top:5px solid var(--yellow)}
+.card img{width:120px;height:120px;border-radius:50%}
+h1{font-size:1.4rem;margin:16px 0 6px;color:var(--green)}
+@media (prefers-color-scheme:dark){h1{color:#7fd6a8}}
+p{margin:6px 0;line-height:1.6;color:var(--muted);font-size:.98rem}
+.en{font-size:.88rem;opacity:.85}
+.spin{width:30px;height:30px;margin:18px auto 6px;border:4px solid rgba(31,110,74,.25);border-top-color:var(--green);border-radius:50%;animation:s .9s linear infinite}
+@keyframes s{to{transform:rotate(360deg)}}
+.go{display:inline-block;margin-top:12px;padding:12px 26px;border-radius:999px;background:var(--green);color:#fff;font-weight:700;text-decoration:none;font-size:1rem}
+.ios{display:none;margin-top:16px;padding:12px;border-radius:12px;background:rgba(245,197,24,.18);font-size:.9rem;color:var(--text)}
+</style>
+</head>
+<body>
+<main class="card">
+<img src="assets/brand/logo-medium.png" alt="আমাদের এলাকা" width="120" height="120" />
+<h1>আমরা নতুন ঠিকানায় এসেছি</h1>
+<p>“আমাদের ড্রাইভার” এখন <strong>“আমাদের এলাকা”</strong>। পুরোনো লিংক ও অ্যাপ এখন নতুন ঠিকানায় চলবে।</p>
+<p class="en">Amader Drivers is now Amader Elaka. Taking you there…</p>
+<div class="spin" aria-hidden="true"></div>
+<a class="go" id="go" href="https://saiful-987-yu.github.io/amader-elaka/">এখনই যান</a>
+<div class="ios" id="ios">iPhone-এ হোম স্ক্রিনে যোগ করা থাকলে: নতুন সাইট খুলে Safari-র শেয়ার বাটন থেকে “Add to Home Screen” দিন, তারপর পুরোনো আইকনটি মুছে ফেলুন।</div>
+</main>
+<script>
+(function () {
+var BASE = "https://saiful-987-yu.github.io/amader-elaka/";
+var target = BASE + (location.search || "") + (location.hash || "");
+var link = document.getElementById("go");
+link.href = target;
+if (/iphone|ipad|ipod/i.test(navigator.userAgent)) {
+document.getElementById("ios").style.display = "block";
+}
+setTimeout(function () { location.replace(target); }, 3000);
+})();
+</script>
+</body>
+</html>
