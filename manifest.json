@@ -1,0 +1,19 @@
+{
+  "name": "আমাদের এলাকা · Amader Elaka",
+  "short_name": "আমাদের এলাকা",
+  "description": "আমাদের এলাকা — ড্রাইভার, ডাক্তার, দোকান, মসজিদসহ আপনার এলাকার সব তথ্য ও ফোন নম্বর এক জায়গায়।",
+  "id": "./",
+  "start_url": "./#/",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#F4F7F5",
+  "theme_color": "#1F6E4A",
+  "lang": "bn",
+  "dir": "ltr",
+  "icons": [
+    { "src": "assets/brand/pwa-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/brand/pwa-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/brand/pwa-icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
